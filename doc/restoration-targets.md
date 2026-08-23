@@ -4,11 +4,12 @@
 
 ### 1. 原版 H 场景 CG（PNG 图片资源）
 
-**已确认（来自 Res 303 分析，存储位置已调整）**：
+**已确认（已实施，见 `script/build_patch.py`）**：
 
 | 资源类型 | 数量 | 命名规则 | 存储位置（本项目） |
 |---------|------|---------|------------------|
-| H 场景事件 CG | 37 个 PNG | `CN_EVCC*` 前缀 | **Chip2.arc** |
+| H 场景事件 CG | 36 个 PNG | `CN_EVCC*` 前缀 | **Chip2.arc** |
+| H 场景系统图 | 1 个 PNG | `CN_SGCC0020` | **Graphic.arc**（例外，见下） |
 | Steam 保留 CG | 保持原样 | `EVCC*` | Chip2.arc（不改动） |
 | 背景图片 | 保持原样 | `BGCC*` | Chip1.arc（不改动） |
 | 立绘资源 | 保持原样 | `T{角色}*` | Graphic.arc（不改动） |
@@ -19,18 +20,22 @@
 - ✅ **使用 PNG 格式**：H 场景不使用 PNA 图层资源，全部使用 PNG
 
 **与 Res 303 的差异**：
-- ⚠️ Res 303 将 CN_EVCC*.PNG 放入 Graphic.arc（违反资源分类规则）
-- ✅ 本项目将 CN_EVCC*.PNG 放入 **Chip2.arc**（遵守资源分类规则）
+- ⚠️ Res 303 将全部 37 个新增 CN_* 资源都放入 Graphic.arc（违反资源分类规则）
+- ✅ 本项目将 36 个 CN_EVCC*.PNG 放入 **Chip2.arc**（遵守资源分类规则）
+- ⚠️ 例外：`CN_SGCC0020.PNG` 放入 **Graphic.arc**（Steam 原版 Graphic.arc 本身混有 92 个 SGCC* 系统图，此资源延续该命名族）
 
 #### 新增资源列表（部分示例）
 
-**事件 CG（存储位置：Chip2.arc）**：
+**事件 CG（存储位置：Chip2.arc，共 36 个）**：
 - `CN_EVCC0002.PNG`、`CN_EVCC0002B.PNG`
 - `CN_EVCC0012.PNG`、`CN_EVCC0013.PNG`、`CN_EVCC0013A.PNG`
 - `CN_EVCC0014.PNG`、`CN_EVCC0014A.PNG`、`CN_EVCC0014B.PNG`
 - `CN_EVCC0015.PNG`、`CN_EVCC0015A.PNG`
 - `CN_EVCC0017B.PNG`、`CN_EVCC0027B.PNG`
-- 等共 37 个
+- 等共 36 个
+
+**系统图（存储位置：Graphic.arc，1 个）**：
+- `CN_SGCC0020.PNG`
 
 ### 2. 原版语音
 
@@ -191,21 +196,15 @@ Steam资源    ORG_*资源    Steam资源
 
 ### 剩余工作量
 
-**实施任务**（低工作量）：
-1. **直接复用 Res 303 资源**
-   - 复制 12 个 H 场景脚本
-   - 复制 11 个修改的入口脚本
-   - 复制 37 个 PNG 资源
-   - 复制 1934 个语音文件
-   - 复制 340 个 lng 文件
-   - 复制 Fonts.arc 和 Script.arc
+**实施任务**（已完成 ✅，见 `script/build_patch.py` + `script/final_verification.py`）：
+1. ✅ 复制 12 个 H 场景脚本 + 11 个修改的入口脚本
+2. ✅ 提取并重新分类 37 个 PNG 资源（36 Chip2.arc + 1 Graphic.arc）
+3. ✅ 复用 1934 个语音文件（随 Voice.arc 整体复用）
+4. ✅ 复用 340 个 lng 文件（随 Rio.arc 一并打包）
+5. ✅ 复用 Fonts.arc 和 Script.arc
 
-2. **打包与验证**
-   - 重新打包 Arc 文件
-   - 运行验收测试
-   - 实机测试关键场景
-
-**预估时间**：1-2 天（主要是文件复制和打包）
+**剩余任务**：
+- ⏳ 实机测试关键场景（12 个 H 场景触发/CG/语音/文本显示，需在游戏环境中手动验证）
 
 ## 风险与挑战
 

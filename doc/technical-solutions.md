@@ -19,15 +19,16 @@
 
 **方案**：
 1. **直接复用 Res 303 的命名**：
-   - 新增 H 场景 CG：`CN_EVCC*.PNG`（37 个）
+   - 新增 H 场景 CG：`CN_EVCC*.PNG`（36 个）+ `CN_SGCC0020.PNG`（1 个）
    - 无需改写资源引用
    - 无需添加 ORG_ 前缀
 
-2. **遵守资源分类规则**：
-   - ⚠️ Res 303 将 CN_EVCC*.PNG 放入 Graphic.arc（错误）
-   - ✅ 本项目将 CN_EVCC*.PNG 放入 **Chip2.arc**（正确）
+2. **遵守资源分类规则（含 1 个例外）**：
+   - ⚠️ Res 303 将全部 37 个 CN_* 资源放入 Graphic.arc（违反分类规则）
+   - ✅ 本项目将 36 个 CN_EVCC*.PNG 放入 **Chip2.arc**
+   - ⚠️ 例外：`CN_SGCC0020.PNG` 放入 **Graphic.arc**（Steam 原版 Graphic.arc 本身混有 92 个 SGCC* 系统图，此资源延续该命名族，归入 Graphic.arc 与既有惯例一致）
 
-**状态**：✅ 方案已确定（零冲突，简化实施）
+**状态**：✅ 已实施（`script/build_patch.py`，全量验证通过）
 
 ### 2. 穿插式调用链组织
 
@@ -156,13 +157,13 @@
    - 重新打包 Chip2.arc（事件 CG + H 场景 CG）
    - 重新打包 Voice.arc（语音）
 
-3. **验收测试工具**（复用 A Sky Full of Stars）：
+3. **验收测试工具**：
    - 调用链完整性检查
    - 资源配对验证
    - Arc 文件规范化检查
-   - **资源分类规则检查**（新增）
+   - **资源分类规则检查**
 
-**状态**：⏳ 待开发（优先级高）
+**状态**：✅ 已开发并验证（`script/build_patch.py`、`script/final_verification.py`，39 项检查全部通过）
 
 ## 实施步骤
 
@@ -184,43 +185,36 @@
 2. ✅ H 场景位置识别（12 个 CNR*.ws2）
 3. ✅ 调用链映射表建立（11 个入口点）
 
-### 阶段 4：内容还原实施（⏳ 待开始）
+### ~~阶段 4：内容还原实施~~（✅ 已完成）
 
-1. **复用 Res 303 脚本**
-   - 从 Res 303 Rio.arc 提取 12 个 H 场景脚本（CNR*.ws2）
-   - 从 Res 303 Rio.arc 提取 11 个修改的入口脚本
-   - 验证脚本完整性
+1. ✅ **复用 Res 303 脚本**（`script/build_patch.py: build_rio()`）
+   - 从 Res 303 Rio.arc 提取 12 个 H 场景脚本（CNR*.ws2）+ 11 个修改的入口脚本
+   - 入口脚本以 res303 版本（跳转已重定向）覆盖 backup 版本，其余 353 个 backup 脚本原样保留
 
-2. **复用 Res 303 资源（调整存储位置）**
-   - 从 Res 303 Graphic.arc 提取 37 个 CN_EVCC*.PNG
-   - **放入 Chip2.arc**（遵守资源分类规则，不放 Graphic.arc）
-   - 从 Res 303 Voice.arc 提取 1934 个语音文件
-   - 放入 Voice.arc
-   - 验证资源完整性
+2. ✅ **复用 Res 303 资源（调整存储位置）**（`build_graphic()` / `build_chip2()`）
+   - 36 个 CN_EVCC*.PNG → **Chip2.arc**（遵守分类规则）
+   - 1 个 CN_SGCC0020.PNG → **Graphic.arc**（延续既有 SGCC 系统图族命名惯例，例外情形）
+   - Voice.arc / Fonts.arc / Script.arc / SysGraphic.arc 整体复用 res303 版本（内容已含全部新增语音/字体/系统界面）
 
-3. **复用 Res 303 汉化**
-   - 从 Res 303 Rio.arc 提取 340 个 lng 文件
-   - 放入 Rio.arc
-   - 复制 Fonts.arc
-   - 复制 Script.arc
+3. ✅ **复用 Res 303 汉化**
+   - 340 个 lng 文件随 `build_rio()` 一并提取，放入 Rio.arc
+   - Fonts.arc / Script.arc 直接复制 res303 版本
 
-### 阶段 5：打包与验证（⏳ 待开始）
+### ~~阶段 5：打包与验证~~（✅ 已完成）
 
-1. **重新打包 Arc 文件**
-   - Rio.arc（脚本 + lng）
-   - **Chip2.arc（事件 CG + H 场景 CG）**
-   - Voice.arc（语音）
-   - Fonts.arc（字体）
-   - Script.arc（Lua 脚本）
-   - Graphic.arc（保持 Steam 原样，仅立绘 PNA）
-   - Chip1.arc（保持 Steam 原样，仅背景 PNG）
+1. ✅ **重新打包 Arc 文件**（产出至 `asset/`）
+   - Rio.arc：717 个成员（364 保留 + 353 新增）
+   - Chip2.arc：235 个成员（199 + 36 CN_EVCC*）
+   - Graphic.arc：716 个成员（715 + CN_SGCC0020.PNG）
+   - Voice.arc / Fonts.arc / Script.arc / SysGraphic.arc：直接复制 res303 版本
+   - Chip1.arc / SysVoice.arc：本次无变化，不生成，安装器保留玩家 Steam 原文件
 
-2. **完整性验证**
-   - Arc 文件规范化检查
-   - SHA256 校验
-   - 调用链完整性检查
-   - 资源配对验证
-   - **资源分类规则检查**（确认 CN_EVCC*.PNG 在 Chip2.arc）
+2. ✅ **完整性验证**（`script/final_verification.py`，39 项检查全部通过）
+   - Arc 文件规范化检查（无 null padding）
+   - SHA256 校验稳定性（重复读写哈希不变）
+   - 调用链完整性检查（11 入口 + 12 CNR 出口全部核对）
+   - 资源配对验证（CNR 脚本引用的全部 PNG 均在 Graphic.arc+Chip2.arc 中找到）
+   - 资源分类规则检查（Chip2.arc 仅含 EVCC*/CN_EVCC*；Graphic.arc 不含 CN_EVCC*）
 
 ### 阶段 6：测试与发布（⏳ 待开始）
 

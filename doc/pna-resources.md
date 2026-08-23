@@ -51,34 +51,41 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 ### 与 Res 303 的差异
 
 **Res 303 的做法**：
-- 将 H 场景 CG（CN_EVCC*.PNG）放入 Graphic.arc
-- 违反了资源分类规则
+- 将全部 37 个新增 CN_* 资源（含 CN_EVCC*.PNG 与 CN_SGCC0020.PNG）都堆进 Graphic.arc
+- 违反了资源分类规则（事件 CG 混入立绘存储区）
 
 **本项目的做法**：
-- ✅ **严格遵守资源分类规则**
-- ✅ 将 H 场景事件 CG（CN_EVCC*.PNG）放入 **Chip2.arc**
-- ✅ 保持 Graphic.arc 仅存储 PNA 立绘资源
-- ✅ 保持 Chip1.arc 仅存储背景 PNG
+- ✅ 将 36 个 H 场景事件 CG（CN_EVCC*.PNG）放入 **Chip2.arc**
+- ⚠️ **例外**：`CN_SGCC0020.PNG` 放入 **Graphic.arc**，不放入 Chip2.arc
+  - 原因：Steam 原版 Graphic.arc 本身已混有 92 个 `SGCC*.png` 系统图（并非"仅存 PNA"），`CN_SGCC0020.PNG` 延续同一 SGCC 命名族，归入 Graphic.arc 与既有惯例一致
+  - 因此 Graphic.arc 的验收标准是"不含 CN_EVCC*"，而不是"不含任何 CN_ 前缀"
+- ✅ 保持 Chip1.arc 仅存储背景 PNG（本次无新增）
 
 ### 实施原则
 
 1. **立绘 → Graphic.arc**
    - 全部 PNA 格式的立绘资源
-   - 包括 Steam 原有和补丁新增（如有）
+   - 包括 Steam 原有立绘 + SGCC 系统图族（含新增 CN_SGCC0020.PNG）
 
 2. **背景 → Chip1.arc**
    - 全部 BGCC*.png 背景图片
-   - 包括 Steam 原有和补丁新增（如有）
+   - 保持 Steam 原样，本次无新增
 
 3. **事件 CG → Chip2.arc**
    - 全部 EVCC*.png 事件 CG
-   - **全部 CN_EVCC*.png H 场景 CG**（与 Res 303 不同）
+   - **36 个 CN_EVCC*.png H 场景 CG**（不含 CN_SGCC0020.PNG）
 
 ### 已备份的 Steam 原文件
 
-- ✅ `backup/Graphic.arc` - 立绘资源（715 个成员）
+- ✅ `backup/Graphic.arc` - 立绘 + 系统图资源（715 个成员）
 - ✅ `backup/Chip1.arc` - 背景图片（140 个成员）
 - ✅ `backup/Chip2.arc` - 事件 CG（199 个成员）
+
+### 实施结果（asset/ 输出）
+
+- `asset/Graphic.arc`：716 个成员（715 + CN_SGCC0020.PNG）
+- `asset/Chip2.arc`：235 个成员（199 + 36 个 CN_EVCC*.PNG）
+- `asset/Chip1.arc`：未生成（内容与 Steam 原版一致，安装器保留玩家原文件）
 
 ## 核心机制：图层 ID 是纯位置量
 
