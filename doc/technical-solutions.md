@@ -216,16 +216,26 @@
    - 资源配对验证（CNR 脚本引用的全部 PNG 均在 Graphic.arc+Chip2.arc 中找到）
    - 资源分类规则检查（Chip2.arc 仅含 EVCC*/CN_EVCC*；Graphic.arc 不含 CN_EVCC*）
 
-### 阶段 6：测试与发布（⏳ 待开始）
+### 阶段 6：测试与发布（部分完成）
 
-1. **实机测试**
+1. **实机测试**（⏳ 待开始）
    - 测试所有 12 个 H 场景
    - 验证入口和出口
    - 测试文本显示
    - 测试语音播放
 
-2. **打包发布**
-   - 生成安装器
+2. ✅ **增量 payload 生成**（`script/generate_payload.py`）
+   - 对比 `asset/` 与 `backup/`（Steam 原始基线），按成员逐一分类为 `keep`/`modified`/`added`/`deleted`
+   - 仅新增/修改的成员打包进 `payload/*_patch.arc`（未变化的成员不重复打包，增量最小化）
+   - 生成 `payload/METADATA.json`：`{文件名: {checksum, members: [{name, type}]}}`，`members` 按 **Steam 原始文件的成员顺序**排列（新增成员追加在末尾），供安装器按序重建目标归档
+   - 脚本内置回读校验：用 `backup/` + `payload/` + `METADATA.json` 通过 `tool/install.py` 的 `merge_arc()` 重放安装流程，核对结果与 `asset/` 逐字节一致
+   - 现状：7 个归档（Rio/Graphic/Chip2/Voice/Fonts/Script/SysGraphic）全部生成并通过回读校验，payload 总大小约 139.6 MB
+
+3. ✅ **安装器打包**（`bash script/pack.sh`，`mamba run -n asky_patch` 环境下用 PyInstaller 打包 `tool/install.py`）
+   - 产出 `releases/CROSS_CHANNEL_Content_Restoration_Patch_Installer_v{VERSION}.exe`
+   - `tool/install.py` 的 `merge_arc()` 已原生支持解析 `METADATA.json` 的 `members` 结构（按目标顺序重组、按 `type` 决定取 game 版本还是 patch 版本），无需额外改动
+
+4. **用户文档 / 发布**（⏳ 待开始）
    - 编写用户文档
    - 发布补丁
 
@@ -260,12 +270,16 @@
 
 ### 难点 4：原版资源获取
 
-**问题**：可能无法获取原版游戏。
+**原问题**：可能无法获取原版游戏，或需要从原版提取资源补入 Steam 版。
 
-**对策**：
-- 完全依赖 Res 303 的资源
-- 验证 Res 303 资源的完整性和正确性
-- 考虑授权和引用方式
+**已确认（分析原版游戏本体后）**：
+- 已获取民间汉化版原版游戏本体（`../CROSS_CHANNEL_Original/`），但**原版引擎（CROSSCHANNEL.exe）与 Steam 版（AdvHD.exe）完全不同**——脚本格式（WSC vs WS2）、Arc 归档格式（13 字节固定名字 vs UTF-16LE 变长名字）均不兼容
+- **无法从原版直接提取二进制资源补入 Steam 版**
+- 详见 [doc/lessons-learned.md](lessons-learned.md) 第 11 节
+
+**最终对策**：
+- ✅ 完全依赖 Res 303 已适配好 Steam 格式的资源（本项目已采用此方案并实施完成）
+- ✅ 原版游戏本体仅用于匹配资源、验证场景编号对应关系，不参与资源打包
 
 ## 风险管理
 

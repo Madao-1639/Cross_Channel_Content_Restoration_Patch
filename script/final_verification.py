@@ -8,12 +8,11 @@ import hashlib
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tool import arcbuild, ws2  # noqa: E402
 
-ASSET = ROOT / 'asset'
+ASSET = Path('asset')
 
 CALL_CHAIN = {
     'CCA0025C_en.ws2': ('CNR0001_EN', 'CCA0029_EN'),

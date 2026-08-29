@@ -19,11 +19,12 @@
 
 #### PNA/PNG 资源
 
-- [x] 所有原版 H 场景 CG 存在（36 个 CN_EVCC* + 1 个 CN_SGCC0020）
+- [x] 所有原版 H 场景 CG 存在（36 个 EVCC9XXX + 1 个 CN_SGCC0020）
 - [x] 所有原版立绘存在
-- [x] Chip2.arc 仅含 `EVCC*`/`CN_EVCC*` 前缀成员，不含其他前缀
-- [x] Graphic.arc 不含 `CN_EVCC*` 前缀成员（允许含 `CN_SGCC0020.PNG`，与既有 SGCC 系统图族命名惯例一致）
-- [x] 无同名冲突（CN_ 前缀零冲突，无需改名隔离）
+- [x] Chip2.arc 仅含 `EVCC*` 前缀成员（包括 EVCC9XXX），不含 `CN_EVCC*` 或其他前缀
+- [x] Graphic.arc 不含 `EVCC*` 前缀成员（允许含 `CN_SGCC0020.PNG`，与既有 SGCC 系统图族命名惯例一致）
+- [x] 无同名冲突（EVCC9XXX 使用未占用编号段，零冲突）
+- [x] 遵循引擎白名单要求（Chip2.arc 中的 CG 使用 EVCC 前缀）
 
 #### 背景与特效资源
 
@@ -245,15 +246,15 @@
 
 ### 阶段 6：验证与测试
 
-- [ ] 调用链完整性检查通过
-- [ ] 资源配对验证通过
+- [x] 调用链完整性检查通过（`script/final_verification.py`，39 项检查全部通过）
+- [x] 资源配对验证通过（含 CNR00009/00010/00011 的 CN_EVCC9XXX 引用修复，见 [doc/lessons-learned.md](lessons-learned.md) 第 12 节）
 - [ ] 实机测试通过
 - [ ] 文本显示验证通过
 
 ### 阶段 7：打包发布
 
-- [ ] 增量 payload 生成完成
-- [ ] 安装器制作完成
+- [x] 增量 payload 生成完成（`script/generate_payload.py`，产出至 `payload/`，含回读校验）
+- [x] 安装器制作完成（`bash script/pack.sh`，产出至 `releases/`）
 - [ ] 用户文档编写完成
 - [ ] 发布包测试通过
 

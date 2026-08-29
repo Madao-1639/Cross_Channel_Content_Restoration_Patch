@@ -4,12 +4,12 @@ script/build_patch.py
 
 backup/
 test_save_files/*.png
-*.backup
+*.backup*
 
 payload/*
 !payload/metadata.json
 releases
-build
+build/
 *.spec
 
 *.local.*

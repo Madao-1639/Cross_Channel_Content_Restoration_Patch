@@ -24,7 +24,23 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 ### 事件 CG 命名规则
 
-**格式**：待分析（Steam 版 Graphic.arc 中未发现典型的事件 CG 命名模式，可能位于 Chip1/Chip2.arc）
+**格式**：`EVCC{编号}{变体}.PNG`
+
+**Steam 原版命名**：
+- 编号范围：0001-0118（非连续，如 EVCC0021A、EVCC0114B 等）
+- 变体后缀：A、B、C、D、E（可选）
+- 示例：`EVCC0021A.png`、`EVCC0114B.png`、`EVCC0202C.png`
+
+**H 场景补丁命名**：
+- 前缀：`EVCC`（必须使用此前缀，引擎存在白名单机制）
+- 编号：**9000-9035**（避免与原版冲突）
+- 变体后缀：保留原始后缀（A/B/C）
+- 示例：`EVCC9000.PNG`（对应原 CN_EVCC0002）、`EVCC9001B.PNG`（对应原 CN_EVCC0002B）
+
+**命名白名单机制**：
+- Steam 引擎对 Chip2.arc 中的事件 CG 实施前缀白名单，只加载 `EVCC` 开头的文件
+- 使用其他前缀（如 `CN_EVCC`）的文件会被引擎静默忽略（不报错，但不加载）
+- 详见 [lessons-learned.md](lessons-learned.md) 第 9 节
 
 **背景资源**（Chip1.arc 中）：
 - `BGCC{编号}{变体}.png` - 背景图片
@@ -46,19 +62,21 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 |---------|---------|------|---------|
 | **Graphic.arc** | 立绘图层资源 | PNA | `T{角色代码}{分类}{编号}{变体}.pna` |
 | **Chip1.arc** | 背景图片 | PNG | `BGCC*.png` |
-| **Chip2.arc** | 事件 CG | PNG | `EVCC*.png`、`CN_EVCC*.png` |
+| **Chip2.arc** | 事件 CG | PNG | `EVCC*.png`（包括 `EVCC9XXX` 补丁 CG） |
 
 ### 与 Res 303 的差异
 
 **Res 303 的做法**：
 - 将全部 37 个新增 CN_* 资源（含 CN_EVCC*.PNG 与 CN_SGCC0020.PNG）都堆进 Graphic.arc
 - 违反了资源分类规则（事件 CG 混入立绘存储区）
+- 使用 `CN_EVCC` 前缀，但因引擎白名单机制导致 CG 无法加载
 
 **本项目的做法**：
-- ✅ 将 36 个 H 场景事件 CG（CN_EVCC*.PNG）放入 **Chip2.arc**
+- ✅ 将 36 个 H 场景事件 CG（**EVCC9XXX.PNG**）放入 **Chip2.arc**
+- ✅ 遵循引擎白名单要求，使用 `EVCC` 前缀 + 9000-9035 编号段
 - ⚠️ **例外**：`CN_SGCC0020.PNG` 放入 **Graphic.arc**，不放入 Chip2.arc
   - 原因：Steam 原版 Graphic.arc 本身已混有 92 个 `SGCC*.png` 系统图（并非"仅存 PNA"），`CN_SGCC0020.PNG` 延续同一 SGCC 命名族，归入 Graphic.arc 与既有惯例一致
-  - 因此 Graphic.arc 的验收标准是"不含 CN_EVCC*"，而不是"不含任何 CN_ 前缀"
+  - 因此 Graphic.arc 的验收标准是"不含 EVCC*"，而不是"不含任何 CN_ 前缀"
 - ✅ 保持 Chip1.arc 仅存储背景 PNG（本次无新增）
 
 ### 实施原则
@@ -73,18 +91,18 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 3. **事件 CG → Chip2.arc**
    - 全部 EVCC*.png 事件 CG
-   - **36 个 CN_EVCC*.png H 场景 CG**（不含 CN_SGCC0020.PNG）
+   - **36 个 EVCC9XXX.PNG H 场景 CG**（编号 9000-9035，不含 CN_SGCC0020.PNG）
 
 ### 已备份的 Steam 原文件
 
 - ✅ `backup/Graphic.arc` - 立绘 + 系统图资源（715 个成员）
 - ✅ `backup/Chip1.arc` - 背景图片（140 个成员）
-- ✅ `backup/Chip2.arc` - 事件 CG（199 个成员）
+- ✅ `backup/Chip2.arc` - 事件 CG（199 个成员，EVCC 前缀）
 
 ### 实施结果（asset/ 输出）
 
 - `asset/Graphic.arc`：716 个成员（715 + CN_SGCC0020.PNG）
-- `asset/Chip2.arc`：235 个成员（199 + 36 个 CN_EVCC*.PNG）
+- `asset/Chip2.arc`：235 个成员（199 + 36 个 EVCC9XXX.PNG）
 - `asset/Chip1.arc`：未生成（内容与 Steam 原版一致，安装器保留玩家原文件）
 
 ## 核心机制：图层 ID 是纯位置量

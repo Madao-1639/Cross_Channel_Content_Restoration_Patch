@@ -4,35 +4,37 @@
 
 ### 1. 原版 H 场景 CG（PNG 图片资源）
 
-**已确认（已实施，见 `script/build_patch.py`）**：
+**已确认（已实施，见 `script/build_patch.py` 和 `script/rename_cn_evcc_to_evcc9xxx.py`）**：
 
 | 资源类型 | 数量 | 命名规则 | 存储位置（本项目） |
 |---------|------|---------|------------------|
-| H 场景事件 CG | 36 个 PNG | `CN_EVCC*` 前缀 | **Chip2.arc** |
+| H 场景事件 CG | 36 个 PNG | `EVCC9XXX` 前缀 | **Chip2.arc** |
 | H 场景系统图 | 1 个 PNG | `CN_SGCC0020` | **Graphic.arc**（例外，见下） |
 | Steam 保留 CG | 保持原样 | `EVCC*` | Chip2.arc（不改动） |
 | 背景图片 | 保持原样 | `BGCC*` | Chip1.arc（不改动） |
 | 立绘资源 | 保持原样 | `T{角色}*` | Graphic.arc（不改动） |
 
 **关键发现**：
-- ✅ **零资源冲突**：使用 `CN_` 前缀，与 Steam 资源无同名冲突
-- ✅ **无需 ORG_ 前缀**：可直接复用 Res 303 的资源命名
+- ✅ **引擎白名单机制**：Chip2.arc 只加载 `EVCC` 前缀的 CG，其他前缀被静默忽略
+- ✅ **编号段隔离**：使用 EVCC9000-9035 编号段，避免与原版 EVCC0001-0118 冲突
+- ✅ **零资源冲突**：9XXX 编号段未被 Steam 原版占用
 - ✅ **使用 PNG 格式**：H 场景不使用 PNA 图层资源，全部使用 PNG
 
 **与 Res 303 的差异**：
 - ⚠️ Res 303 将全部 37 个新增 CN_* 资源都放入 Graphic.arc（违反资源分类规则）
-- ✅ 本项目将 36 个 CN_EVCC*.PNG 放入 **Chip2.arc**（遵守资源分类规则）
+- ⚠️ Res 303 使用 `CN_EVCC` 前缀，违反引擎白名单要求，导致 CG 无法加载
+- ✅ 本项目将 36 个 EVCC9XXX.PNG 放入 **Chip2.arc**（遵守资源分类规则和白名单要求）
 - ⚠️ 例外：`CN_SGCC0020.PNG` 放入 **Graphic.arc**（Steam 原版 Graphic.arc 本身混有 92 个 SGCC* 系统图，此资源延续该命名族）
 
 #### 新增资源列表（部分示例）
 
 **事件 CG（存储位置：Chip2.arc，共 36 个）**：
-- `CN_EVCC0002.PNG`、`CN_EVCC0002B.PNG`
-- `CN_EVCC0012.PNG`、`CN_EVCC0013.PNG`、`CN_EVCC0013A.PNG`
-- `CN_EVCC0014.PNG`、`CN_EVCC0014A.PNG`、`CN_EVCC0014B.PNG`
-- `CN_EVCC0015.PNG`、`CN_EVCC0015A.PNG`
-- `CN_EVCC0017B.PNG`、`CN_EVCC0027B.PNG`
-- 等共 36 个
+- `EVCC9000.PNG`（原 CN_EVCC0002）、`EVCC9001B.PNG`（原 CN_EVCC0002B）
+- `EVCC9002.PNG`（原 CN_EVCC0012）、`EVCC9003.PNG`（原 CN_EVCC0013）、`EVCC9004A.PNG`（原 CN_EVCC0013A）
+- `EVCC9005.PNG`（原 CN_EVCC0014）、`EVCC9006A.PNG`（原 CN_EVCC0014A）、`EVCC9007B.PNG`（原 CN_EVCC0014B）
+- `EVCC9008.PNG`（原 CN_EVCC0015）、`EVCC9009A.PNG`（原 CN_EVCC0015A）
+- `EVCC9010B.PNG`（原 CN_EVCC0017B）、`EVCC9018B.PNG`（原 CN_EVCC0027B）
+- 等共 36 个（编号范围：EVCC9000-EVCC9035）
 
 **系统图（存储位置：Graphic.arc，1 个）**：
 - `CN_SGCC0020.PNG`
@@ -215,18 +217,10 @@ Steam资源    ORG_*资源    Steam资源
 | 分支复杂度 | 高 | Res 303 已处理 | ✅ 已解决 |
 | 资源冲突 | 中 | 零冲突 | ✅ 无风险 |
 | LNG 格式 | 中 | 可直接复用 | ✅ 无风险 |
-| 原版资源获取 | 低 | 完全依赖 Res 303 | ✅ 可控 |
+| 原版资源获取 | 低 | 已确认原版引擎（CROSSCHANNEL.exe）与 Steam 版（AdvHD.exe）不兼容，无法直接提取资源；完全依赖 Res 303 | ✅ 已解决（见 [doc/lessons-learned.md](lessons-learned.md) 第 11 节） |
 
-### 依赖风险
-
-1. **Res 303 授权**
-   - 使用 Res 303 的资源可能有版权问题
-   - 需要考虑授权和引用方式
-   - 建议：标注来源并致谢
-
-2. **Res 303 可用性**
-   - 如果 Res 303 不可用，需重新获取原版资源
-   - 备份方案：寻找原版游戏资源
+- 如果 Res 303 不可用，暂无法从原版游戏本体直接补入替代资源（引擎不兼容，见 [doc/lessons-learned.md](lessons-learned.md) 第 11 节）
+- 已获取的原版游戏本体仅可用于匹配资源、验证场景编号，不能替代 Res 303 作为资源来源
 
 ## 里程碑
 
