@@ -5,12 +5,21 @@ Fixed path convention:
   - backup/   = Steam original baseline (used to compute the delta)
   - payload/  = output incremental payload consumed by tool/install.py
 
-For each archive, every backup member is classified against the asset
-version (keep / modified / deleted); members present only in asset are
-appended as added. This ordered list — ordered by the *Steam original
-file*, with additions appended — is written to METADATA.json so the
-installer can reconstruct the exact target archive from
+For each archive, **every asset member** is classified against the backup
+version (added / modified / keep), and the resulting list is written to
+METADATA.json **in the asset file's own member order**; backup-only
+members are appended as `deleted` (the installer skips those, so their
+position does not matter). The installer reconstructs the archive as
 (player's original file) + (payload patch archive) + (metadata).
+
+Ordering by the **asset** file — rather than by the Steam original with
+additions appended — is what makes the replay byte-exact: `merge_arc`
+re-orders members according to this list. `Voice.arc` is the reason it
+matters: its Steam original is already sorted by name, and
+`import_missing_voices.py` inserts new voices at their *sorted* position,
+so the asset order is NOT "original order + appended additions". Ordering
+METADATA by the original made the installer emit a different member order
+than the asset and fail its own checksum verification.
 
 Idempotent: safe to re-run; payload/ is cleared and rebuilt each time.
 """
@@ -54,8 +63,9 @@ def build_archive_delta(asset_path, backup_path):
     """Classify every member and build the added/modified delta.
 
     Returns (delta_members, members_with_type, stats).
-    members_with_type is ordered by the Steam original (backup) file,
-    with asset-only members appended in their asset order.
+    members_with_type follows the **asset file's own member order**
+    (backup-only members appended as `deleted`), so that the installer's
+    replay reproduces the asset byte-for-byte.
     """
     asset_members = arcbuild.read_raw(asset_path)
     asset_map = {n.decode('utf-16le'): (n, d) for n, d in asset_members}
@@ -70,17 +80,17 @@ def build_archive_delta(asset_path, backup_path):
 
     members_with_type = []
     seen = set()
-    for name in backup_order:
+    for name in asset_order:                 # ← 按 asset 的实际顺序
         seen.add(name)
-        if name not in asset_map:
-            members_with_type.append({'name': name, 'type': 'deleted'})
+        if name not in backup_map:
+            members_with_type.append({'name': name, 'type': 'added'})
         elif sha256(asset_map[name][1]) != sha256(backup_map[name]):
             members_with_type.append({'name': name, 'type': 'modified'})
         else:
             members_with_type.append({'name': name, 'type': 'keep'})
-    for name in asset_order:
+    for name in backup_order:                # 仅原档有的 → deleted（merge 时跳过，位置无关）
         if name not in seen:
-            members_with_type.append({'name': name, 'type': 'added'})
+            members_with_type.append({'name': name, 'type': 'deleted'})
 
     delta = [asset_map[m['name']] for m in members_with_type
              if m['type'] in ('added', 'modified')]
@@ -157,51 +167,61 @@ def generate():
     return metadata
 
 
-# def verify(metadata):
-#     """回读校验：用 backup + payload + metadata 重放安装流程，核对结果与 asset 字节一致。"""
-#     print()
-#     print('=' * 84)
-#     print('回读校验（模拟安装流程）')
-#     print('=' * 84)
+def verify(metadata):
+    """回读校验：用 backup + payload + metadata 重放安装流程，核对结果与 asset 字节一致。
 
-#     from tool.install import merge_arc  # noqa: E402
+    这是唯一能抓住「元数据成员顺序与 asset 不一致」的检查 —— 顺序错了，
+    重放出来的归档成员内容都对、但字节序不同，安装器的 checksum 校验必然失败。
+    """
+    print()
+    print('=' * 84)
+    print('回读校验（模拟安装流程）')
+    print('=' * 84)
 
-#     if VERIFY_TMP_DIR.exists():
-#         shutil.rmtree(VERIFY_TMP_DIR)
-#     VERIFY_TMP_DIR.mkdir(parents=True, exist_ok=True)
+    # tool/install.py 是 PyInstaller 的入口，里面写的是裸 `import arcbuild`
+    # （打包后 arcbuild.py 与 exe 同目录）。在项目内 import 它，需要把 tool/
+    # 一并放进 sys.path，否则 ModuleNotFoundError。
+    tool_dir = str(Path(__file__).parent.parent / 'tool')
+    if tool_dir not in sys.path:
+        sys.path.insert(0, tool_dir)
+    from tool.install import merge_arc  # noqa: E402
 
-#     metadata_path = PAYLOAD_DIR / 'METADATA.json'
-#     ok = True
+    if VERIFY_TMP_DIR.exists():
+        shutil.rmtree(VERIFY_TMP_DIR)
+    VERIFY_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-#     try:
-#         for asset_name, info in metadata.items():
-#             asset_path = ASSET_DIR / asset_name
-#             backup_path = BACKUP_DIR / asset_name
-#             patch_path = PAYLOAD_DIR / patch_name_for(asset_name)
-#             out_path = VERIFY_TMP_DIR / asset_name
+    metadata_path = PAYLOAD_DIR / 'METADATA.json'
+    ok = True
 
-#             merge_arc(backup_path, patch_path, out_path, metadata_path, asset_name)
+    try:
+        for asset_name, info in metadata.items():
+            backup_path = BACKUP_DIR / asset_name
+            patch_path = PAYLOAD_DIR / patch_name_for(asset_name)
+            out_path = VERIFY_TMP_DIR / asset_name
 
-#             actual = sha256(out_path.read_bytes())
-#             expected = info['checksum']
-#             if actual == expected:
-#                 print(f'  [OK] {asset_name}: 重放结果与 asset/ 一致')
-#             else:
-#                 ok = False
-#                 print(f'  [FAIL] {asset_name}: 重放结果不一致')
-#                 print(f'      期望: {expected}')
-#                 print(f'      实际: {actual}')
-#     finally:
-#         shutil.rmtree(VERIFY_TMP_DIR, ignore_errors=True)
+            merge_arc(backup_path, patch_path, out_path, metadata_path, asset_name)
 
-#     if ok:
-#         print()
-#         print('[OK] 所有归档回读校验通过')
-#     else:
-#         print()
-#         print('[FAIL] 回读校验失败，请检查上方输出')
+            actual = sha256(out_path.read_bytes())
+            expected = info['checksum']
+            if actual == expected:
+                print(f'  [OK] {asset_name}: 重放结果与 asset/ 一致')
+            else:
+                ok = False
+                print(f'  [FAIL] {asset_name}: 重放结果不一致')
+                print(f'      期望: {expected}')
+                print(f'      实际: {actual}')
+            out_path.unlink(missing_ok=True)
+    finally:
+        shutil.rmtree(VERIFY_TMP_DIR, ignore_errors=True)
 
-#     return ok
+    if ok:
+        print()
+        print('[OK] 所有归档回读校验通过')
+    else:
+        print()
+        print('[FAIL] 回读校验失败，请检查上方输出')
+
+    return ok
 
 
 def main():
@@ -211,8 +231,8 @@ def main():
     if not metadata:
         print('没有生成任何 payload，跳过校验')
         return 0
-    # if not verify(metadata):
-    #     return 1
+    if not verify(metadata):
+        return 1
     print()
     print('下一步: bash script/pack.sh')
     return 0

@@ -5,6 +5,7 @@ script/build_patch.py
 backup/
 test_save_files/*.png
 *.backup*
+*.before_*
 
 payload/*
 !payload/metadata.json

@@ -6,6 +6,7 @@ offsets even though read_arc (and the engine) treat the offset field as
 relative to 8 + table_size. Both bugs are avoided here by carrying raw name
 bytes and computing relative offsets.
 """
+import os
 import struct
 from pathlib import Path
 
@@ -37,7 +38,13 @@ def read_raw(path):
 
 
 def write_arc(members, output_path):
-    """Write members as [(name_bytes, data)]; offsets are relative."""
+    """Write members as [(name_bytes, data)]; offsets are relative.
+
+    先写同目录临时文件再 os.replace，而不是直接 open(target, 'wb')：
+      * 本机对已存在的大归档（如 340 MB 的 Chip2.arc）做 O_TRUNC 会偶发
+        `OSError: [Errno 22] Invalid argument`（读写、追加、替换都正常）；
+      * 顺带获得原子性——写入中断不会把原归档截断成半个文件。
+    """
     table_size = sum(8 + len(n) + 2 for n, _ in members)
     table = bytearray()
     rel = 0
@@ -48,12 +55,23 @@ def write_arc(members, output_path):
     if len(table) != table_size:
         raise AssertionError('table size mismatch')
 
-    with open(output_path, 'wb') as fh:
-        fh.write(HEADER.pack(len(members), table_size))
-        fh.write(table)
-        for _, data in members:
-            fh.write(data)
-    return Path(output_path).stat().st_size
+    output_path = Path(output_path)
+    tmp_path = output_path.with_name(output_path.name + '.tmp')
+    try:
+        with open(tmp_path, 'wb') as fh:
+            fh.write(HEADER.pack(len(members), table_size))
+            fh.write(table)
+            for _, data in members:
+                fh.write(data)
+        os.replace(tmp_path, output_path)
+    except BaseException:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        raise
+    return output_path.stat().st_size
 
 
 def verify(path, expect_count=None):
@@ -93,3 +111,34 @@ def normalize_arc_padding(path):
     members = read_raw(path)
     write_arc(members, path)
     return Path(path).stat().st_size
+
+
+def read_old_arc(path):
+    """原版（WillPlus）Rio.arc 的老式归档：类型表 + 21 字节定长条目。
+
+    结构（见 CROSS_CHANNEL_Original/unpack_method.md）：
+        [u32 类型数] n×[4B 类型名][u32 该类文件数][u32 条目区起始偏移]
+        条目: 13B 文件名 + u32 大小 + u32 绝对偏移
+    返回 [(name_bytes, data)]，名字形如 b'CCC0000'（不含扩展名，扩展名即类型名）。
+    """
+    blob = Path(path).read_bytes()
+    n_types, = struct.unpack_from('<I', blob, 0)
+    off = 4
+    types = []
+    for _ in range(n_types):
+        tname = blob[off:off + 4].rstrip(b'\x00')
+        cnt, start = struct.unpack_from('<II', blob, off + 4)
+        types.append((tname, cnt, start))
+        off += 12
+    out = []
+    for tname, cnt, start in types:
+        p = start
+        for _ in range(cnt):
+            name = blob[p:p + 13].split(b'\x00')[0]
+            size, foff = struct.unpack_from('<II', blob, p + 13)
+            data = blob[foff:foff + size]
+            if len(data) != size:
+                raise ValueError('truncated member %r in %s' % (name, path))
+            out.append((name + b'.' + tname, data))
+            p += 21
+    return out

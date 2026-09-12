@@ -14,22 +14,21 @@
 
 ### 技术挑战
 
-1. **同名冲突**：Steam 版和原版的同名 PNA 资源内容不同，layer_id 是纯位置量，不能直接替换
-2. **调用链混乱**：需要在 Steam 段落间穿插原版 H 段落，形成完整剧情
-3. **资源缺失**：Steam 删除 H 场景时一并删除了对应的 CG、语音、背景等资源
+1. **同名冲突**：Steam 版和原版的同名资源内容不同，layer_id 是纯位置量，不能直接替换
+2. **接缝错位**：Steam 删 H 场景时会在宿主脚本里留下整场**删节版**，直接追加还原内容会造成顺序倒置 + 局部重复
+3. **资源缺失**：Steam 删除 H 场景时一并删除了对应的 CG、语音等资源
 4. **语言障碍**：Steam 版只有英文，需要汉化全部文本
 5. **字体支持**：原版字体不支持汉字显示，需要替换字体文件
-6. **分支复杂**：游戏分支较多，调用链分析工作量大
+6. **脚本格式差异**：原版 WSC 与 Steam WS2 指令集不同，必须逐指令转换
 
 ### 解决方案
 
-- **命名空间隔离**：使用 ORG_ 前缀（或其他方案）隔离两套资源
-- **穿插式调用链**：在 Steam 脚本（*_en）间插入原版脚本（*_h）
-- **资源补全**：从原版或 Res 303 补丁补入 Steam 缺失的资源
-- **配对保证**：*_h ↔ ORG_*，*_en ↔ Steam 资源
-- **文本汉化**：使用 lng 文件机制替换英文文本为中文
-- **字体替换**：使用支持汉字的字体文件
-- **复用已有方案**：参考和复用 Res 303 补丁的技术方案
+- **资源隔离**：同名冲突一律改名（CG → `EVCC9XXX`，立绘 → `TCxx0nnn`→`TCxx1nnn`），禁止覆盖 Steam 原文件
+- **就地插入**：把源 WSC 的删除区间转换后插进调用脚本，不引入新脚本、不增加跳转
+- **资源补全**：从原版补入 Steam 缺失的资源（语音可直接复用 OGG）
+- **文本汉化**：lng 文件按池槽位替换文本，人名走 `NameTable.txt`
+- **字体替换**：复用支持汉字的字体文件
+- **参考但仍需验证**：Res 303 的方案可作参考，但其产物未经 Steam 版验证
 
 ## 工程约定
 
@@ -55,9 +54,9 @@
 - ✅ 忠实的文本汉化
 
 **原则**：
-1. **Res 303 的内容是参考基准** - 除非有明确证据表明 Res 303 错误，否则保持其设计
-2. **缺少的信息不应猜测补全** - 如果无法从原版或 Res 303 确认某个设计，保持现状
-3. **演出问题应报告而非修改** - 如果发现演出异常（如 BGM 消失），记录问题但不擅自修改，除非能从原版游戏确认正确行为
+1. **原版数据是权威信源** - 场景内容、资源引用、演出时序一律以**解密后的原版 WSC**为准；Res 303 的产物只作参考（其还原脚本未经 Steam 版验证，且存在格式错误）
+1. **缺少的信息不应猜测补全** - 如果无法从原版确认某个设计，保持现状并如实记录
+2. **演出问题应报告而非修改** - 如果发现演出异常（如 BGM 消失），记录问题但不擅自修改，除非能从原版游戏确认正确行为
 
 ### 1. 文档同步要求
 
@@ -116,19 +115,26 @@ tool/
 ├── __init__.py      （包标记）
 ├── arcbuild.py      （Arc 文件读写）
 ├── ws2.py           （WS2 脚本编解码）
-├── lng.py           （LNG 文件处理，待开发）
-└── （其他工具）
+├── ws2disasm.py     （WS2 反汇编）
+├── wsc.py           （原版 WSC 反汇编）
+├── wsc2ws2.py       （WSC→WS2 转换，含切片模式）
+├── lng.py           （LNG 编解码 + CCS 解析）
+├── luac53.py        （Lua 5.3 字节码解析）
+├── luadis53.py      （Lua 5.3 反汇编）
+└── install.py       （安装器入口）
 ```
 
 脚本通过 `from tool import arcbuild, ws2` 等方式导入，所有脚本使用相对于项目根的路径。从项目根执行：
 
 ```bash
-python script/analyze_call_chain.py     # 分析调用链
-python script/identify_conflicts.py     # 识别资源冲突
-python script/rewrite_scripts.py        # 改写脚本
-python script/generate_payload.py       # 生成增量补丁到 payload/
-python script/final_verification.py     # 全量验证
+python script/build_patch.py            # 按方案产出 asset/（完整文件）
+python script/generate_payload.py       # 生成增量补丁到 payload/（含回读校验）
+python script/final_verification.py     # 全量验收
+python script/audit_inline.py           # 就地插入回归守卫
+python script/verify_ws2_conventions.py # 转换器约定回归
 ```
+
+各脚本的职责见 `doc/technical-solutions.md`「工具链」。
 
 ### 4. 脚本开发规范
 
@@ -210,24 +216,23 @@ if pattern in decoded:
 ### 4. 命名规范
 
 **脚本命名**：
-- `*_en.ws2`：Steam 版英文脚本，引用 Steam 资源
-- `*_h.ws2`：原版 H 场景脚本，引用 ORG_* 资源
-- `*_he.ws2`：Steam 过审 H 场景脚本（如存在），引用 Steam 资源
+- `*_en.ws2`：Steam 版英文脚本。**本补丁不新增脚本名** —— 原版内容**就地插入**这 363 个脚本中的 12 个，不引入还原脚本、不增加跳转（见 `doc/call-chain.md`）
 
 **PNA 资源命名**：
 
 *立绘（角色标识+分类+编号+变体）*：
 - 格式：`T{角色代码}{分类}{编号}{变体}.pna`
-- 角色代码：CCT（透）、CCN（那奈）、MIS（美希）、BSK（剑）等
-- 示例：`TCCT1000.pna`（透的基础立绘）、`TCCN1100B.pna`（那奈的立绘 B 变体）
+- 角色代码：CMM（見里）、CYM（美希）、CSK（霧）、CKT（冬子）、CST（友貴）、CHY（曜子）、CCN（七香）、CSH（桜庭）、CDY（遊紗）、CSY（新川）等
+- 示例：`TCKT1002B.pna`（冬子的立绘 B 变体）
 
 *事件 CG*：
-- 格式：待分析（可能使用 PNG 格式，位于 Chip1/Chip2.arc）
-- 示例：`BGCC0000A.png`（背景图片）
+- 格式：`EVCC{编号}{变体}.PNG`，位于 `Chip2.arc`
+- 补丁新增的还原 CG **一律落在 `EVCC9XXX` 段**（引擎对 Chip2 实施 `EVCC` 前缀白名单，`CN_` 前缀会被静默忽略），编号按「基号 + 脚本引用顺序」分配
+- 对照用 `python script/renumber_evcc9xxx.py --check`
 
-*补丁资源*：
-- `ORG_TCCT1000.pna`：原版立绘（st* 槽）
-- 事件 CG 命名策略待确定（取决于 ev 槽对前缀的容忍度）
+*背景*：`BGCC*.png`，位于 `Chip1.arc`（本补丁不改动）
+
+详见 `doc/pna-resources.md`。
 
 **章节前缀**：
 - `CC0-CC6`：主要角色线（TOU/MIS/KIR/MIK/YOU/TOM/SAK）
@@ -239,17 +244,18 @@ if pattern in decoded:
 每次重大修改后必须执行：
 
 1. 运行 `final_verification.py` 全量验证
-2. 检查调用链完整性
-3. 验证资源配对正确性
-4. 验证 Arc 文件规范化（无 null padding）
-5. 测试关键场景功能
-6. 更新文档
+2. **流水线复跑必须 0 处改动** —— `build_patch.py` 与其各步（含 `realign_lng_to_ws2.py`）都是幂等的；复跑报出改动即说明某步破坏了自己的输入
+3. 检查调用链完整性
+4. 验证资源配对正确性
+5. 验证 Arc 文件规范化（无 null padding）
+6. 测试关键场景功能
+7. 更新文档
 
 **Arc 文件规范化检查**：
 - `arcbuild.verify()` 会检测表末尾的 null padding 并拒绝
 - 若发现 padding，运行 `arcbuild.normalize_arc_padding(path)` 清理
 - 规范化后哈希稳定，安装器校验通过
-- 详见 `doc/lessons-learned.md` 第 8 节
+- 详见 `doc/lessons-learned.md` §6
 
 ### 6. 备份策略
 
@@ -268,7 +274,7 @@ if pattern in decoded:
 
 **必须提交的文件**：
 - 所有 Python 脚本
-- 文档文件（README.md 和 doc/ 下所有文件）
+- 文档文件（`doc/` 下所有文件）
 - 配置文件
 - SHA256SUMS
 
@@ -299,7 +305,7 @@ if pattern in decoded:
 ## 技术栈
 
 - **语言**：Python（使用 mamba/conda 管理，优先使用 mamba）
-- **编码**：Shift-JIS（资源名）、UTF-8（文档）、待确认（lng 文件中文本）
+- **编码**：Shift-JIS（脚本内资源名与文本）、UTF-16LE + XOR 0x2C（lng）、UTF-8（文档）
 - **归档格式**：自定义 Arc 格式（UTF-16LE 文件名）
 - **脚本格式**：WS2 二进制格式（rot6 混淆）
 - **文本格式**：LNG 文件（文本替换机制）
@@ -309,16 +315,16 @@ if pattern in decoded:
 
 ## 参考文档
 
-- [README.md](README.md) - 项目概述和快速开始
 - [doc/file-formats.md](doc/file-formats.md) - 游戏文件格式规范（Arc/WS2/LNG/Script.arc）
 - [doc/pna-resources.md](doc/pna-resources.md) - PNA 资源机制与命名规则
 - [doc/localization.md](doc/localization.md) - 汉化方案（lng 文件、字体、系统界面）
-- [doc/call-chain.md](doc/call-chain.md) - 调用链组织与穿插式还原
-- [doc/restoration-targets.md](doc/restoration-targets.md) - 还原目标与里程碑
-- [doc/technical-solutions.md](doc/technical-solutions.md) - 技术方案与实施步骤
+- [doc/call-chain.md](doc/call-chain.md) - 调用链组织与就地插入接线
+- [doc/restoration-targets.md](doc/restoration-targets.md) - 还原目标与剩余工作
+- [doc/technical-solutions.md](doc/technical-solutions.md) - 技术方案与工具链
 - [doc/engine-mechanics.md](doc/engine-mechanics.md) - 引擎机制与逆向发现
 - [doc/lessons-learned.md](doc/lessons-learned.md) - 问题记录与经验教训
-- [doc/acceptance-criteria.md](doc/acceptance-criteria.md) - 验收标准与测试清单
+- [doc/acceptance-criteria.md](doc/acceptance-criteria.md) - 验收标准、回归与实机测试清单
+- [doc/wsc_to_ws2_conversion.md](doc/wsc_to_ws2_conversion.md) - WSC→WS2 指令集转换规则（含切片模式）
 
 ## 与 A Sky Full of Stars 项目的关系
 

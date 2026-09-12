@@ -33,18 +33,87 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 **H 场景补丁命名**：
 - 前缀：`EVCC`（必须使用此前缀，引擎存在白名单机制）
-- 编号：**9000-9035**（避免与原版冲突）
-- 变体后缀：保留原始后缀（A/B/C）
-- 示例：`EVCC9000.PNG`（对应原 CN_EVCC0002）、`EVCC9001B.PNG`（对应原 CN_EVCC0002B）
+- 编号规则：**一律使用 `EVCC9000` 起的编号段，并按「脚本引用顺序」分配**
+  （`script/renumber_evcc9xxx.py`）：按剧情顺序扫描脚本、同一脚本内按指令偏移递增，
+  **首次被引用的「基号」**拿 `9000`，其后依次 `9001`、`9002`……
+  **同一张 CG 的差分共用一个编号**（`EVCC9018`/`EVCC9018A`），只用变体字母区分。
+  这样"编号小的 CG 一定先被引用"，编号可读、可用脚本复核；37 个文件 → 19 个编号。
+- 变体后缀：保留原版后缀（A/B/C/D/E），重编号时只改数字段
+- 示例：`EVCC9000.PNG`（剧情中最先被引用的那张）、`EVCC9004.PNG`（并入的原版系统图）
+- 编号对照不单独维护：规则见本节，需要具体映射（原版 CG ↔ 本项目名 ↔ 引用它的脚本）时跑
+  `python script/renumber_evcc9xxx.py --check`（只打印、不写入）
 
 **命名白名单机制**：
 - Steam 引擎对 Chip2.arc 中的事件 CG 实施前缀白名单，只加载 `EVCC` 开头的文件
 - 使用其他前缀（如 `CN_EVCC`）的文件会被引擎静默忽略（不报错，但不加载）
-- 详见 [lessons-learned.md](lessons-learned.md) 第 9 节
+- 详见 [lessons-learned.md](lessons-learned.md) §12
 
 **背景资源**（Chip1.arc 中）：
 - `BGCC{编号}{变体}.png` - 背景图片
 - 示例：`BGCC0000A.png`、`BGCC2001.png`、`bgcc0000a.png`（注意大小写混用）
+
+## CG/背景资源引入决策流程（强制执行）
+
+**适用场景**：从原版提取任何 CG/背景/立绘资源，准备加入 Steam 版归档时，必须按以下流程处理，禁止跳过任何一步。
+
+### 决策树
+
+```
+需要引入资源 X.png（来自原版）
+  │
+  ├─ Step 1: 检索该资源属于哪个归档
+  │    ├─ 立绘（T*.pna）→ Graphic.arc
+  │    ├─ 背景（BGCC*.png）→ Chip1.arc
+  │    └─ 事件 CG（EVCC*.png）→ Chip2.arc
+  │    参考本文档「Arc 文件资源分类规则」一节，不得凭猜测判断归档位置
+  │
+  ├─ Step 2: 在对应的 Steam 版归档（backup/*.arc，即安装前的原始文件）中
+  │           大小写不敏感地检索同名文件
+  │    （引擎对文件名大小写不敏感，归档中同时存在大写/小写命名，
+  │      检索时必须对文件名统一转大写/小写后再比较，否则会产生假阴性）
+  │
+  ├─ Step 3a: 若 Steam 版归档中【不存在】同名文件
+  │    → 无冲突，直接使用原版文件名，加入对应的 asset/*.arc
+  │    → 示例：EVCC0002.png（Steam 版 Chip2.arc 中不存在）→ 直接加入 asset/Chip2.arc
+  │
+  ├─ Step 3b: 若 Steam 版归档中【存在】同名文件
+  │    → 计算两者的 SHA256 哈希并比较
+  │    │
+  │    ├─ 哈希相同（同一文件）
+  │    │    → 无需引入，直接在脚本中引用 Steam 版已有的同名资源
+  │    │    → 不得重复添加
+  │    │
+  │    └─ 哈希不同（同名但内容不同，即"同名冲突"）
+  │         → 必须使用命名空间隔离，禁止覆盖 Steam 版原文件
+  │         → 事件 CG：并入 `EVCC9XXX` 段，编号按脚本引用顺序分配
+  │           （见「事件 CG 命名规则」；对照用 `renumber_evcc9xxx.py --check`）
+  │         → 立绘：按 `TCxx0nnn` → `TCxx1nnn` 规则改名（见「同名冲突的处理」）
+  │         → 同步修改脚本中的资源引用为新文件名
+  │
+  └─ Step 4: 写入目标归档前，必须再次读回验证
+       （文件确实写入、大小写符合归档惯例、无重复条目、arcbuild.verify() 通过）
+```
+
+### 常见错误（已发生过，引以为戒）
+
+1. **未检索直接判定"文件缺失"**：只搜索了几个候选归档就下结论，实际文件存在于未检索到的归档或以不同大小写存在
+2. **大小写敏感检索导致假阴性**：Steam 版归档中文件名为 `evcc0001.png`（小写），检索时用 `EVCC0001.PNG`（大写）做精确匹配，误判为不存在
+3. **未做哈希比较直接判定"冲突"**：看到同名就假设内容不同并套用 9000 编号，实际两个版本完全一致，造成冗余
+4. **引入位置错误**：把事件 CG 加入 Graphic.arc（立绘专用归档），违反分类规则
+5. **同名冲突未隔离直接覆盖**：把原版文件用相同文件名写入 Steam 版归档，覆盖了 Steam 版自己的资源（可能内容不同，导致其他脚本显示错误）
+
+### 验证命令模板
+
+```python
+# Step 2: 大小写不敏感检索
+existing_files = {name.upper(): name for name, _ in arcbuild.read_raw('backup/Chip2.arc')}
+found = 'EVCC0002.PNG' in existing_files  # 统一转大写后比较
+
+# Step 3b: 哈希比较
+import hashlib
+def sha256(data): return hashlib.sha256(data).hexdigest()
+same_file = sha256(orig_data) == sha256(steam_data)
+```
 
 ### PNA Stem 长度
 
@@ -66,44 +135,23 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 ### 与 Res 303 的差异
 
-**Res 303 的做法**：
-- 将全部 37 个新增 CN_* 资源（含 CN_EVCC*.PNG 与 CN_SGCC0020.PNG）都堆进 Graphic.arc
-- 违反了资源分类规则（事件 CG 混入立绘存储区）
-- 使用 `CN_EVCC` 前缀，但因引擎白名单机制导致 CG 无法加载
+Res 303 把全部 37 个新增 `CN_*` 资源都堆进 **Graphic.arc**（事件 CG 混入立绘存储区），
+且用 `CN_EVCC` 前缀 —— 因引擎白名单导致 CG 全部加载不了。
 
-**本项目的做法**：
-- ✅ 将 36 个 H 场景事件 CG（**EVCC9XXX.PNG**）放入 **Chip2.arc**
-- ✅ 遵循引擎白名单要求，使用 `EVCC` 前缀 + 9000-9035 编号段
-- ⚠️ **例外**：`CN_SGCC0020.PNG` 放入 **Graphic.arc**，不放入 Chip2.arc
-  - 原因：Steam 原版 Graphic.arc 本身已混有 92 个 `SGCC*.png` 系统图（并非"仅存 PNA"），`CN_SGCC0020.PNG` 延续同一 SGCC 命名族，归入 Graphic.arc 与既有惯例一致
-  - 因此 Graphic.arc 的验收标准是"不含 EVCC*"，而不是"不含任何 CN_ 前缀"
-- ✅ 保持 Chip1.arc 仅存储背景 PNG（本次无新增）
+本项目：
 
-### 实施原则
-
-1. **立绘 → Graphic.arc**
-   - 全部 PNA 格式的立绘资源
-   - 包括 Steam 原有立绘 + SGCC 系统图族（含新增 CN_SGCC0020.PNG）
-
-2. **背景 → Chip1.arc**
-   - 全部 BGCC*.png 背景图片
-   - 保持 Steam 原样，本次无新增
-
-3. **事件 CG → Chip2.arc**
-   - 全部 EVCC*.png 事件 CG
-   - **36 个 EVCC9XXX.PNG H 场景 CG**（编号 9000-9035，不含 CN_SGCC0020.PNG）
-
-### 已备份的 Steam 原文件
-
-- ✅ `backup/Graphic.arc` - 立绘 + 系统图资源（715 个成员）
-- ✅ `backup/Chip1.arc` - 背景图片（140 个成员）
-- ✅ `backup/Chip2.arc` - 事件 CG（199 个成员，EVCC 前缀）
+- **37 个 CG 一律 `EVCC9XXX.PNG` 放进 `Chip2.arc`** —— 含 36 个 H 场景 CG + 1 个并入的
+  原版系统图 `SGCC0020`（原版 `CCB2101.WSC` 以 `0x48`/`0x46` 引用它，按事件 CG 处理，
+  现为 `EVCC9004.PNG`），19 个编号 `EVCC9000`–`EVCC9018`（差分共用编号）。
+- **立绘/背景本次无新增**：`Graphic.arc` 与 `Chip1.arc` 保持 Steam 原样。
 
 ### 实施结果（asset/ 输出）
 
-- `asset/Graphic.arc`：716 个成员（715 + CN_SGCC0020.PNG）
-- `asset/Chip2.arc`：235 个成员（199 + 36 个 EVCC9XXX.PNG）
-- `asset/Chip1.arc`：未生成（内容与 Steam 原版一致，安装器保留玩家原文件）
+- `asset/Chip2.arc`：236 个成员（199 + 37 个 EVCC9XXX.PNG）
+- `asset/Graphic.arc`：**不生成** —— 与 Steam 原档逐字节相同（715 个成员），
+  安装器保留玩家原文件（与 `Chip1.arc` 同样处理）
+- Steam 原文件备份在 `backup/`：`Graphic.arc` 715 成员、`Chip1.arc` 140 成员、
+  `Chip2.arc` 199 成员
 
 ## 核心机制：图层 ID 是纯位置量
 
@@ -118,17 +166,14 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 ### 脚本中的引用
 
-```
-0x34 显示指令格式：
-\x34 <slot(2-12字节)> \x00 <文件名>.PNA \x00 \x01 \x01 ...
-```
-
-其中 `<slot>` 的最后 2 字节是 u16 图层 id，取值范围 `[0, layer_count)`。
+显示指令 `0x34` 的槽名是**一个完整的 NUL 串**（`st01`…`st12`，见
+[file-formats.md](file-formats.md)「0x34」）。**图层 id** 是 u16 小端序整数，
+取值必须落在 `[0, layer_count)`。
 
 ### 合法性判断
 
 - ✅ **正确**：请求 id < layer_count（位置区间）
-- ❌ **错误**：用 PNAP 元数据表中的 layer_id 字段集合
+- ❌ **错误**：用 PNAP 元数据表中的 layer_id 字段集合（那是另一套编号）
 
 ### 关键结论
 
@@ -140,35 +185,27 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 **因此**：如果需要同时使用两个版本的同名 PNA，必须使用命名空间隔离（改名）。
 
-## 命名空间隔离规则
+## 同名冲突的处理（本项目实际规则）
 
-### 基本原则
+引擎对同名 PNA/PNG 的容忍度为零：同名的两个版本 layer 数可能不同、layer 内容与位置完全
+不同，脚本里引用的 layer_id 只对特定版本成立（见上文「图层 ID 是纯位置量」）。
+所以**同名冲突必须隔离**，且**禁止覆盖 Steam 原文件**。
 
-当原版和 Steam 版脚本引用了同名的 PNA，且两者内容不同时：
-1. 必须为其中一个版本的 PNA 重命名（通常是原版添加前缀）
-2. 同步修改相应脚本中的资源引用
+**本项目没有采用 `ORG_` 前缀方案**，而是按资源类别各有一套重命名规则：
 
-### 槽位特性
+| 类别 | 规则 | 落到哪 |
+|---|---|---|
+| 事件 CG | 原版基号 → `EVCC9XXX`（内容哈希反查，变体字母保留） | `Chip2.arc` |
+| 立绘 | `TC{角色}0{nnn}{变体}` → `TC{角色}1{nnn}{变体}` | `Graphic.arc` |
+| 背景 / 蒙版 | 原名（Steam 侧未重编） | `Chip1.arc` |
+| 语音 | 原名（Steam 侧未重编） | `Voice.arc` |
 
-CROSS†CHANNEL 的槽位设计：
+立绘规则的两点依据：两版立绘被重编过（原版 `TCMM0002C` ↔ Steam `TCMM1001C`），
+且原版是 `.PNG`+`.MSK`、Steam 是 `.PNA`。还原区间的 46 个立绘引用里按此规则
+**两侧都存在 44 个**，余下 2 个非立绘（`SGCC0020` 并入 `EVCC9004`、`EFCC0003` 保持原名）。
 
-| 槽位 | 用途 | 命名限制 |
-|------|------|----------|
-| `ev` | 事件 CG | 待测试（可能无严格限制） |
-| `st01`-`st12` | 立绘 | 无严格限制，8-10 字节可用 |
-| `bg01`-`bg03` | 背景 | 待测试 |
-
-**注意**：CROSS†CHANNEL 只有单个 `ev` 槽，与 A Sky Full of Stars 的 `ev01/ev02` 双槽设计不同。
-
-### 命名空间隔离实例
-
-**立绘（st* 槽）**：
-- Steam 资源：`TCCT1000.pna`
-- 原版资源（如需隔离）：`ORG_TCCT1000.pna`
-
-**配对规则**：
-- 原版 H 场景脚本 → 引用 `ORG_*` 前缀资源
-- Steam 版脚本 → 引用 Steam 裸名资源
+实现：`script/build_rename_map.py` —— **规则解不掉的条目单独列出，不许静默跳过**。
+详见 [call-chain.md](call-chain.md)「资源配对保证」。
 
 ## PNA 内部结构
 
@@ -206,22 +243,3 @@ PNA 的图层按**动画相位分组**，通过 `u0`（unknown_0）字段标记�
 | `st02` | 26 | 8-9 字节 |
 
 总计：约 7668 次 PNA 显示指令（0x34）。
-
-## 补丁资源命名策略
-
-### 原版 H 场景资源
-
-**立绘**（进 st* 槽）：
-- 使用 `ORG_` 前缀做命名空间隔离
-- 示例：`ORG_TCCT1000.pna`、`ORG_TCCN1100.pna`
-
-**事件 CG**（进 ev 槽）：
-- 命名策略待确定（需实测 ev 槽对前缀的容忍度）
-- 若 ev 槽无严格限制，可使用 `ORG_` 前缀
-- 若有限制，需使用其他命名策略（如数字段位）
-
-### 资源配对保证
-
-- 原版 H 场景脚本 ↔ `ORG_*` 前缀资源
-- Steam 版脚本（`*_en.ws2`） ↔ Steam 裸名资源
-- 每个 ORG_* 资源必须被至少 1 个原版脚本引用（无冗余）
