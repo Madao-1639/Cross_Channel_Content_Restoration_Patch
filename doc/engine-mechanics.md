@@ -297,7 +297,7 @@ Steam 的立绘 PNA **不是**单层图，但**也不是**多张叠加的复合�
 * `tool/wsc2ws2.py` 的 `PORTRAIT_ATTRS_BY_LAYERS` 按**记录数**选形态，记录数由
   `ConvertOptions.pna_layers` 传入（`script/splice_restoration.py` 从运行时 `Graphic.arc` 现读）；
 * 记录数未知时按 4 条形态发射**并逐条告警**（不静默）；
-* `script/verify_ws2_conventions.py` 第 9 项回归守卫：产物里每条 `39` 的帧号都校验 `< 记录数`。
+* `script/audit/verify_ws2_conventions.py` 第 9 项回归守卫：产物里每条 `39` 的帧号都校验 `< 记录数`。
 
 ### 0x46 MoveBackground：位置在这里 ★
 

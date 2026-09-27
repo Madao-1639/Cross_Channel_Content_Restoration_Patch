@@ -1,40 +1,35 @@
-"""构建「就地插入」所需的资源重命名表（原版名 -> 本补丁可用的名字）。
+# -*- coding: utf-8 -*-
+"""「就地插入」所需的资源重命名表（原版名 -> 本补丁可用的名字）。
 
-1. **事件 CG**：**直接读 `resource/cg_map.json`**（由 `script/build_cg_map.py` 生成），
-   不再在此推导。表里**只含改过名的**条目（原版名 -> `EVCC9XXX`）；查不到即保持原名
-   （同名且内容一致，用 Steam 侧的文件即可）。识别方式=像素而非 sha：Res303 出货的图
+**库**：被 `script/splice_restoration.py`（插入段改名）、`script/build_original_stage.py`
+（随行演出改名）、`script/import_missing_voices.py`（找「原版有、Steam 没有」的录音）调用。
+原为 `script/build_rename_map.py`，兼作独立 CLI；CLI 已被流水线自带的打印取代，已删除。
+
+## 映射规则
+
+1. **事件 CG**：直接读 `resource/cg_map.json`（由 `script/build_cg_map.py` 生成），
+   不在此推导。表里**只含改过名的**（原版名 -> `EVCC9XXX`）；查不到即保持原名
+   （同名且内容一致，用 Steam 侧的文件即可）。识别方式=**像素**而非 sha：上游出货的图
    被 LANCZOS 放大并重编码过，同一张画的 sha 必然不同。
    还原范围（剧情顺序 + 切片区间）读 `resource/scene_slices.json`，与 splice 共用一份。
 
 2. **立绘**：原版 `TC{角色}0{nnn}{变体}` -> Steam `TC{角色}1{nnn}{变体}`。
-   立绘名三个维度：**档位**（0 最远/1 标准/2 最近，数字越大越放大）、
-   **姿势编号**（动作/表情，`TCMM0002C` ↔ `TCMM1002C` 是同姿势同色调、只差缩放）、
-   **变体**（色调，构图不变）。原版只用档位 0；Steam 三档都有，但档位 0 只有 41 个文件
-   （本表引用的 38 个立绘里只有 19 个有同档），**混档会让同框角色大小不一致**，
-   故统一取档位 1 —— 全覆盖且同框一致，代价是构图比原版略近。
-   另：原版是 `.PNG`+`.MSK`、Steam 是 `.PNA`。
+   立绘名三个维度：**档位**（0 最远 / 1 标准 / 2 最近）、**姿势编号**、**变体**（色调）。
+   原版只用档位 0；Steam 三档都有，但档位 0 只有 41 个文件（本表引用的 38 个立绘里只有
+   19 个有同档），**混档会让同框角色大小不一致**，故统一取档位 1 —— 全覆盖且同框一致，
+   代价是构图比原版略近。另：原版是 `.PNG`+`.MSK`、Steam 是 `.PNA`。
 
 每个映射都要在归档里**核对目标资源真实存在**；解不掉的条目单独列出，不静默跳过。
-
-用法（项目根目录）：
-    python script/build_rename_map.py            # 打印表 + 覆盖度
-    python script/build_rename_map.py --json out.json
 """
-import argparse
-import io
 import json
 import re
-import sys
 from pathlib import Path
 
+from tool import arcbuild, wsc
+
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
-
-from tool import arcbuild, wsc  # noqa: E402
-
 CG_MAP_PATH = ROOT / 'resource' / 'cg_map.json'
 SLICES_PATH = ROOT / 'resource' / 'scene_slices.json'
-CG_RE = re.compile(r'^(EVCC\d{4})([A-Z]?)$')
 # 立绘：`TC{角色2}0{档位?}{编号3}{变体≤2}` —— 变体可有两字母（如 `TCYM0000AA`/`AS`）
 TC_RE = re.compile(r'^(TC[A-Z]{2})0(\d{3})([A-Z]{0,2})$')
 ARCHIVES = ['asset/Chip1.arc', 'asset/Chip2.arc', 'asset/Graphic.arc', 'asset/Voice.arc',
@@ -141,43 +136,3 @@ def build():
         else:
             unresolved.append('%s%s%s' % (n, ' -> %s' % new if new else '', '（缺 %s）' % target))
     return rename, unresolved, unchanged, cgmap, conflicts
-
-
-def main():
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--json', default=None, help='把映射表写到指定 JSON')
-    args = ap.parse_args()
-
-    rename, unresolved, unchanged, cgmap, conflicts = build()
-    print('事件 CG：读 resource/cg_map.json，本补丁有 EVCC9XXX 副本的 %d 个'
-          % len(cgmap))
-    print('  编号区间 EVCC%04d..EVCC%04d'
-          % (min(int(v[4:8]) for v in cgmap.values()),
-             max(int(v[4:8]) for v in cgmap.values())))
-    if conflicts:
-        print('  ⚠ %s' % conflicts)
-
-    print()
-    print('重命名条目 %d 条：' % len(rename))
-    for k in sorted(rename):
-        print('   %-14s -> %s' % (k, rename[k]))
-    print()
-    print('无需改名且已存在 %d 个' % len(unchanged))
-    print('**找不到出处** %d 个:' % len(unresolved))
-    for u in sorted(unresolved)[:40]:
-        print('   ', u)
-    if len(unresolved) > 40:
-        print('    ... 另 %d 个' % (len(unresolved) - 40))
-
-    if args.json:
-        Path(args.json).write_text(json.dumps(
-            {'rename': rename, 'unresolved': sorted(unresolved)}, ensure_ascii=False, indent=1),
-            encoding='utf-8')
-        print('\n已写出 %s' % args.json)
-    return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

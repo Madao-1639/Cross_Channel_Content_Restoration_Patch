@@ -23,11 +23,10 @@ from pathlib import Path
 
 ROOT = Path('.').resolve()
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / 'script'))
 sys.stdout.reconfigure(encoding='utf-8')
 from tool import arcbuild, ws2, ws2disasm, lng as lngmod, wsc   # noqa: E402
 from tool.wsc2ws2 import decrypt_wsc                            # noqa: E402
-import apply_text_map as ATM                                     # noqa: E402
+from tool import textplan as TP                                  # noqa: E402
 
 WSC = ROOT / 'resource' / 'corpus' / 'wsc'
 MEM = {n.decode('utf-16-le').upper(): d for n, d in arcbuild.read_raw(ROOT / 'asset' / 'Rio.arc')}
@@ -78,7 +77,7 @@ def oname(b):
 
 # 产物侧：录音 → 绑定的格（含该格中文）；录音 → 时长
 bind = collections.defaultdict(list)
-for stem in sorted(ATM.TM):
+for stem in sorted(TP.TM):
     L = lngmod.parse_lng(MEM.get(stem + '.LNG', b''))
     vo, k = None, -1
     for i in ws2disasm.disassemble(ws2.decode(MEM[stem + '.WS2'])):
@@ -128,12 +127,13 @@ def ov_names(stem):
 
 def main():
     plan, stat = {}, collections.Counter()
-    for stem, sc in sorted(ATM.TM.items()):
+    for stem, sc in sorted(TP.TM.items()):
         ovn = ov_names(sc['ccs'])
         if not ovn:
             continue
-        texts, _ins, _dr, _nm, rows, _st = ATM.expand_script(sc)
-        cv = ATM.cur_voice(ws2disasm.disassemble(ws2.decode(MEM[stem + '.WS2'])), frozenset())
+        ins = ws2disasm.disassemble(ws2.decode(MEM[stem + '.WS2']))
+        texts, _ins, _dr, _nm, rows, _st = TP.expand_script(sc, TP.en_of_from(ins))
+        cv = TP.cur_voice(ins, frozenset())
         rc = collections.Counter(rows.values())
         ent = {}
         for k, r in sorted(rows.items()):

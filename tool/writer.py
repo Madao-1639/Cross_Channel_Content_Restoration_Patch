@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-"""把 Steam 删掉、原版有、且**当前没有任何槽位显示**的原版对话，插回原位。
+"""结构写盘器：把「还原插入格」「删格」「名字框同步」「借用语音删除」落到 ws2 字节上。
 
-清单来自 `tmp/textfix/orphan-insert.json`（分析产出：每段给出源 CCS 的行范围、
-插入点 `after_k`、条数 `n`）。
-
-    python script/insert_deleted_dialogues.py            # 只诊断
-    python script/insert_deleted_dialogues.py --write    # 写入（备份 + 回读校验）
+**唯一调用方**是 `script/apply_text_map.py`（经 `tool.textplan` 算出计划后交给 `rebuild`）。
+它原为 `script/insert_deleted_dialogues.py`，兼作独立脚本；那个入口早已废弃
+（只写结构、不含表驱动的 lng 与名字框同步，单跑会把 asset 写回旧口径且不报错）—— 已删除。
 
 ## 插什么
 
@@ -15,55 +13,33 @@
     14 <u16 id> 00 00 "char" 00 <text> 00 00       DisplayMessage
 
 **不搬任何演出指令**（立绘 / BGM / 渐变 / CG 一律不插）——「不新增原版不存在的演出」
-是项目铁律，而这些行在原版当时是否伴随演出，此刻无法确认，保持现状最安全。
-`text` 取**源 WSC 的日文原文**（与 12 个宿主插入段的做法一致：屏幕上的中文由 lng 覆写）。
+是项目铁律。`text` 取**源 WSC 的日文原文**（屏幕上的中文由 lng 覆写）。
 
 ## 池序号：重算，不顺延
 
 `14` 的 `id` 与 `0f` 各条目的 `strid` 是**同一个「文件出现序」字符串池**
-（`doc/wsc_to_ws2_conversion.md` §3.2）。实测**全库 363 个脚本的 `id`/`strid` 都严格
-等于「按出现序分配的池序号」**，所以在插入后**整体重算**即可 —— 比「找插入点之后的
-逐条 +n」简单得多，也不会漏掉 `0f` 里夹着的条目。
+（见 [wsc_to_ws2_conversion.md](../doc/wsc_to_ws2_conversion.md)）。实测全库 363 个脚本都
+严格等于「按出现序分配的池序号」，所以插入后**整体重算**即可 —— 比逐条 `+n` 简单，
+也不会漏掉 `0f` 夹着的条目。
 
-`01`（绝对偏移）在本批这些脚本里**实测全部为 0**，所以只有序号要动。
+## 公开 API
 
-## lng 同步
-
-lng 是**位置对应**的（第 N 条 lng ↔ 脚本里第 N 个占位，`14` 与 `0f` 各条目都占位）。
-所以在插入点对应的 lng 位置插入 n 条中文即可，后面的自动顺延。
+- `rebuild(...)` —— 主入口：在 `plan` 指定的格后插 `15+14`、按 `drops` 删格、
+  按 `vc` 同步名字框、按 `del2e`/`plan2e` 增删语音、按 `stage` 补随行演出
+- `src_lines(stem)` / `src_voices(stem)` —— 源 WSC 的逐行正文 / 录音名
+- `spk_lc(ccs_line)` / `LC` —— 说话人标记（`%LC<名>`）
 """
-import argparse
-import io
-import json
-import shutil
 import struct
-import sys
 from pathlib import Path
 
+from tool import arcbuild, speaker, wsc, ws2, ws2disasm
+from tool.wsc2ws2 import decrypt_wsc
+
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
-
-from tool.lng import parse_ccs_both                      # noqa: E402
-from tool import arcbuild, lng as lngmod, speaker, wsc, ws2, ws2disasm  # noqa: E402
-from tool.wsc2ws2 import decrypt_wsc                          # noqa: E402
-
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
-
-TMP = ROOT / 'tmp' / 'textfix'
-RIO = ROOT / 'asset' / 'Rio.arc'
-BACKUP = ROOT / 'asset' / 'Rio.arc.before_insert_deleted'
 WSC_DIR = ROOT / 'resource' / 'corpus' / 'wsc'
-CCS_DIR = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
 
-# 中文/日文字形（汉化组 CCS 的 `[...]` 前缀）-> Steam 的 `%LC` 名。
-# **从 `resource/speaker_map.json` 读**（`tool/speaker.zh_to_en()`），不再内联一份 ——
-# 原先这里手抄 17 条，与 tool/wsc2ws2.py、script/rename_speakers.py 各自的表重复。
+# 中→英说话人名反查（从 `resource/speaker_map.json` 读，不再内联一份）
 SPK2LC = speaker.zh_to_en()
-
-
-def jl(p):
-    return [json.loads(l) for l in Path(p).read_text(encoding='utf-8').splitlines() if l.strip()]
 
 
 LC = '%' + 'LC'      # 引擎的说话人标记：`%LC<英文名>` → 查 NameTable.txt 换中文
@@ -447,29 +423,6 @@ def rebuild(raw, ins, plan, drops=frozenset(), vc=None, del2e=frozenset(), plan2
     return bytes(out)
 
 
-def _seg_done(ins, after_k, seg):
-    """**逐段**判这一趟是否已经插过（2026-09-16 修）。
-
-    ⚠️ 判据必须**按段**，不能按脚本 —— 原来只要**任何一段**命中就返回 True、
-    整脚本跳过。实测 `CCD4003A_EN` 的两段状态不同：`after_k=143` 已插、
-    `after_k=398` 从未插，于是那 24 行被**永久跳过**。
-
-    判据用「插入点之后紧邻的那个**占位**（`14` 各占一格、`0f` 的每个条目也各占一格，
-    lng 就是这么对应的）的文本，是否正是插入段的第一条」。不能按 `14` 的下标算 ——
-    有选项表的脚本里两者不等。
-    """
-    slots = []
-    for i in ins:
-        if i.opcode == 0x14:
-            slots.append(i)
-        elif i.opcode == 0x0f:
-            slots.extend([None] * len(i.fields['entries']))
-    if not seg or after_k + 1 >= len(slots):
-        return False
-    i = slots[after_k + 1]
-    return i is not None and i.fields.get('text') == seg[0][1]
-
-
 def src_lines(stem):
     """源 WSC 的 {CCS 行号: 日文文本}。
 
@@ -518,104 +471,3 @@ def src_voices(stem):
                 pend = None
             d += 1
     return out
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--write', action='store_true')
-    args = ap.parse_args()
-
-    items = json.loads((TMP / 'orphan-insert.json').read_text(encoding='utf-8'))
-    idx = json.loads((TMP / 'index.json').read_text(encoding='utf-8'))
-    members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(RIO)}
-    by = {}
-    for it in items:
-        by.setdefault(it['script'], []).append(it)
-
-    out, newdata = io.StringIO(), {}
-    out.write('%-14s %-14s %3s %8s %-22s %s\n'
-              % ('脚本', '源 CCS 行', '条', '插于第几格后', '说话人', '首行（源日文）'))
-    for s in sorted(by):
-        raw = ws2.decode(members[s + '.WS2'])
-        ins = ws2disasm.disassemble(raw)
-        slots_kind = []
-        for i in ins:
-            if i.opcode == 0x14:
-                slots_kind.append('dlg')
-            elif i.opcode == 0x0f:
-                slots_kind.extend(['opt'] * len(i.fields['entries']))
-        jp, zh = parse_ccs_both(CCS_DIR / (idx[s]['ccs'] + '.CCS'))
-        src = src_lines(idx[s]['ccs'])
-        L = lngmod.parse_lng(members[s + '.LNG'])
-
-        plan = {}
-        for it in sorted(by[s], key=lambda x: x['after_k']):
-            a, b = it['rows']
-            # 插入点须是**占位格**（`14` 或 `0f` 条目各占一格）。允许落在 `0f` 条目之后
-            # =「选项块之后」（2026-09-19 放宽）——`rebuild` 会一并回写该选项的 `06` 跳转。
-            assert slots_kind[it['after_k']] in ('dlg', 'opt'), '%s: 插入点不是占位格' % s
-            rows = list(range(a, b + 1))
-            plan[it['after_k']] = [
-                (spk_lc(jp.get(n, '')), src.get(n, jp.get(n, '')),
-                 lngmod.strip_speaker_wrap(zh.get(n, ''))) for n in rows]
-            out.write('%-14s %-14s %3d %8d %-22s %s\n'
-                      % (s, 'CCS#%d-%d' % (a, b), len(rows), it['after_k'],
-                         ','.join(repr(x[0]) for x in plan[it['after_k']][:3]),
-                         plan[it['after_k']][0][1][:26]))
-        # **幂等守卫（逐段）**：已经插过的段**过滤掉**，只插缺的。
-        # ⚠️ **不能按脚本跳过** —— 实测 `CCD4003A_EN` 的两段状态不同
-        # （`after_k=143` 已插、`after_k=398` 从未插），按脚本跳过会让缺的那段永远补不上。
-        done = [ak for ak, seg in plan.items() if _seg_done(ins, ak, seg)]
-        if done:
-            print('%-14s 已有 %d 段插过，本次只插余下 %d 段'
-                  % (s, len(done), len(plan) - len(done)))
-            plan = {ak: seg for ak, seg in plan.items() if ak not in done}
-        if not plan:
-            continue
-        raw2 = rebuild(raw, ins, plan)
-        # lng：**按占位序重建**（插入的格取源 CCS 中文，其余沿用原 lng）。
-        # 不要「从后往前往 L 里插」—— 有多个插入段时下标会漂移（实测 `CCD0023_EN`
-        # 的第二个段被第一个推移了 3 格，正是第一段的条数）。
-        newL, oi = [], 0
-        for si in range(len(slots_kind)):
-            newL.append(L[oi])
-            oi += 1
-            for _spk, _ja, zt, *_v in plan.get(si, []):
-                newL.append(zt)
-        L = newL
-        newdata[s + '.WS2'] = ws2.encode(raw2)
-        newdata[s + '.LNG'] = lngmod.encode_lng(L)
-        back = ws2disasm.disassemble(ws2.decode(newdata[s + '.WS2']))
-        n14 = sum(1 for i in back if i.opcode == 0x14)
-        n0f = sum(len(i.fields['entries']) for i in back if i.opcode == 0x0f)
-        if n14 + n0f != len(L):
-            raise SystemExit('%s: 回读不符 ws2 占位 %d != lng %d' % (s, n14 + n0f, len(L)))
-    sys.stdout.write(out.getvalue())
-
-    print()
-    print('脚本 %d 个、区段 %d 个、共插入 %d 行' % (len(by), len(items), sum(x['n'] for x in items)))
-    if not args.write:
-        print('（未写入；加 --write 才改 asset/Rio.arc）')
-        return 0
-    if not BACKUP.exists():
-        shutil.copy2(RIO, BACKUP)
-        print('[备份] %s' % BACKUP)
-    members.update(newdata)
-    order = [n for n, _ in arcbuild.read_raw(RIO)]
-    merged = [(nb, members[nb.decode('utf-16-le').upper()]) for nb in order]
-    arcbuild.write_arc(merged, RIO)
-    back = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(RIO)}
-    for k, v in newdata.items():
-        if back[k] != v:
-            raise SystemExit('[失败] 回读不一致：%s' % k)
-    cnt, size, _ = arcbuild.verify(RIO)
-    print('[写入] 回读校验通过（%d 个成员，%d 字节）' % (cnt, size))
-    return 0
-
-
-if __name__ == '__main__':
-    # ⚠️ 已废弃（2026-09-20）：本文件现在只作**工具库**被 `script/apply_text_map.py` import
-    # （`rebuild` / `src_lines` / `spk_lc` / `LC`）。**不要再单独运行它** ——
-    # 它写的只有结构，**不含**表驱动的 lng、名字框同步与借用语音删除，
-    # 跑一次就会把 asset 写回旧口径（且不报错）。
-    raise SystemExit('已废弃：结构 + lng 请用 `python script/apply_text_map.py --write` 一次产出。')

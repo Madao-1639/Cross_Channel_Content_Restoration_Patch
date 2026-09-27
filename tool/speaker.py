@@ -2,8 +2,8 @@
 
 **这是角色名的唯一来源**：名字框显示文本（`Rio.arc` 的 `NameTable.txt`）、转换器的
 说话人映射、语音通道、立绘前缀全部从这里取。原先这些映射散在
-`tool/wsc2ws2.py` 的 `SPEAKER_MAP` / `VOICE_CHANNEL`、`script/rename_speakers.py` 的
-`SPEAKER_ZH`、`script/insert_deleted_dialogues.py` 的 `SPK2LC` 与
+`tool/wsc2ws2.py` 的 `SPEAKER_MAP` / `VOICE_CHANNEL`、`script/rename_speakers.py`（已删）的
+`SPEAKER_ZH`、`tool/writer.py` 的 `SPK2LC` 与
 `doc/localization.md` 的两张表里，彼此已经漂移（35 处中文值不一致）。
 
 表的形状与判据见 `resource/README.md`。要点：

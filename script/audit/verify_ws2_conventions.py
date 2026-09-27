@@ -11,7 +11,7 @@
   * 选项 strid 写成 0 基表内序号 → 与字符串池（= `14` 的 id）错位
 
 用法（项目根目录）：
-    python script/verify_ws2_conventions.py
+    python script/audit/verify_ws2_conventions.py
 """
 import collections
 import glob
@@ -21,7 +21,7 @@ import struct
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild, ws2, ws2disasm, wsc                      # noqa: E402

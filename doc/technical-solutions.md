@@ -30,7 +30,7 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
   引擎对 Chip2 实施 `EVCC` 前缀白名单，`CN_` 前缀会被静默忽略。
 - **立绘**：`TC{角色}0{nnn}{变体}` → `TC{角色}1{nnn}{变体}`（两版被重编过）。
 - **背景 / 蒙版 / 语音**：原名（Steam 侧未重编）。
-- 实现：`script/build_rename_map.py` —— 规则解不掉的条目**单独列出，不许静默跳过**。
+- 实现：`tool/rename_map.py` —— 规则解不掉的条目**单独列出，不许静默跳过**。
 
 完整规则与决策流程见 [pna-resources.md](pna-resources.md)。
 
@@ -50,7 +50,7 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 12 个宿主，出口与 Steam 原档**逐一致**；`CCC0000_en` 的 `01 mode=0x85` 条件双出口是唯一
 带文件内偏移的出口，已按新布局重算。判据、逐场景参数与合并规则见
 [call-chain.md](call-chain.md)「就地插入接线」；`script/splice_restoration.py` 是实施脚本，
-`script/audit_inline.py` 是回归守卫。
+`script/audit/audit_inline.py` 是回归守卫。
 
 > **为什么不是「宿主截断 + 追加还原脚本」**：Steam 删 H 场景时会把该场景压成删节版留在
 > 宿主里，而宿主是**按序跑完整场**的 —— 追加式会造成顺序倒置 + 局部重复；
@@ -171,6 +171,10 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 | `tool/ws2disasm.py` | WS2 反汇编（363 个原生脚本 100% 覆盖） |
 | `tool/wsc2ws2.py` | WSC→WS2 逐指令转换（含 `convert_range` 切片模式） |
 | `tool/lng.py` | lng 编解码 + CCS 解析（`parse_ccs` / `parse_ccs_both`）+ **文本体例规则**（`fix_tail` / `normalize_zh`）+ 去说话人包裹 |
+| `tool/writer.py` | **结构写盘器**：还原插入 / 删格 / 名字框同步 / 借用语音删除 → ws2 字节（原 `insert_deleted_dialogues.py`） |
+| `tool/textplan.py` | **表 → 写盘计划**：逐格处置展开、尾标记、名字框、随行演出（原在写盘器里） |
+| `tool/rename_map.py` | 资源**改名表**（原版名 → 本补丁名；原 `build_rename_map.py`） |
+| `tool/archprobe.py` | 归档探针：运行时可用资源名集合 / PNA 层数（原在 `splice_restoration` 里） |
 | `tool/pna.py` | PNA 分层图像只读解析：图层表 + 内嵌 PNG 切分（见 `engine-mechanics.md`「PNA 二进制布局」） |
 | `tool/luac53.py` / `tool/luadis53.py` | Lua 5.3 字节码解析 / 反汇编 |
 | `tool/install.py` | 安装器（PyInstaller 入口，`merge_arc` 按 METADATA 重组归档） |
@@ -186,16 +190,20 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 `import_missing_voices` · `audit_choices` · `build_nametable` · `verify_text_map` · `final_verification`；
 **引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。
 
-**一次性内化**（产出进版本控制，此后不再需要上游目录）：
-`extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`。
+**目录分组**（`script/` 根只放入口与流水线步骤）：
 
-**表侧生成器**（输入仍在仓库内，可重跑）：`build_original_audio` · `build_voice_plan` · `convert_wsc`。
+- `script/internalize/` —— 把**上游产物搬进仓库**，各跑一次；跑完构建不再需要外部目录：
+  `extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`
+- `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：
+  `build_original_audio` · `build_voice_plan`
+- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：
+  `audit_inline` · `audit_lng_semantics` · `audit_duplicate_text` ·
+  `verify_ws2_conventions` · `convert_wsc`
 
-**库**（被上面那些 import，本身不是入口）：`insert_deleted_dialogues`（结构写盘器）、
-`build_rename_map`（改名表）；`apply_text_map` / `splice_restoration` **既是步骤也被 import**。
-
-**回归 / 审计**（手动按需跑）：`audit_inline` · `audit_coverage` · `audit_missing_content` ·
-`audit_lng_semantics` · `audit_duplicate_text` · `verify_ws2_conventions`。
+**库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/rename_map.py`（改名表）、
+`tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
+⚠️ **流水线步骤不再互相 import** —— 原先库放在 `script/` 里，要靠 `sys.path.insert` 与
+`importlib` 绕路加载（那正是尾标记事故的温床）。
 
 **`audit_duplicate_text.py` 是"检测报告"，不是闸**：列**同一脚本内**出现完全相同显示文本的格
 （长度 <8 的短句/纯符号句一律略过，跨脚本不比），并标注每格的出处。
@@ -205,7 +213,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 90 组同文本，其中 1 组含自撰格 —— 经查是 Steam 自己连着两槽同样的笑声，正常）。
 
 **`apply_text_map.py` = 落盘接线的入口**：按 `resource/text_map.json` **一次产出结构 + lng** ——
-它是**表的唯一消费者**，取代了 `insert_deleted_dialogues.py`（结构）与 lng 生成的那一族。
+它是**表的唯一消费者**，取代了结构写盘的独立入口与 lng 生成的那一族。
 以下脚本**只写 `.LNG`**、处理集全部落在表的 293 个范围内 ⇒ 输出必被 `apply_text_map` 覆写，
 已从流水线摘除并**删除**：
 `realign_lng_to_ws2.py`（DP 对齐）、`build_host_lng.py`（宿主 lng）、`fix_lng_alignment.py`（模型对齐）、
@@ -216,7 +224,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 —— **要改某一格，改表**。
 （`build_text_map.py` 里仍被复用的两条文本体例规则 `fix_tail` / `normalize_zh` 已移入 `tool/lng.py`。）
 - 原理：原始槽位 `k` = ws2 里 `14` 与 `0f` 条目按指令序编号；表的 `items` 给出每格显示什么 +
-  `insert`（`at_k`/`src_rows`）+ `drop`；结构先落（复用 `insert_deleted_dialogues.rebuild`，含跳转回写），
+  `insert`（`at_k`/`src_rows`）+ `drop`；结构先落（复用 `tool.writer.rebuild`，含跳转回写），
   lng 按**最终槽位序**逐个取文本。
 - **指令排布照抄 Steam**：相邻的 `15`（`SetDisplayName`）**一律原样保留**（不得折叠），
   `drop` **删整格**（`14` + 它的设名 `15` + 清框 `15`，带「不改动任何存活格名字框」的守卫）
@@ -229,7 +237,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 - 校验：`script/verify_text_map.py`（哨兵**七条**）＋ `script/final_verification.py`（全量验收）＋ 逐格内容比对；产出与表逐脚本相等。
 - 试跑可加 `--rio <副本路径>`（不动 `asset/`）。
 
-**`insert_deleted_dialogues.py` 的三处硬要求**：
+**结构写盘器（`tool/writer.py`）的三处硬要求**：
 
 - **必须回写文件内跳转**。它在指定占位之后插 `15`+`14`，会平移其后的所有字节；而
   `06 <u32>`（无条件跳转）、`01 mode=0x85` 的 `b`、**选项条目里的 `06 <u32>`** 记的都是
@@ -244,9 +252,8 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
   `drop` **删整格**（`14` + 设名 `15` + 清框 `15`，带名字框守卫）。理由与守卫见
   [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) [file-formats.md](file-formats.md)「字符串池」.11。
 
-回归类：`audit_inline.py`（就地插入）、`audit_coverage.py` / `audit_missing_content.py`
-（覆盖与缺口）、`audit_choices.py` / `audit_lng_semantics.py`（lng 槽位与语义）、
-`verify_ws2_conventions.py`（转换器约定）。
+回归类：`script/audit/audit_inline.py`（就地插入）、`audit_lng_semantics.py`（lng 语义）、
+`verify_ws2_conventions.py`（转换器约定）；`audit_choices.py` 是**流水线步骤**（选项池位检查）。
 
 转换器的规则、全量验证结果与实现陷阱见
 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md)。

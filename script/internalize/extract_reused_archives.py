@@ -7,8 +7,8 @@
 
 产出：`resource/reused_archives/{Fonts.arc, Script.arc}`（逐字节原样）+ `manifest.json`（名/大小/哈希）。
 用法（项目根目录）：
-    python script/extract_reused_archives.py            # 预演
-    python script/extract_reused_archives.py --write    # 落盘
+    python script/internalize/extract_reused_archives.py            # 预演
+    python script/internalize/extract_reused_archives.py --write    # 落盘
 """
 import argparse
 import hashlib
@@ -17,7 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 if hasattr(sys.stdout, 'buffer'):

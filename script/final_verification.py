@@ -34,7 +34,7 @@ STEAM_IDX = {k.upper(): v for k, v in STEAM_RIO.items()}
 HOSTS_INLINE = ['CCA0025C_en.ws2', 'CCB1014C_en.ws2', 'CCB2013_en.ws2', 'CCB2101_en.ws2',
                 'CCC0000_en.ws2', 'CCC3027_en.ws2', 'CCC4022_en.ws2', 'CCD0022A_en.ws2',
                 'CCD1001B_en.ws2', 'CCD4003A_en.ws2', 'CCD5001A_en.ws2', 'CCD5001B_en.ws2']
-# 每个宿主的对话数（`14` 条数）。逐值由 script/audit_inline.py 与源 CCS 对位核对，
+# 每个宿主的对话数（`14` 条数）。逐值由 script/audit/audit_inline.py 与源 CCS 对位核对，
 # 要求「恰好一次、无缺失、无重复、无倒序」。
 # 宿主对话数（`14` 条数）现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出：
 # 还原插入（`insert`）增格、`drop` 减格、同一行的拆分记为 `span`（**不**增格）。

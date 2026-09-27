@@ -48,7 +48,7 @@ SEP = b'\t\x00'
 def lc_keys(members):
     """脚本里 `15` 指令带的名字前缀集合（`%LC` 开头的那些）。
 
-    与 `script/audit_lng_semantics.py` 的 `ws2_rows()` 是同一套取法（引擎也是这么取键的）。
+    与 `script/audit/audit_lng_semantics.py` 的 `ws2_rows()` 是同一套取法（引擎也是这么取键的）。
     这里就地实现而不 import 它，是因为那个模块在 import 期会包装 `sys.stdout`，
     与本脚本自己的包装叠加会关掉底层 buffer（见 README.local.md「环境注意」）。
     """

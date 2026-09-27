@@ -42,7 +42,7 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
   用 Steam 侧同名文件，见下）。
 - 变体后缀：保留原版后缀（A/B/C/D/E），重编号时只改数字段
 - **对照表**：`resource/cg_map.json` —— **这是 CG 对应关系的唯一权威来源**，
-  由 `script/build_cg_map.py` 生成；`script/build_rename_map.py`（产出就地插入用的改名表）
+  由 `script/build_cg_map.py` 生成；`tool/rename_map.py`（产出就地插入用的改名表）
   与 `script/renumber_evcc9xxx.py`（核对引用可解析）都**读这张表**，不再各自硬编码。
   表项形如：`{"EVCC0017B.PNG": {"patch": "EVCC9006B.PNG", "steam_same_name": false,
   "refs": [{"host": "CCC3027", "script_id": 227, "opcode": "0x46", "offset": "0x3436"}]}}`
@@ -224,7 +224,7 @@ Res 303 把全部 37 个新增 `CN_*` 资源都堆进 **Graphic.arc**（事件 C
 且原版是 `.PNG`+`.MSK`、Steam 是 `.PNA`。还原区间的 46 个立绘引用里按此规则
 **两侧都存在 44 个**，余下 2 个非立绘（`SGCC0020` 并入 `EVCC9004`、`EFCC0003` 保持原名）。
 
-实现：`script/build_rename_map.py` —— **规则解不掉的条目单独列出，不许静默跳过**。
+实现：`tool/rename_map.py` —— **规则解不掉的条目单独列出，不许静默跳过**。
 详见 [call-chain.md](call-chain.md)「资源配对保证」。
 
 ## 图形指令：参数与还原套路

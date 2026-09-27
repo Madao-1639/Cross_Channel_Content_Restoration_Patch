@@ -249,8 +249,7 @@ Steam 与原版同名图片（`EVCC*`）逐对比较：**至今没有任何一�
 - [ ] **流水线复跑 0 处改动**（`build_patch.py` 及各步皆幂等；报出改动即说明某步破坏了自己的输入）
 - [ ] **派生数据等式核对**（见「派生数据会过时」）：逐脚本核「计划格数 == ws2 槽位数 == lng 条数」
 - [ ] **语音对账**：挂语音的格，其计划取值必须包含锚点指到的那行原版
-- [ ] `python script/audit_inline.py` —— 就地插入的合并播放序与出口集合
-- [ ] `python script/verify_ws2_conventions.py` —— 转换器约定的 9 项回归
-- [ ] `python script/audit_coverage.py` / `audit_missing_content.py`（按需，较慢）
+- [ ] `python script/audit/audit_inline.py` —— 就地插入的合并播放序与出口集合
+- [ ] `python script/audit/verify_ws2_conventions.py` —— 转换器约定的 9 项回归
 - [ ] Arc 规范化（`arcbuild.verify()` 无 padding）与 SHA256 稳定性
 - [ ] `asset/` 或 `backup/` 任一变动后**必须**重新生成 `payload/`

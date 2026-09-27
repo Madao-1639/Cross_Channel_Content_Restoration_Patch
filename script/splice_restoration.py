@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, ws2, ws2disasm, wsc  # noqa: E402
+from tool import archprobe, arcbuild, rename_map as RN, ws2, ws2disasm, wsc  # noqa: E402
 from tool.wsc2ws2 import ConvertOptions, convert_range  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
@@ -88,9 +88,7 @@ def rebase_offsets(data, base):
 
 def load_rename_map():
     """资源重命名表。直接调用构建器，不经过 tmp/ 中转文件。"""
-    sys.path.insert(0, str(ROOT / 'script'))
-    import build_rename_map
-    rename, unresolved, unchanged, _cg, conflicts = build_rename_map.build()
+    rename, unresolved, unchanged, _cg, conflicts = RN.build()
     print('资源重命名表 %d 条；无需改名且已存在 %d 个' % (len(rename), len(unchanged)))
     if conflicts:
         raise SystemExit('CG 编号表有未入表项：%s' % conflicts)
@@ -102,38 +100,6 @@ def load_rename_map():
 
 def src_instrs(stem):
     return wsc.disassemble((WSC_DIR / (stem + '.WSC')).read_bytes())
-
-
-def load_inventory():
-    """运行时可用资源名集合（大写）。用于「不存在就不发射」的防御（蒙版）。"""
-    inv = set()
-    sys.path.insert(0, str(ROOT / 'script'))
-    import build_rename_map
-    for p in build_rename_map.ARCHIVES:
-        q = ROOT / p
-        if q.exists():
-            inv |= {n.decode('utf-16-le').upper() for n, _ in arcbuild.read_raw(q)}
-    return inv
-
-
-def load_pna_layers():
-    """{PNA 名(大写): 层数}。决定 `39` 的帧号形态（见 wsc2ws2.PORTRAIT_ATTRS_BY_LAYERS）。
-
-    不查层数而照抄「4 层形态」，对 1 层 PNA 就是**子图层越位**（别的游戏补丁踩过的坑）。
-    """
-    from tool import pna
-    out = {}
-    sys.path.insert(0, str(ROOT / 'script'))
-    import build_rename_map
-    for p in build_rename_map.ARCHIVES:
-        q = ROOT / p
-        if not q.exists():
-            continue
-        for n, d in arcbuild.read_raw(q):
-            name = n.decode('utf-16-le').upper()
-            if name.endswith('.PNA') and d[:4] == b'PNAP':
-                out.setdefault(name, struct.unpack_from('<I', d, 0x10)[0])
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -303,9 +269,9 @@ def main():
     members = load(RIO)
     steam = load(STEAM_RIO)
     rename = load_rename_map()
-    inventory = load_inventory()
+    inventory = archprobe.load_inventory()
     print('运行时可用资源 %d 个' % len(inventory))
-    pna_layers = load_pna_layers()
+    pna_layers = archprobe.load_pna_layers()
     print('PNA 层数表 %d 个（决定 `39` 的帧号形态）' % len(pna_layers))
 
     results, reports = {}, []

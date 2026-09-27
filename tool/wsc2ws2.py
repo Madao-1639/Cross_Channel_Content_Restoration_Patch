@@ -24,7 +24,7 @@ PORTRAIT_RE = re.compile(r'^T[CB]')
 # ---------------------------------------------------------------------------
 # 说话人映射与语音通道：**从 `resource/speaker_map.json` 读**，本文件不再内联一份。
 # 原先这里内联了 33 条日文->英文（SPEAKER_MAP）与 12 条前缀->通道（VOICE_CHANNEL），
-# 与 script/rename_speakers.py、script/insert_deleted_dialogues.py 及文档各写一份、
+# 与 `tool/writer.py`、文档各写一份、
 # 已经漂移。现在由 `tool/speaker.py` 统一读表（表见 resource/README.md）。
 # 键名保持不变，下游 `from tool.wsc2ws2 import SPEAKER_MAP` 不用改。
 # 表外名字原样保留进 `%LC` 并产生 warning（低置信度条目待实机校对，表里标了

@@ -18,11 +18,11 @@
 |---|---|---|
 | `text_map.json` | **文本映射表**（写盘的唯一依据） | `apply_text_map` / `verify_text_map*` / `check_reset_state` |
 | `text_map_vc.json` | 逐格**覆盖**：名字框 / 删借用语音 | `apply_text_map` |
-| `text_map_stage.json` | 演出覆盖层（洞 2，手工 30 格） | `apply_text_map` / `build_original_stage` / `insert_deleted_dialogues` |
+| `text_map_stage.json` | 演出覆盖层（洞 2，手工 30 格） | `apply_text_map` / `build_original_stage` / `tool.writer` |
 | `text_map_stage_verdicts.jsonl` | 上表的**来源台账**（30 行，写盘不读） | （无消费者，纯溯源） |
 | `scene_slices.json` | 还原场景的**插入范围**（11 场景 + 1 截头宿主） | `splice_restoration` / `build_cg_map` / `check_reset_state` |
-| `cg_map.json` | 事件 CG 的**改名**映射（36 改名 / 37 全量） | `build_rename_map` / `build_restored_cgs` / `build_cg_map` / `renumber_evcc9xxx` |
-| `speaker_map.json` | 角色名称 + 语音通道 + 立绘前缀（**唯一来源**，90 条） | `build_nametable` / `wsc2ws2` / `speaker` / `insert_deleted_dialogues` / `final_verification` |
+| `cg_map.json` | 事件 CG 的**改名**映射（36 改名 / 37 全量） | `rename_map` / `build_restored_cgs` / `build_cg_map` / `renumber_evcc9xxx` |
+| `speaker_map.json` | 角色名称 + 语音通道 + 立绘前缀（**唯一来源**，90 条） | `build_nametable` / `wsc2ws2` / `speaker` / `tool.writer` / `final_verification` |
 | `original_stage.json` | 洞 1：插入行的**随行画面演出**（派生，237 脚本） | `apply_text_map` / `build_original_stage` |
 | `original_audio.json` | 逐行**原版演出属性**（语音 / SE，237 脚本） | `apply_text_map` / `build_original_stage` |
 | `voice_plan.json` | **补挂语音**计划（27 脚本；键 = 表的 `k`） | `apply_text_map` / `import_missing_voices` |
@@ -125,7 +125,7 @@
 - **`original_audio.json`**（声音）—— 原版**每行**的语音/SE 属性。正文取自原版的格，若该行
   **原版没有配音**，就删掉格上的 `2e`（Steam 把原版的旁白改写成台词并配了音，正文换回原版后
   那声音就成了别人的）。⚠️ **只做行级演出属性**；立绘/BGM/计时器/跳转等**跟随 Steam**。
-  生成：`script/build_original_audio.py`。
+  生成：`script/gen/build_original_audio.py`。
 
 ### 洞 2 的区间算法与洞 1 不同
 
@@ -261,13 +261,13 @@
   **みゆき/少女** 同一人）、槽 11 = `GKA/GKB/GKC/HRA/RKA/MSM`（声/腹の虫/老カラデ家/政宗）。
   所以同槽的多个前缀在 Steam 侧**共用该槽唯一存在的通道**。见 [engine-mechanics.md](../doc/engine-mechanics.md)「语音前缀 → 配音来源」。
 - ⚠️ **同一个人在两版可能拼法不同**：原版 `HRA`（腹の虫）在 Steam 侧被改名成 `HAR_0001..0006.OGG`。
-  本列**记原版拼法**（`WSC→WS2` 用）；Steam 侧自己的拼法由 `insert_deleted_dialogues` 直接从 `backup` 取。
+  本列**记原版拼法**（`WSC→WS2` 用）；Steam 侧自己的拼法由 `tool/writer.py` 直接从 `backup` 取。
 - **组合名分隔符统一用全角斜杠 `／`**（如 `冬子／见里／美希／友贵`）；原版日文侧用 `･`/`・`，保留在 `ja` 列不动。
 - `en` 是**单值映射**：原版 `太一` 与 `俺` 都写成 `%LCTaichi`，只能显示一个中文。
 - 中文列取值的判据分三层：**汉化组 CCS 的 `[...]` 前缀**（机械配对）、**台词自证**、其余交逐条语义判定。
 
 手工维护（本表即唯一来源）。消费方：`build_nametable`（生成 `NameTable.txt`）/ `wsc2ws2` /
-`insert_deleted_dialogues` / `speaker` / `audit_lng_semantics` / `final_verification`。
+`tool.writer` / `speaker` / `audit_lng_semantics` / `final_verification`。
 
 ### `corpus/wsc/` —— 源语料（324 个原版 WSC）
 
@@ -282,12 +282,12 @@
 基线改从 `backup/`（Steam 原版）起底后，有两样东西**只在 Res303 里有**，必须显式带过（否则静默丢）：
 
 - **`carried_lng/`** = **本项目处理集之外**（脚本不在 `text_map.json` 的 293 个内）但**要保留**的
-  35 个汉化 `.lng`（+ `manifest.json` 记名与哈希）。由 `script/extract_carried_lng.py` 一次性内化。
+  35 个汉化 `.lng`（+ `manifest.json` 记名与哈希）。由 `script/internalize/extract_carried_lng.py` 一次性内化。
 - **`carried_soundlevel.json`** = **967 条 `.soundlevel`** 音量包络（按秒 ASCII，与采样率无关）——
   产物需要 16,111 条 = `backup` 的 **15,144**（Steam 对**每条**语音都配了包络，实测 OGG 与侧车的
   stem 逐一相等）**＋ 967 条（补入的原版录音）**，后者只存在于上游补丁的 `Voice.arc`，不显式带过即
   静默丢失（`import_missing_voices.py` 只补 OGG）。余下 585 条补入语音没有包络 —— 本来就没有，
-  **不凭空造**（引擎容忍缺包络）。由 `script/extract_carried_soundlevel.py` 提取。
+  **不凭空造**（引擎容忍缺包络）。由 `script/internalize/extract_carried_soundlevel.py` 提取。
 
 消费方：`build_patch` 的 `carry_carried_lng()` / `carry_carried_soundlevel()`（仅 `--bootstrap` 时）。
 `final_verification` 有产物级断言「侧车条数 ≥ backup + 内化清单」。
@@ -295,7 +295,7 @@
 ### `reused_archives/` —— **完全复用**的上游归档
 
 `Fonts.arc`（汉字字体）+ `Script.arc`（Lua 系统界面）—— 上游汉化产出，**原样采用、不涉裁定**。
-由 `script/extract_reused_archives.py` 一次性内化（+ `manifest.json` 记哈希）。
+由 `script/internalize/extract_reused_archives.py` 一次性内化（+ `manifest.json` 记哈希）。
 `build_patch` 的 `bootstrap_copy()` 据此带入 `asset/` ⇒ **构建期不再依赖任何外部上游目录**。
 （`SysGraphic.arc` 属另一类：其 UI 汉化图**不采用**，取 `backup/` 的 Steam 原版。）
 

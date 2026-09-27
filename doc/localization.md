@@ -232,7 +232,7 @@ Res 303 的自述审计判定 `TEXT_QA_PASS = false`，理由是旧的对齐/复
 - **语音**：
   - 「原版该行无配音」⇒ `rebuild(..., del2e=…)` **删掉**该格的 `2e`；
   - 「原版有配音却没挂」⇒ `rebuild(..., plan2e={占位序: 文件名})` **补挂**一条 `2e`（`mk2e`）；
-  - **补挂的选段**由 `script/build_voice_plan.py` 生成 `resource/voice_plan.json`：**时长指纹只用来找候选，定案看台词**（候选录音在 Steam 侧绑定的那一格，其显示中文须与本格**逐字相同**）；
+  - **补挂的选段**由 `script/gen/build_voice_plan.py` 生成 `resource/voice_plan.json`：**时长指纹只用来找候选，定案看台词**（候选录音在 Steam 侧绑定的那一格，其显示中文须与本格**逐字相同**）；
   - **要新增的原版录音**：`resource/original_audio.json` 记「原版每一行有没有配音」（WSC 的 `0x23`）；缺的录音从原版归档导入 `asset/Voice.arc`；
 - **删格 = 删整格**：`drop` 去掉该格的 `14`，**连同它的设名 `15` 与清框 `15`**（`drop_units()`，
   带「**不改动任何存活格名字框**」的守卫 —— Steam 里两格之间有时只有一条 `15`，单看位置认不出归属，
@@ -397,8 +397,7 @@ Steam 版 `Graphic.arc` 里有几张**整屏图**内嵌日文/英文文本（标
 > **唯一来源是 [`resource/speaker_map.json`](../resource/README.md)**。
 > 本节两张表**只作历史记录**；判定结果与取值一律以资源表为准（个别条目已被表推翻，见下）。
 > 消费方：`tool/speaker.py`（读取层）、`tool/wsc2ws2.py`（`SPEAKER_MAP`/`VOICE_CHANNEL`）、
-> `script/rename_speakers.py`、`script/insert_deleted_dialogues.py`、
-> `script/audit_lng_semantics.py`；`NameTable.txt` 由它经 `script/build_nametable.py` 生成。
+> `tool/writer.py`、`script/audit/audit_lng_semantics.py`；`NameTable.txt` 由它经 `script/build_nametable.py` 生成。
 
 - **日文名**取自原版 WSC 的 0x42 说话人字段（游戏自带数据）；
 - **中文名**取自汉化组 CCS 的 `>1●` 行 `[...]` 前缀（与 WSC 说话人逐句配对， 33 个名字全量提取，频次与 WSC 侧完全一致）；

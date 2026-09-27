@@ -8,7 +8,7 @@
 - [ ] 12 个宿主的出口集合 == Steam 原档（`script/final_verification.py` 的
       `check_call_chain()` / `check_inline_splice()`）
 - [ ] **就地插入落位正确**：与源 CCS 对位后**恰好一次、无缺失、无重复、无倒序**
-      （回归守卫 `script/audit_inline.py`）
+      （回归守卫 `script/audit/audit_inline.py`）
 - [ ] 条件双出口（`CCC0000_en` 的 `01 mode=0x85`）的 `b` 字段按新布局重算，
       且指向正确的 `07`
 - [ ] 宿主「第一句对话之前」的场景开场件仍在（`SCENETITLE*`、`SGCC*`、鉴赏钩子）
@@ -102,7 +102,7 @@
       判据是「**这一组在原版对应位置是否存在**」，不是「看起来像空行」——**逐格判，不按组批量删**
 - [ ] 不出现「堆字 / 整段不翻页」：删格后前后两屏不得挤进同一个未清屏文本框
 - [ ] **`15` 结构照抄 Steam**：产物里每条 `15` 都紧贴某个 `14`（作设名或清框），**不得有游离的 `15`**；
-      相邻的 `15` 不得被压掉（`python script/verify_ws2_conventions.py` 的连跑 ⊆{1,2} 断言）
+      相邻的 `15` 不得被压掉（`python script/audit/verify_ws2_conventions.py` 的连跑 ⊆{1,2} 断言）
 - [ ] **还原插入的每一句都要独立成页**（带页断符，与原版惯例一致）：判据是**原版该句本就占一页**，
       **与插入段长短无关**——21 句和 1 句都是缺陷，长短只影响严重程度，不影响是否算缺陷
 - [ ] `op:drop` 全部站点复核：只允许删**非原版的多余正文或多余空行**，不得删三族成员
@@ -126,7 +126,7 @@
 - [ ] **选项 / 菜单译法不要求逐词一致（裁定）**：同一英文动作在不同语境（旅行菜单 / 分支标签 / 正文台词）
       用不同中文**是正常的**。判时必须回到该选项所在的界面与上下文：**用语风格一致**即可；
       只有**同屏或同族两个不同英文动作撞成同一个中文**（玩家无法区分）才算缺陷
-- [ ] 格间源行号单调不减、无倒序、无整段错挂（`script/audit_inline.py`）
+- [ ] 格间源行号单调不减、无倒序、无整段错挂（`script/audit/audit_inline.py`）
 - [ ] **范围排除**：民汉文本**既有**的语病、错字不属本项；新增或本批改写的文本的错误计入
 
 ### E4 动线完整
@@ -183,21 +183,19 @@
          `apply_text_map.py`）都是幂等的；复跑报出改动即说明某步破坏了自己的输入
 
 2. **调用链**
-   - [ ] `python script/audit_inline.py` —— 合并播放序与出口一致性
-   - [ ] （按需，较慢）`python script/audit_missing_content.py` —— 确认原版场景的每一段
-         内容都能归属到某个脚本，没有真正掉内容
+   - [ ] `python script/audit/audit_inline.py` —— 合并播放序与出口一致性
 
 3. **转换器约定**（改 `tool/ws2disasm.py` / `tool/wsc2ws2.py` 后必跑）
-   - [ ] `python script/verify_ws2_conventions.py`（9 项：`28`/`1e` 尾段结构、发射模板、
+   - [ ] `python script/audit/verify_ws2_conventions.py`（9 项：`28`/`1e` 尾段结构、发射模板、
          `0x34` 槽名、`65` 首操作数、`15` 连跑、转换后的对话文本/id、选项 strid）
-   - [ ] `python script/convert_wsc.py --outdir tmp/converted_ws2_new`，确认
+   - [ ] `python script/audit/convert_wsc.py --outdir tmp/converted_ws2_new`，确认
          `parse failures` / `count mismatch` / `roundtrip bad` 全为 0
    - [ ] 新增/改动字节模板时按**全语料逐字节模态**核对，不要只看覆盖率
          （见 [lessons-learned.md](lessons-learned.md) 「字节覆盖不构成正确性证明」）
 
 4. **lng**
    - [ ] `python script/audit_choices.py` —— 池位连续性、条数等式、选项槽位形态
-   - [ ] `python script/audit_lng_semantics.py` —— 语义复审 triage
+   - [ ] `python script/audit/audit_lng_semantics.py` —— 语义复审 triage
 
 5. **打包**
    - [ ] `python script/generate_payload.py` —— 回读校验全 `[OK]`

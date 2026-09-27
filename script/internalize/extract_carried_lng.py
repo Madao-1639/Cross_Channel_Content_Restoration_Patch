@@ -10,8 +10,8 @@ Res303 的汉化 —— 于是把它们**内化**成仓库数据，基线构建�
 
 产出：`resource/carried_lng/<原成员名>`（逐字节原样）；清单 `resource/carried_lng/manifest.json`。
 用法（项目根目录）：
-    python script/extract_carried_lng.py            # 预演
-    python script/extract_carried_lng.py --write    # 落盘
+    python script/internalize/extract_carried_lng.py            # 预演
+    python script/internalize/extract_carried_lng.py --write    # 落盘
 """
 import argparse
 import hashlib
@@ -19,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild  # noqa: E402

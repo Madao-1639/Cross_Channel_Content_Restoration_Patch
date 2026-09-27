@@ -4,7 +4,7 @@
 新覆盖的那几百句所引用的语音 `asset/Voice.arc` 里没有（共 186 条，如
 `KRI061C3027.OGG`、`MKI179D4001.OGG`），但**原版 Voice.arc 里都有**。
 
-要补哪些：直接调用 `script/build_rename_map.py` 的 `build()`，取它的「找不到出处」清单
+要补哪些：直接调用 `tool/rename_map` 的 `build()`，取它的「找不到出处」清单
 （它已经把所有插入区间的引用与 asset+backup 全量核对过）。
 
 关于 `.soundlevel`：原版 Voice.arc 只有 `.OGG`，Steam 侧才带 `.soundlevel`（ASCII 的
@@ -38,7 +38,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, rename_map as RN, ws2, ws2disasm  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -99,9 +99,7 @@ def wanted():
     （现有 56 条 `voice_plan` 条目已全部同时存在于 `asset/Voice.arc` 与原版归档，故纳入 ② 不会
     引入"原版也没有"的中止。）
     """
-    sys.path.insert(0, str(ROOT / 'script'))
-    import build_rename_map
-    _rename, unresolved, _unchanged, _cg, _conf = build_rename_map.build()
+    _rename, unresolved, _unchanged, _cg, _conf = RN.build()
     missing = []
     for u in unresolved:
         m = UNRESOLVED_RE.match(u)

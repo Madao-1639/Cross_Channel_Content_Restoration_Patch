@@ -3,7 +3,7 @@
 本文档记录原版（WillPlus 引擎，`.WSC` 脚本）与 Steam 版（AdvHD 引擎，`.ws2` 脚本）两个指令集的全面分析结论、忠实转换规则、转换工具用法与验证结果。
 
 - **按全语料逐指令复核修订过**（修正 `28`/`1e` 尾段长度、
-  `65` 参数、选项 strid 与对话正文策略；回归检查固定为 `script/verify_ws2_conventions.py`）
+  `65` 参数、选项 strid 与对话正文策略；回归检查固定为 `script/audit/verify_ws2_conventions.py`）
 - 语料：原版 Rio.arc 全部 **324 个 WSC**（2.36 MB，ror2 解密）、Steam 版 Rio.arc 全部 **363 个 WS2**（rot6 解码）、Res303 的 12 个还原脚本*.WS2、汉化组 `CrossChannelCrack.cpp`
 - 逐操作码证据来自两个反汇编器的**全语料覆盖**（即上表 `tool/wsc.py` / `tool/ws2disasm.py`），
   并由两者互相复核：565/565 跳转目标全部落在指令边界，文本与汉化组 CCS 逐字互验 41,628/41,629。
@@ -15,7 +15,7 @@
 | WSC 反汇编器 | `tool/wsc.py` | 线性解析；324/324 文件 100% 覆盖 |
 | WS2 反汇编器 | `tool/ws2disasm.py` | 375/375 文件（363 Steam + 12 还原脚本）100% 覆盖 |
 | 转换器 | `tool/wsc2ws2.py` | 每条 WSC 指令 → 等价 WS2 序列，或明确跳过并计数 |
-| 批量 CLI | `script/convert_wsc.py` | 全量转换 + 结构校验 + 往返忠实性校验 + 资源核对 |
+| 批量 CLI | `script/audit/convert_wsc.py` | 全量转换 + 结构校验 + 往返忠实性校验 + 资源核对 |
 | 转换产物 | 临时目录（`convert_wsc.py --outdir`） | 324 个 `.ws2` + `conversion_report.json` |
 
 **全量验证结果（324/324）**：
@@ -24,7 +24,7 @@
 - 对话 / 语音 / 图像 / 选项数量与原版零误差；
 - **往返忠实性**：重解析产物逐句比对——每条对话文本与原版**逐字节一致**（CP932 原文直通，含 `%K%P`、ruby、`\n`），语音文件名与顺序一致，对话 id 一致；
 - 资源缺口（Steam 侧没有的原版资源）全部列入报告 `missing_resources`（§7），是补丁 payload 的工作清单；转换器不虚构、不重定向任何资源。
-- **约定回归检查**：`python script/verify_ws2_conventions.py`（9 项，含尾段结构、发射模板、
+- **约定回归检查**：`python script/audit/verify_ws2_conventions.py`（9 项，含尾段结构、发射模板、
   对话文本/id、选项 strid、`15` 连跑），任何一项失败都说明转换器或反汇编器又漂移了。
 
 > **"字节 100% 覆盖"不等于解析正确**。反汇编器只要在错误的位置重新同步，覆盖率检查仍会通过——
@@ -51,7 +51,7 @@
 - **原版引擎按全局脚本号路由**：剧情脚本的"下一幕"不写在 WSC 里。实测 CCA0004 的选项块之后直接 `0a ff` 结束，分支由引擎按脚本号+选择结果分发； 56 个选项块中 42 个属于这种"文件尾选项"。
 - **Steam 引擎要求显式跳转**：每个 `.ws2` 以 `07 <目标> 00 | ff a b` 收尾（**不带清框** ——
   实测原生 369 条出口里只有 27 条前面是 `15`，见 [file-formats.md](file-formats.md)「场景控制指令」）。
-- **解法**：Steam 语料就是路由 ground truth。`script/convert_wsc.py` 自动从 Steam 对应脚本（`<词干>_EN`）收割出口目标与选项分支目标注入转换。280/324 脚本有 Steam 对应物；其余（多为 Steam 重构/删除的 H 场景，恰是还原目标）输出终止型 `ff` 并标记 `exit.source == 'none'`，由调用链整合步骤（`doc/call-chain.md`）接线。转换器**绝不猜测**出口目标。
+- **解法**：Steam 语料就是路由 ground truth。`script/audit/convert_wsc.py` 自动从 Steam 对应脚本（`<词干>_EN`）收割出口目标与选项分支目标注入转换。280/324 脚本有 Steam 对应物；其余（多为 Steam 重构/删除的 H 场景，恰是还原目标）输出终止型 `ff` 并标记 `exit.source == 'none'`，由调用链整合步骤（`doc/call-chain.md`）接线。转换器**绝不猜测**出口目标。
 - Steam 尾部存在条件双出口（`07 A | 07 B | ff`，前面 `01 mode=0x85` 的 `b` 字段指向第二出口的文件偏移）；收割取第一个为默认出口，其余记入 `<词干>_ALT`。
 
 ## 3. 核心功能转换规则（字节级）
@@ -497,9 +497,9 @@ jmp   ds:jpt_40A392[edx*4]         ; case → handler（均在本函数内）
 
 ```bash
 # 全量转换（默认读原版 Rio.arc + backup/Rio.arc 收割路由知识）
-python script/convert_wsc.py                      # -> tmp/converted_ws2/
-python script/convert_wsc.py --stem CCC0000       # 单文件
-python script/convert_wsc.py --outdir out/ws2 --report out/report.json
+python script/audit/convert_wsc.py                      # -> tmp/converted_ws2/
+python script/audit/convert_wsc.py --stem CCC0000       # 单文件
+python script/audit/convert_wsc.py --outdir out/ws2 --report out/report.json
 
 # 编程接口
 from tool.wsc2ws2 import convert, decrypt_wsc, ConvertOptions
@@ -516,7 +516,7 @@ Rio.arc；打包与调用链穿插属于补丁管线（`doc/call-chain.md`）。
 
 ## 7. 验证明细
 
-1. **全量**：324 转换 0 失败；产物 100% 重解析；对话/语音/图像/选项数量零误差；**对话文本与 id、语音序列、立绘槽名逐字节一致**（往返校验内置于 `convert_wsc.py`，当前 0 失败）；另有 `script/verify_ws2_conventions.py` 的 9 项约定检查。
+1. **全量**：324 转换 0 失败；产物 100% 重解析；对话/语音/图像/选项数量零误差；**对话文本与 id、语音序列、立绘槽名逐字节一致**（往返校验内置于 `convert_wsc.py`，当前 0 失败）；另有 `script/audit/verify_ws2_conventions.py` 的 9 项约定检查。
 2. **资源缺口统计**（`missing_resources`，各脚本分别去重后合计 2,180 项引用、全局去重 **473** 个不同名字）：立绘 `TC**` 及其 X/Z 掩码变体、`SE*` 113、`EVCC*` 36、`SGCC*` 31、`EFMSK_*` 蒙版、原版 `BGM*` 25 等——即 Steam 删除 H 场景时一并删除的资源，正是补丁 payload 的补入清单。入包前必须清零（`33` 硬加载缺资源会卡死）。
 3. **出口分布**：243 个脚本出口从 Steam 对应脚本自动收割 + 38 个"由选项块收尾" + 3 个 WSC 尾转移；**40 个脚本出口未接线**（无 Steam 对应物，等调用链整合）。选项表 56 张：35 张从 Steam 对应脚本收割 + 7 张文件内阶梯重定位 + 4 张混合 + 10 张回退（回退项记入 warning，需在调用链层接线）。
 

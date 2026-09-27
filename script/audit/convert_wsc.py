@@ -1,9 +1,9 @@
 """批量把原版 Rio.arc 的 WSC 脚本转换为 Steam (AdvHD) WS2 格式。
 
 用法（项目根执行）：
-    python script/convert_wsc.py                      # 全量转换 -> tmp/converted_ws2/
-    python script/convert_wsc.py --stem CCC0000       # 只转一个
-    python script/convert_wsc.py --outdir out/ws2
+    python script/audit/convert_wsc.py                      # 全量转换 -> tmp/converted_ws2/
+    python script/audit/convert_wsc.py --stem CCC0000       # 只转一个
+    python script/audit/convert_wsc.py --outdir out/ws2
 
 行为：
 1. 读取原版 Rio.arc（老式归档），逐文件解密(ror2) -> tool/wsc2ws2.convert。
@@ -18,7 +18,7 @@ import struct
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.stdout.reconfigure(encoding='utf-8')
 
 from tool import arcbuild, ws2
@@ -26,7 +26,7 @@ from tool.wsc import disassemble as disassemble_wsc
 from tool.ws2disasm import disassemble as disassemble_ws2
 from tool.wsc2ws2 import ConvertOptions, convert, decrypt_wsc
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ORIGINAL_RIO = Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Original\Rio.arc')
 DEFAULT_STEAM_RIO = ROOT / 'backup' / 'Rio.arc'
 # 存在性核对的资源归档（名称大写比对；缺失只记录，不视为错误 —— H 场景资源

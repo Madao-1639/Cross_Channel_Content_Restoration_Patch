@@ -12,15 +12,15 @@ Voice.arc 里存在 ⇒ `asset/Voice.arc` 有 16,111 条 = 15,144 + 967。若起
 
 产出：`resource/carried_soundlevel.json` —— `{stem: "0.00,0.00,..."}`（成员名 = `<stem>.soundlevel`）。
 用法（项目根目录）：
-    python script/extract_carried_soundlevel.py            # 预演
-    python script/extract_carried_soundlevel.py --write    # 落盘
+    python script/internalize/extract_carried_soundlevel.py            # 预演
+    python script/internalize/extract_carried_soundlevel.py --write    # 落盘
 """
 import argparse
 import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild  # noqa: E402

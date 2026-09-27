@@ -22,15 +22,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / 'script'))
 sys.stdout.reconfigure(encoding='utf-8')
 
 from tool import wsc                                    # noqa: E402
 from tool import speaker as spk                         # noqa: E402
 from tool import arcbuild, ws2, ws2disasm               # noqa: E402
 from tool.wsc2ws2 import ConvertOptions, convert_range, decrypt_wsc   # noqa: E402
-import build_rename_map                                 # noqa: E402
-import splice_restoration as SR                         # noqa: E402
+from tool import rename_map as RN                       # noqa: E402
+from tool import archprobe                              # noqa: E402
 
 WSC = ROOT / 'resource' / 'corpus' / 'wsc'
 OUT = ROOT / 'resource' / 'original_stage.json'
@@ -120,13 +119,13 @@ def family_slots(rio_path):
 
 def main():
     tm = json.loads(TM.read_text(encoding='utf-8'))['scripts']
-    rename, unresolved, _unchanged, _cg, conflicts = build_rename_map.build()
+    rename, unresolved, _unchanged, _cg, conflicts = RN.build()
     if conflicts:
         raise SystemExit('CG 编号表有未入表项：%s' % conflicts[:5])
     if unresolved:
         raise SystemExit('有资源找不到出处（先跑 import_missing_voices）：%s' % unresolved[:5])
-    inventory = SR.load_inventory()
-    pna_layers = SR.load_pna_layers()
+    inventory = archprobe.load_inventory()
+    pna_layers = archprobe.load_pna_layers()
     # 骨架（接缝已合）里各角色用的槽 —— **只有唯一槽时才沿用**（有据；多槽/没有则不猜）。
     # `family_slots` 的键是脚本名（`CCD3003A_EN`），这里按 `text_map` 映射到 `ccs`（`CCD3003`）——
     # 同一 ccs 的多个脚本取**并集**：某个脚本里唯一、另一个里不是 ⇒ 变成多槽 ⇒ 自动放弃沿用（保守）。
@@ -184,7 +183,7 @@ def main():
                 if s:
                     spans.setdefault(ccs, {})[row] = s
 
-    # 这些行**不在 `build_rename_map` 的覆盖面内**（它只扫 12 宿主的切片区间）⇒
+    # 这些行**不在 `tool/rename_map` 的覆盖面内**（它只扫 12 宿主的切片区间）⇒
     # 按同一条规则（档位 0 → 1）本地补全立绘改名；目标不存在就不入表，
     # 转换器 `emit_portrait_block` 会跳过它（绝不产出悬空引用）。
     for ccs, per in spans.items():
@@ -193,7 +192,7 @@ def main():
             for i in ins:
                 if a <= i.offset < b and i.opcode == 0x48:
                     nm = (i.fields.get('name') or '').upper()
-                    t = build_rename_map.portrait_target(nm, inventory)
+                    t = RN.portrait_target(nm, inventory)
                     if t:
                         rename[nm] = t
 

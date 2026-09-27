@@ -13,7 +13,7 @@
      "两条都绑原版行"多半是原版自己就重复；**"至少一条是自撰格"才值得人看一眼**。
 
 用法：
-    python script/audit_duplicate_text.py [--min-len 8] [--limit 40]
+    python script/audit/audit_duplicate_text.py [--min-len 8] [--limit 40]
 """
 import argparse
 import collections
@@ -23,9 +23,8 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / 'script'))
 
 from tool import lng as lngmod                      # noqa: E402
 

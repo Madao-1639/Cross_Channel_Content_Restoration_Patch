@@ -18,9 +18,9 @@ ws2 每句对话前有 `15 %LC<角色名>`（英文名），CCS 每行有 `[角�
 说话人不一致率天然偏高，需与「句数相同却大量不一致」分开看 —— 后者才是纯错位。
 
 用法（项目根目录）：
-    python script/audit_lng_semantics.py                 # 扫 asset/Rio.arc
-    python script/audit_lng_semantics.py --rio backup.arc
-    python script/audit_lng_semantics.py --calibrate     # 用 Res303 已确认的 6 条做正对照
+    python script/audit/audit_lng_semantics.py                 # 扫 asset/Rio.arc
+    python script/audit/audit_lng_semantics.py --rio backup.arc
+    python script/audit/audit_lng_semantics.py --calibrate     # 用 Res303 已确认的 6 条做正对照
 """
 import argparse
 import difflib
@@ -31,7 +31,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402

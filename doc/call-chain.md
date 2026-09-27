@@ -75,8 +75,7 @@ lo_eff = lo + 首端重合长度
 ```
 
 - **接缝**与**交接点**由「源 WSC ↔ 宿主 lng ↔ CCS」三方对位定出
-  （`python script/audit_coverage.py --res303`，结论与 Res303 `docs/report.json` 的
-  `source_range` **11/11 逐值一致**）。
+  （与 Res303 `docs/report.json` 的 `source_range` **11/11 逐值一致**）。
 - **对位只能用显示文本**。语音名 / 立绘名 / 背景名三个结构锚点**实测全部不可用**：
   Steam 侧语音按角色全局重编、立绘被重编（原版 `TCMM0002C` ↔ Steam `TCMM1001C`）、
   背景与 CG 会被替换重排。
@@ -169,7 +168,7 @@ lo_eff = lo + 首端重合长度
 
 ### ACCEPTANCE
 
-`script/audit_inline.py` 是回归守卫：要求每个场景与源 CCS 对位后
+`script/audit/audit_inline.py` 是回归守卫：要求每个场景与源 CCS 对位后
 **恰好一次、无缺失、无重复、无倒序**，且出口等于 Steam 原档。
 
 ---
@@ -185,8 +184,7 @@ lo_eff = lo + 首端重合长度
 ### 检查方法
 
 ```bash
-python script/audit_inline.py            # 顺序对位 + 出口一致性
-python script/audit_coverage.py          # 覆盖区间（插入前用它定 lo/hi）
+python script/audit/audit_inline.py      # 顺序对位 + 出口一致性
 python script/final_verification.py      # 全量验收
 ```
 
@@ -195,7 +193,7 @@ python script/final_verification.py      # 全量验收
 ### 引用名 -> 归档成员
 
 就地插入会引入**原版**的资源名，必须换成补丁里真实存在的名字
-（`script/build_rename_map.py` 生成，逐条与归档成员核对过）：
+（`tool/rename_map.py` 生成，逐条与归档成员核对过）：
 
 | 类别 | 规则 | 落到哪 |
 |---|---|---|
@@ -236,7 +234,7 @@ python script/final_verification.py      # 全量验收
 - [ ] 与源 CCS 对位后「恰好一次、无缺失、无重复、无倒序」
 - [ ] `01 mode=0x85` 的 `b` 字段指向正确的 `07`
 - [ ] 宿主第一句对话之前的开场件（`SCENETITLE*`、`SGCC*`、鉴赏钩子）仍在
-- [ ] 还原段引用的资源都能解析（`script/build_rename_map.py` 的「找不到出处」清单为空）
+- [ ] 还原段引用的资源都能解析（`tool/rename_map.py` 的「找不到出处」清单为空）
 
 > 实机测试项见 [acceptance-criteria.md](acceptance-criteria.md)「实机测试清单」。
 

@@ -3,7 +3,7 @@
 
 **本脚本不改写任何东西。** 事件 CG 的原版↔补丁对应关系由
 `script/build_cg_map.py` 生成到 `resource/cg_map.json`；真正应用改名的是
-`script/build_rename_map.py` + `script/splice_restoration.py`（每个宿主脚本都由
+`tool/rename_map.py` + `script/splice_restoration.py`（每个宿主脚本都由
 splice 从源 WSC 重新生成，改名在那一趟里落到 ws2 字节上）。
 
 为什么不在这里做全局改名：**同一个原版名在不同脚本里含义不同**。例如

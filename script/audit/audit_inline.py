@@ -7,20 +7,22 @@
   * 倒序：对位结果的源序号是否单调不减
   * 出口：跳转目标是否等于 Steam 原档
 
-只读。用法：python script/audit_inline.py
+只读。用法：python script/audit/audit_inline.py
 """
 import io
 import re
+import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402
 
-sys.path.insert(0, str(ROOT / 'script'))
-from splice_restoration import SCENES, TAIL_HOSTS  # noqa: E402
+# 还原范围**直读表**（原先 import 一个流水线步骤只为了拿这张表的内容）
+_SL = json.loads((ROOT / 'resource' / 'scene_slices.json').read_text(encoding='utf-8'))
+SCENES, TAIL_HOSTS = _SL['scenes'], _SL['tail_hosts']
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')

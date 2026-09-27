@@ -133,8 +133,8 @@ tool/
 python script/build_patch.py            # 按方案产出 asset/（完整文件）
 python script/generate_payload.py       # 生成增量补丁到 payload/（含回读校验）
 python script/final_verification.py     # 全量验收
-python script/audit_inline.py           # 就地插入回归守卫
-python script/verify_ws2_conventions.py # 转换器约定回归```
+python script/audit/audit_inline.py           # 就地插入回归守卫
+python script/audit/verify_ws2_conventions.py # 转换器约定回归```
 
 各脚本的职责见 `doc/technical-solutions.md`「工具链」。
 
