@@ -38,33 +38,27 @@ from tool.wsc2ws2 import ConvertOptions, convert_range  # noqa: E402
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-WSC_DIR = ROOT / 'tmp' / 'corpus' / 'wsc'
+WSC_DIR = ROOT / 'resource' / 'corpus' / 'wsc'
 RIO = ROOT / 'asset' / 'Rio.arc'
 STEAM_RIO = ROOT / 'backup' / 'Rio.arc'
 BACKUP = ROOT / 'asset' / 'Rio.arc.before_inline_splice'
 
-# 逐场景参数。`lo`/`hi` 来自 script/audit_coverage.py（与 Res303 report.json 11/11 一致），
-# `hi` = 插入段的**末句源序号（含）**，等于场景末句、或下一个承载脚本的源起点 − 1；
-# `head_overlap` = 宿主开头与源「内容完全一致」的连续块长度（长连续块判据，≥5）；
-# `keep` = 前段保留的宿主对话数 = 插入段首句在字符串池里的位置。
-SCENES = [
-    dict(host='CCA0025C_en.ws2', src='CCA0025C', lo=15, hi=571, head_overlap=0, keep=16),
-    dict(host='CCB1014C_en.ws2', src='CCB1014C', lo=15, hi=570, head_overlap=0, keep=16),
-    dict(host='CCB2013_en.ws2', src='CCB2013', lo=0, hi=546, head_overlap=0, keep=0),
-    dict(host='CCB2101_en.ws2', src='CCB2101', lo=0, hi=236, head_overlap=6, keep=6),
-    dict(host='CCC0000_en.ws2', src='CCC0000', lo=195, hi=363, head_overlap=0, keep=211),
-    dict(host='CCC3027_en.ws2', src='CCC3027', lo=203, hi=808, head_overlap=0, keep=84),
-    dict(host='CCC4022_en.ws2', src='CCC4022', lo=135, hi=614, head_overlap=6, keep=141),
-    dict(host='CCD0022A_en.ws2', src='CCD0022A', lo=7, hi=348, head_overlap=0, keep=18),
-    dict(host='CCD1001B_en.ws2', src='CCD1001', lo=980, hi=1560, head_overlap=13, keep=337),
-    dict(host='CCD4003A_en.ws2', src='CCD4003', lo=486, hi=865, head_overlap=0, keep=539),
-    dict(host='CCD5001A_en.ws2', src='CCD5001', lo=450, hi=1111, head_overlap=0, keep=444),
-]
-# 需要「截掉与插入段重合的头部」的第二个脚本。
-# `from_dialogue` = 该脚本里对应源 `from_src` 的那条对话（实测 lng 对位定出）
-TAIL_HOSTS = [
-    dict(host='CCD5001B_en.ws2', src='CCD5001', from_dialogue=220, from_src=1112),
-]
+# 逐场景参数从 `resource/scene_slices.json` 读 —— 那份表是「还原范围」的唯一来源，
+# 剧情顺序 = `order`，`lo`/`hi` 为源 WSC 的对话序号（含端点），
+# `keep` = 前段保留的宿主对话数，`head_overlap` = 宿主开头与源内容完全一致的连续块长度。
+# （原先在此内联的 SCENES/TAIL_HOSTS 已迁出，避免与其它工具各写一份。）
+def _load_slices():
+    import json as _json
+    p = Path(__file__).resolve().parent.parent / 'resource' / 'scene_slices.json'
+    if not p.exists():
+        raise SystemExit('缺少 %s' % p)
+    d = _json.loads(p.read_text(encoding='utf-8'))
+    return d
+
+
+_SL = _load_slices()
+SCENES = _SL['scenes']
+TAIL_HOSTS = _SL['tail_hosts']
 
 
 def load(path):
@@ -122,6 +116,184 @@ def load_inventory():
     return inv
 
 
+def load_pna_layers():
+    """{PNA 名(大写): 层数}。决定 `39` 的帧号形态（见 wsc2ws2.PORTRAIT_ATTRS_BY_LAYERS）。
+
+    不查层数而照抄「4 层形态」，对 1 层 PNA 就是**子图层越位**（别的游戏补丁踩过的坑）。
+    """
+    from tool import pna
+    out = {}
+    sys.path.insert(0, str(ROOT / 'script'))
+    import build_rename_map
+    for p in build_rename_map.ARCHIVES:
+        q = ROOT / p
+        if not q.exists():
+            continue
+        for n, d in arcbuild.read_raw(q):
+            name = n.decode('utf-16-le').upper()
+            if name.endswith('.PNA') and d[:4] == b'PNAP':
+                out.setdefault(name, struct.unpack_from('<I', d, 0x10)[0])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 接缝定位统一（方针）：插入段首尾的立绘若**延续**接缝另一侧的同一角色，坐标必须一致，
+# 否则该角色会在接缝处原地跳一下。中段的立绘才用还原出来的原版坐标。
+# ---------------------------------------------------------------------------
+
+def _slot_name(ins):
+    tag = ins.fields.get('tag')
+    return (chr(tag) if isinstance(tag, int) else '') + str(ins.fields.get('slot', ''))
+
+
+def _fam(name):
+    return str(name)[:4]
+
+
+def _live_state(instrs):
+    """一段指令流**结束时**仍在屏的立绘：{槽: (family, x 或 None)}。"""
+    bound, cur = {}, {}
+    for j in instrs:
+        if j.opcode == 0x34:
+            s = _slot_name(j)
+            bound[s] = _fam(j.fields.get('file', ''))
+            cur.pop(s, None)
+        elif j.opcode == 0x46 and tuple(j.fields['cfg']) == (0, 0, 0):
+            cur[str(j.fields['name'])] = round(j.fields['x'], 1)
+        elif j.opcode == 0x37:
+            n = str(j.fields['name'])
+            if n == '*':
+                bound.clear()
+                cur.clear()
+            else:
+                bound.pop(n, None)
+                cur.pop(n, None)
+    return {s: (bound[s], cur.get(s)) for s in bound}
+
+
+def _first_bindings(instrs):
+    """一段指令流**开始时**先绑定的立绘：{槽: (family, 首个位置 x 或 None)}。"""
+    out = {}
+    for j in instrs:
+        if j.opcode == 0x34:
+            s = _slot_name(j)
+            out.setdefault(s, [_fam(j.fields.get('file', '')), None])
+        elif j.opcode == 0x46 and tuple(j.fields['cfg']) == (0, 0, 0):
+            n = str(j.fields['name'])
+            if n in out and out[n][1] is None:
+                out[n][1] = round(j.fields['x'], 1)
+        elif j.opcode == 0x37:
+            n = str(j.fields['name'])
+            if n == '*':
+                out.clear()
+            else:
+                out.pop(n, None)
+    return {s: tuple(v) for s, v in out.items()}
+
+
+def _portrait_blocks(seg):
+    """插入段里的立绘块：[{slot, family, pos_off}]（pos_off = 位置 46 的 x 字段偏移）。"""
+    out = []
+    for k, j in enumerate(seg):
+        if j.opcode != 0x34:
+            continue
+        if k + 4 >= len(seg) or seg[k + 2].opcode != 0x04 \
+                or seg[k + 3].opcode != 0x46 or seg[k + 4].opcode != 0x46:
+            continue
+        pos = seg[k + 4]
+        out.append({'slot': _slot_name(j), 'family': _fam(j.fields.get('file', '')),
+                    'x': round(pos.fields['x'], 1), 'pos_off': pos.offset,
+                    'off': pos.offset + 1 + len(str(pos.fields['name'])) + 1 + 3})
+    return out
+
+
+def align_seam_positions(seg_plain, entry_state, exit_state):
+    """把插入段首尾**延续同一角色**的立绘块的位置改成接缝另一侧的值。
+
+    规则（见 doc/call-chain.md「接缝定位统一」）：
+
+    * **入口**：前段末尾某槽有角色在屏 ⇒ 插入段里该槽**首条「连续链」**沿用前段的 x；
+    * **出口**：尾段开头会绑定某槽 ⇒ 插入段里该槽**末条「连续链」**改用尾段的 x；
+    * 两者冲突时**入口优先**（并计入 report），中段一律保留还原坐标。
+
+    「连续链」= 同一槽内 family 不变、且中间没有 `37` 清槽的一段。换成别的角色或清槽
+    都会开一条新链 —— 那之后的立绘就是**新登场的**，该用还原坐标而不是沿用接缝的值。
+
+    返回 (新字节, 改动条数, 冲突条数)。
+    """
+    seg = ws2disasm.disassemble(seg_plain)
+    blocks = _portrait_blocks(seg)
+    if not blocks:
+        return seg_plain, 0, 0
+    by_pos = {b['pos_off']: b for b in blocks}
+
+    # ---- 给每个块标注它所属的「连续链」----
+    seq = 0
+    chain, chain_fam, first, last = {}, {}, {}, {}
+    cur_fam = {}
+    for j in seg:
+        if j.opcode == 0x34:
+            s = _slot_name(j)
+            fam = _fam(j.fields.get('file', ''))
+            if cur_fam.get(s) != fam:
+                seq += 1
+                cur_fam[s] = fam
+            chain[s] = seq
+            chain_fam[s] = fam
+        elif j.opcode == 0x37:
+            n = str(j.fields['name'])
+            if n == '*':
+                cur_fam.clear()
+            else:
+                cur_fam.pop(n, None)
+        elif j.opcode == 0x46 and tuple(j.fields['cfg']) == (0, 0, 0) \
+                and j.offset in by_pos:
+            b = by_pos[j.offset]
+            b['chain'] = chain.get(b['slot'])
+            if b['chain'] is not None:
+                first.setdefault(b['slot'], b['chain'])
+                last[b['slot']] = b['chain']
+
+    target = {}
+
+    def consider(b, x):
+        if x is None:
+            return None
+        if b['off'] in target:
+            if target[b['off']] != x:
+                return 'conflict'
+            return None
+        target[b['off']] = x
+        return 'set'
+
+    # ---- 入口：首链 ----
+    for b in blocks:
+        if b['chain'] != first.get(b['slot']):
+            continue
+        ent = entry_state.get(b['slot'])
+        if ent and ent[0] == b['family']:
+            consider(b, ent[1])
+    # ---- 出口：末链（入口已定的以入口为准）----
+    conflicts = 0
+    for b in reversed(blocks):
+        if b['chain'] != last.get(b['slot']):
+            continue
+        ext = exit_state.get(b['slot'])
+        if not (ext and ext[0] == b['family']):
+            continue
+        if consider(b, ext[1]) == 'conflict':
+            conflicts += 1
+
+    buf = bytearray(seg_plain)
+    n = 0
+    for b in blocks:
+        if target.get(b['off'], b['x']) == b['x']:
+            continue
+        buf[b['off']:b['off'] + 4] = struct.pack('<f', target[b['off']])
+        n += 1
+    return bytes(buf), n, conflicts
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--check', action='store_true')
@@ -133,6 +305,8 @@ def main():
     rename = load_rename_map()
     inventory = load_inventory()
     print('运行时可用资源 %d 个' % len(inventory))
+    pna_layers = load_pna_layers()
+    print('PNA 层数表 %d 个（决定 `39` 的帧号形态）' % len(pna_layers))
 
     results, reports = {}, []
     for sc in SCENES:
@@ -169,7 +343,7 @@ def main():
         else:
             end = wdl[sc['hi']].offset + wdl[sc['hi']].size
         opts = ConvertOptions(slice_mode=True, pool_start=sc['keep'], rename_map=rename,
-                              available=inventory)
+                              available=inventory, pna_layers=pna_layers)
         src_raw = (WSC_DIR / (stem + '.WSC')).read_bytes()
         slice_plain, rep = convert_range(src_raw, stem, opts,
                                          start_offset=start, end_offset=end)
@@ -191,6 +365,17 @@ def main():
         tail_off = s_dl[-1].offset + s_dl[-1].size
         tail = bytearray(steam[host.upper()][tail_off:])
         # 尾段里的 `01 mode=0x85`：第二出口的文件内偏移按新布局重算
+        # ---- 接缝定位统一：首尾延续同一角色的立绘沿用接缝另一侧的坐标 ----
+        slice_plain, n_seam, n_conf = align_seam_positions(
+            slice_plain,
+            _live_state(ws2disasm.disassemble(ws2.decode(prefix))),
+            _first_bindings(ws2disasm.disassemble(ws2.decode(bytes(tail)))))
+        if n_seam:
+            print('  %-20s 接缝定位统一：改写 %d 个立绘块的位置%s'
+                  % (host, n_seam, '（入口/出口冲突 %d 处，入口优先）' % n_conf if n_conf else ''))
+        if n_conf:
+            print('  %-20s ⚠ 接缝入口与出口对同一角色的坐标不一致 %d 处，已按入口取值'
+                  % (host, n_conf))
         seg_enc = ws2.encode(slice_plain)
         base = len(prefix) + len(seg_enc)
         fixed = 0
@@ -284,9 +469,9 @@ def main():
         print('\n[--check] 未写入')
         return 0
 
-    if BACKUP.exists():
-        print('\n[备份] 已存在 %s（保留原样）' % BACKUP)
-    else:
+    # 备份判据 = **内容**（不是"存在即跳过"）：目标与本步备份不同才刷新，
+    # 否则 `.before_*` 会永远停在最早那次、失去"本步之前的回滚点"的作用。
+    if not (BACKUP.exists() and arcbuild.same_file(BACKUP, RIO)):
         arcbuild.write_arc(arcbuild.read_raw(RIO), BACKUP)
         print('\n[备份] asset/Rio.arc -> %s' % BACKUP)
 

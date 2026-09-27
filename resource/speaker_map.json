@@ -1,0 +1,847 @@
+{
+  "_说明": "角色名称映射的唯一来源。en = Steam ws2 脚本里的 `%LC` 标记；zh = 名字框显示文本（本表为 `asset/Rio.arc` 的 NameTable.txt 的唯一来源）；ja = 原版 WSC 的 0x42 说话人字段（无源角色为 null）；voice_prefix = 原版语音文件名前缀（大写）；channel = Steam `2e` 指令的通道名；pna_prefix = 立绘文件名前四字符；confidence=low 表示日文名是低置信度推断、待实机校对；note = 判定留痕。表的键集合必须等于脚本里实际出现的 `%LC` 集合。",
+  "speakers": [
+    {
+      "en": "Taichi",
+      "zh": "太一",
+      "ja": [
+        "太一",
+        "俺"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "原版 0x42 里 `太一` 与 `俺` 是两个说话人标记，Steam 都写成 %LCTaichi；NameTable 是单值映射，只能显示「太一」（`俺` 的 118 处一并如此显示）"
+    },
+    {
+      "en": "Misato",
+      "zh": "见里",
+      "ja": [
+        "見里"
+      ],
+      "voice_prefix": "MSA",
+      "channel": "charMIS",
+      "pna_prefix": "TCMM"
+    },
+    {
+      "en": "Miki",
+      "zh": "美希",
+      "ja": [
+        "美希"
+      ],
+      "voice_prefix": "MKI",
+      "channel": "charMIK",
+      "pna_prefix": "TCYM"
+    },
+    {
+      "en": "Kiri",
+      "zh": "雾",
+      "ja": [
+        "霧"
+      ],
+      "voice_prefix": "KRI",
+      "channel": "charKIR",
+      "pna_prefix": "TCSK"
+    },
+    {
+      "en": "Touko",
+      "zh": "冬子",
+      "ja": [
+        "冬子"
+      ],
+      "voice_prefix": "FYU",
+      "channel": "charTOU",
+      "pna_prefix": "TCKT"
+    },
+    {
+      "en": "Tomoki",
+      "zh": "友贵",
+      "ja": [
+        "友貴"
+      ],
+      "voice_prefix": "YKI",
+      "channel": "charTOM",
+      "pna_prefix": "TCST"
+    },
+    {
+      "en": "Sakuraba",
+      "zh": "樱庭",
+      "ja": [
+        "桜庭"
+      ],
+      "voice_prefix": "SKU",
+      "channel": "charSAK",
+      "pna_prefix": "TCSH"
+    },
+    {
+      "en": "Youko",
+      "zh": "曜子",
+      "ja": [
+        "曜子"
+      ],
+      "voice_prefix": "YOU",
+      "channel": "charYOU",
+      "pna_prefix": "TCHY"
+    },
+    {
+      "en": "Nanaca",
+      "zh": "七香",
+      "ja": [
+        "七香"
+      ],
+      "voice_prefix": "NNK",
+      "channel": "charNNK",
+      "pna_prefix": "TCCN"
+    },
+    {
+      "en": "Dr. Oldman",
+      "zh": "老医生",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Yusa",
+      "zh": "游纱",
+      "ja": [
+        "遊紗"
+      ],
+      "voice_prefix": "YSA",
+      "channel": "charYUS",
+      "pna_prefix": "TCDY"
+    },
+    {
+      "en": "Shinkawa",
+      "zh": "新川",
+      "ja": [
+        "新川"
+      ],
+      "voice_prefix": "SHI",
+      "channel": "charSIN",
+      "pna_prefix": "TCSY"
+    },
+    {
+      "en": "Mimi",
+      "zh": "咪咪",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Girl",
+      "zh": "少女",
+      "ja": [
+        "少女"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Lunch Lady",
+      "zh": "阿姨",
+      "ja": [
+        "おばちゃん"
+      ],
+      "voice_prefix": "MMN",
+      "channel": "charOBA",
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "同上，CCS 实测 n=12/12"
+    },
+    {
+      "en": "Poko",
+      "zh": "波可",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Akira",
+      "zh": "阿基拉",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "台词自证（“阿基拉……”/“阿基拉·梅鲁纳……”）；原「明」的命中全是“三明治”噪声"
+    },
+    {
+      "en": "Michiru",
+      "zh": "美知留",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "台词自证（“美知留……”）；原「满」是“右满舵/好丰满”噪声"
+    },
+    {
+      "en": "Hayasugi",
+      "zh": "速杉",
+      "ja": [
+        "曜子先生"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "台词用「速杉」5 处（CC_15A 的“世界上最快的早泄男”，保住 はやすぎ≈早すぎ 双关）；原「早杉」从没出现在台词里"
+    },
+    {
+      "en": "Miyuki",
+      "zh": "美幸",
+      "ja": [
+        "みゆき"
+      ],
+      "voice_prefix": "MYK",
+      "channel": "charMIY",
+      "pna_prefix": null,
+      "confidence": "low"
+    },
+    {
+      "en": "Boy",
+      "zh": "少年",
+      "ja": [
+        "少年"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Usamimi",
+      "zh": "兔耳",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Matron",
+      "zh": "岳母",
+      "ja": [
+        "ママン"
+      ],
+      "voice_prefix": "MMN",
+      "channel": "charOBA",
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "与 Lunch Lady 同在 NameTable 里写成「食堂阿姨」（撞名），已按 CCS 实测 n=26/26 改"
+    },
+    {
+      "en": "???",
+      "zh": "＊",
+      "ja": [
+        "＊＊"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "原为 U+FF1F×3「？？？」（作者把星号掩码当问号翻了，字节 1f ff ×3 可证）；改为 CCS 实证的 ＊"
+    },
+    {
+      "en": "All together",
+      "zh": "众人",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Sakuraba/Tomoki",
+      "zh": "樱庭／友贵",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Fukuhara",
+      "zh": "福原",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Mimimi",
+      "zh": "咪咪咪",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "台词自证（“不愧是咪咪咪学姐”）；另 lng 有 [太一]“咪咪咪学姐还真是坚强啊。”"
+    },
+    {
+      "en": "Both",
+      "zh": "二人",
+      "ja": [
+        "二人"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low"
+    },
+    {
+      "en": "Dead Misato",
+      "zh": "见里的尸体",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Voice",
+      "zh": "一个声音",
+      "ja": [
+        "声"
+      ],
+      "voice_prefix": [
+        "GKA",
+        "GKB",
+        "GKC"
+      ],
+      "channel": "charRKA",
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "lng 有 [一个声音] 前缀 2 处精确命中；原「声音」的命中是“这是声音。”噪声。语音前缀（`gka000a0022` 等三条）与通道经**原版引擎实证**：原版别名表里 `GKA/GKB/GKC` 与 `HRA`(腹の虫)/`RKA`(老カラデ家)/`MSM`(政宗) 同属**同一个配音来源**（槽 11），故共用该槽在 Steam 侧唯一存在的通道 `charRKA`"
+    },
+    {
+      "en": "Tomokichi",
+      "zh": "友吉",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "台词自证（“永别了，友吉……”）；原「友贵」的命中是“岛友贵”噪声"
+    },
+    {
+      "en": "Misako",
+      "zh": "美佐子",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Student",
+      "zh": "学生",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Taichi's Voice",
+      "zh": "太一的声音",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Vet",
+      "zh": "兽医",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "??",
+      "zh": "＊＊",
+      "ja": [
+        "＊"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "维持 ＊＊（CCS 众数 5/7、与现状一致）"
+    },
+    {
+      "en": "Miki/Kiri",
+      "zh": "美希／雾",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "All 3",
+      "zh": "三人",
+      "ja": [
+        "三人"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low"
+    },
+    {
+      "en": "Stomach",
+      "zh": "肚子里的虫",
+      "ja": [
+        "腹の虫"
+      ],
+      "voice_prefix": "HRA",
+      "channel": "charHAR",
+      "pna_prefix": null,
+      "note": "语音前缀经**原版引擎实证**为 `HRA`（原版别名表 `0x4f3cd8`）；旧表把它误记成 `HAR`（Steam 把自己的同名录音改名成 `HAR_0001..0006.OGG`，字母顺序与原版前缀不同）。通道 `charHAR`：原生 `HAR_*` ↔ `%LCStomach`，那 6 条就在 `CCB2002_EN`，与原版 `hra000b2002..` 同批"
+    },
+    {
+      "en": "All 4",
+      "zh": "冬子／见里／美希／友贵",
+      "ja": [
+        "冬子･見里･美希･友貴"
+      ],
+      "voice_prefix": "DOZ",
+      "channel": "charMUL",
+      "pna_prefix": null,
+      "confidence": "low",
+      "note": "内容照 CCS 实证（冬子･见里･美希･友贵），分隔符遵「组合名统一 ／」。语音前缀 `doz`（`doz000a0027`）；通道 `charMUL`：原生 `charMUL` 装的就是 `%LCAll 4`/`Both` 一类多人齐声，且原版引擎的别名表里**没有** `DOZ`（返回「非角色」）"
+    },
+    {
+      "en": "Kiri/Miki",
+      "zh": "雾／美希",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Misato/Kiri",
+      "zh": "见里／雾",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "(Taichi)",
+      "zh": "（太一）",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "保留全角括号（判定：不采纳去括号）"
+    },
+    {
+      "en": "(Touko)",
+      "zh": "（冬子）",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "保留全角括号（判定：不采纳去括号）"
+    },
+    {
+      "en": "All Girls",
+      "zh": "女生们",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Anatomy Model",
+      "zh": "人体模型",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Announcement",
+      "zh": "广播",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Male Student A",
+      "zh": "男生A",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Male Student B",
+      "zh": "男生B",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Male Student C",
+      "zh": "男生C",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Taichi (Delusional)",
+      "zh": "太一（妄想）",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "All",
+      "zh": "众人",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Club President",
+      "zh": "社长",
+      "ja": [
+        "部長"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Karade Master",
+      "zh": "老控手道大师",
+      "ja": [
+        "老カラデ家"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "CCS 实测 2/2 一致（唯一证据来源，只 1 个脚本）"
+    },
+    {
+      "en": "Miki/Misato",
+      "zh": "美希／见里",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Misato/Touko",
+      "zh": "见里／冬子",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Taichi/Touko",
+      "zh": "太一／冬子",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Attacker",
+      "zh": "袭击者",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Dead Kiri",
+      "zh": "雾的尸体",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Dead Sakuraba",
+      "zh": "樱庭的尸体",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Dead Tomoki",
+      "zh": "友贵的尸体",
+      "ja": [
+        "友貴の死体"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "confidence": "low"
+    },
+    {
+      "en": "Female Students",
+      "zh": "女学生们",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Juuzou",
+      "zh": "重藏",
+      "ja": [
+        "重蔵"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Kiri/Touko",
+      "zh": "雾／冬子",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Miki/Dr. Oldman",
+      "zh": "美希／老医生",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Recording",
+      "zh": "录音",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Scream",
+      "zh": "惨叫",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "判定维持现状：证据只有台词且均为叙述用词，不构成改名依据"
+    },
+    {
+      "en": "Shark",
+      "zh": "鲨鱼",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Taichi/Miki",
+      "zh": "太一／美希",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Taichi/Sakuraba",
+      "zh": "太一／樱庭",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Tomoki/Misato",
+      "zh": "友贵／见里",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Tomoki/Taichi",
+      "zh": "友贵／太一",
+      "ja": [],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null
+    },
+    {
+      "en": "Kiri/Taichi",
+      "zh": "雾／太一",
+      "ja": [
+        "霧・太一"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "原版语料里存在、Steam 脚本里从未出现；保留供转换器映射用（`%LC` 键集合不变量按「脚本里的键必须都能查到」单向核对）"
+    },
+    {
+      "en": "Masamune",
+      "zh": "政宗",
+      "ja": [
+        "政宗"
+      ],
+      "voice_prefix": "MSM",
+      "channel": "charRKA",
+      "pna_prefix": null,
+      "note": "原版语料里存在、Steam 脚本里从未出现；保留供转换器映射用（`%LC` 键集合不变量按「脚本里的键必须都能查到」单向核对）。语音前缀 `msm`（`msm000b2015`，Steam 删了对应段落）；与原版别名表里同一槽（11）的 `rka`/`hra`/`gka*`(声) 是**同一个配音来源**，故取该槽在 Steam 侧唯一存在的通道 `charRKA`"
+    },
+    {
+      "en": "Woman",
+      "zh": "女声",
+      "ja": [
+        "女"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "原版语料里存在、Steam 脚本里从未出现；保留供转换器映射用（`%LC` 键集合不变量按「脚本里的键必须都能查到」单向核对）"
+    },
+    {
+      "en": "Yutaka",
+      "zh": "丰",
+      "ja": [
+        "豊"
+      ],
+      "voice_prefix": null,
+      "channel": null,
+      "pna_prefix": null,
+      "note": "原版语料里存在、Steam 脚本里从未出现；保留供转换器映射用（`%LC` 键集合不变量按「脚本里的键必须都能查到」单向核对）"
+    },
+    {
+      "zh": "旁白（アナウンス）",
+      "en": "Announcer",
+      "channel": "charANA",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "旁白（アナウンス）",
+      "voice_prefix": "ANA"
+    },
+    {
+      "zh": "旁白",
+      "en": "Narration",
+      "channel": "charNAR",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "旁白",
+      "voice_prefix": "NAR"
+    },
+    {
+      "zh": "群众/弟子A",
+      "en": "Extra A",
+      "channel": "charDSA",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "群众/弟子A",
+      "voice_prefix": "DSA"
+    },
+    {
+      "zh": "群众/弟子B",
+      "en": "Extra B",
+      "channel": "charDSB",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "群众/弟子B",
+      "voice_prefix": "DSB"
+    },
+    {
+      "zh": "群众/弟子C",
+      "en": "Extra C",
+      "channel": "charDSC",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "群众/弟子C",
+      "voice_prefix": "DSC"
+    },
+    {
+      "zh": "柔道部員",
+      "en": "Judo Club Member",
+      "channel": "charJYM",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "柔道部員",
+      "voice_prefix": "JYM"
+    },
+    {
+      "zh": "众人 A",
+      "en": "Crowd A",
+      "channel": "charMOA",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "众人 A",
+      "voice_prefix": "MOA"
+    },
+    {
+      "zh": "众人 B",
+      "en": "Crowd B",
+      "channel": "charMOB",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "众人 B",
+      "voice_prefix": "MOB"
+    },
+    {
+      "zh": "众人 C",
+      "en": "Crowd C",
+      "channel": "charMOC",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "众人 C",
+      "voice_prefix": "MOC"
+    },
+    {
+      "zh": "数人齐声",
+      "en": "Multiple",
+      "channel": "charMUL",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "数人齐声",
+      "voice_prefix": "MUL"
+    },
+    {
+      "zh": "陸上部員",
+      "en": "Track Club Member",
+      "channel": "charRKA",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "陸上部員",
+      "voice_prefix": "RKA"
+    },
+    {
+      "zh": "桜庭（旧名）",
+      "en": "Sakuraba (alt)",
+      "channel": "charSAM",
+      "confidence": "low",
+      "note": "本轮按原生语料补登记（该通道在 Steam 出货版里真实出现）",
+      "ja": "桜庭（旧名）",
+      "voice_prefix": "SAM"
+    },
+    {
+      "ja": "群声（二人／三人）",
+      "zh": "数人齐声",
+      "en": "Group (multiple)",
+      "channel": "charMUL",
+      "voice_prefix": "GOO",
+      "confidence": "low",
+      "note": "原版 GOO* 录音用于「二人／三人」齐声行（实测说话人＝二人/三人），通道按 charMUL"
+    }
+  ]
+}

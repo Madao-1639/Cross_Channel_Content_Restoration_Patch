@@ -174,7 +174,11 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 ├── script/             构建和开发脚本
 │   ├── pack.sh         exe 打包脚本
 │   ├── generate_payload.py  生成增量补丁
-│   ├── final_verification.py 最终验证工具
+│   └── final_verification.py 最终验证工具
+├── resource/           可复用映射表与打包资源
+│   ├── scene_slices.json  还原场景的插入范围
+│   ├── cg_map.json        事件 CG 的改名映射
+│   ├── speaker_map.json   角色名称映射（名字框文本的唯一来源）
 │   └── icon.ico        打包用图标
 ├── payload/            增量补丁产物（构建后生成）
 ├── releases/           exe 最终产物（构建后生成）
@@ -185,7 +189,7 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 
 - [x] `CCC0000` 段（内容还原试点）
 - [ ] 其余 11 个还原场景
-- [ ] 说话人名字框显示
+- [x] 说话人名字框显示
 - [ ] 全 CG 解锁
 - [ ] 全成就解锁
 
@@ -207,3 +211,4 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 ## To-Do
 - [ ] 全量测试
 - [ ] UI 汉化
+- [ ] 蜜汁内容

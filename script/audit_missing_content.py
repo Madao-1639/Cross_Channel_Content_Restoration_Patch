@@ -103,7 +103,7 @@ print('%-9s %-9s %-6s %-5s | %-34s | %s' % (
     '还原脚本', '原版场景', '区间', '长句', '最像的脚本（票数）', '判定'))
 print('-' * 118)
 for cnr, host, stem, succs in SCENES:
-    wi = wsc.disassemble(open('tmp/corpus/wsc/%s.WSC' % stem, 'rb').read())
+    wi = wsc.disassemble(open('resource/corpus/wsc/%s.WSC' % stem, 'rb').read())
     n = 0
     vline = []
     for i in wi:

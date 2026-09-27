@@ -1,0 +1,238 @@
+{
+ "_说明": "原版内容（日文剧本 + 官方中文）覆盖的剧本范围。**边界以「脚本」为粒度**：下面列出的脚本，其剧本在源语料里没有对应文件，属 Steam 追加内容；**未列出的脚本一律在原版范围内**（共 293 个脚本 / 41,924 格）。",
+ "criterion": {
+  "为什么不能按「格」划": "试过「从第一次出现连续不再匹配处划界」，数据上不成立：全库 702 个「原版没有」的格只分布在 78/293 个脚本里、且高度散布（227 段连续段里 126 段只有 1 格），而 289/293 个脚本是「一路匹配到最后一格」，根本没有尾部不匹配段。按那条判据切，会把 11,085 个已匹配格误判成范围外。",
+  "原因": "那些格是 Steam 的**局部新写/改写**，不是剧情段落结束；而 Steam 真正的整段删改（敏感内容处理）在数据上表现为「源剧本的行没人取」，根本不产生这类格。两类现象形状不同，判据会盯错那一类。",
+  "实际判据": "看**剧本名在源语料里有没有对应文件**，并核对脚本调用图：范围外的这些只被回放菜单调用、自成一个闭环，不在主线流程上。",
+  "结论": "原版覆盖的是**整条主线** —— 共同线、循环/分岐章节、**全部 6 条个人线**、终章都在范围内；Steam 追加的是**角色后日谈与追加剧本**（在回放菜单里），不是个人线的后半。"
+ },
+ "out_of_scope": [
+  {
+   "script": "CC0TOU_EN",
+   "n_slots": 499,
+   "block": "角色后日谈（見里）"
+  },
+  {
+   "script": "CC1MIS_EN",
+   "n_slots": 438,
+   "block": "角色后日谈（見里）"
+  },
+  {
+   "script": "CC2KIR_EN",
+   "n_slots": 1221,
+   "block": "角色后日谈（霧）"
+  },
+  {
+   "script": "CC3MIK_EN",
+   "n_slots": 483,
+   "block": "角色后日谈（美希）"
+  },
+  {
+   "script": "CC4YOU_EN",
+   "n_slots": 550,
+   "block": "角色后日谈（曜子）"
+  },
+  {
+   "script": "CC5TOM_EN",
+   "n_slots": 607,
+   "block": "角色后日谈（友贵）"
+  },
+  {
+   "script": "CC6SAK_EN",
+   "n_slots": 1205,
+   "block": "角色后日谈（樱庭）"
+  },
+  {
+   "script": "CC_10A_EN",
+   "n_slots": 92,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_11A_EN",
+   "n_slots": 480,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_12A_EN",
+   "n_slots": 812,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_13A_EN",
+   "n_slots": 629,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_14A_EN",
+   "n_slots": 735,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_15A_EN",
+   "n_slots": 720,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_16A_EN",
+   "n_slots": 115,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_17A_EN",
+   "n_slots": 136,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_20A_EN",
+   "n_slots": 80,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_21AA_EN",
+   "n_slots": 242,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_21AB_EN",
+   "n_slots": 386,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_21A_EN",
+   "n_slots": 260,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22AA_EN",
+   "n_slots": 11,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22A_EN",
+   "n_slots": 88,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22B_EN",
+   "n_slots": 426,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22C_EN",
+   "n_slots": 478,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22D_EN",
+   "n_slots": 426,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22E_EN",
+   "n_slots": 270,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22XA_EN",
+   "n_slots": 44,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22XB_EN",
+   "n_slots": 61,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22XC_EN",
+   "n_slots": 94,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_22XD_EN",
+   "n_slots": 32,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_26A_EN",
+   "n_slots": 27,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_26B_EN",
+   "n_slots": 270,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_26C_EN",
+   "n_slots": 163,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_27A_EN",
+   "n_slots": 331,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_27B_EN",
+   "n_slots": 40,
+   "block": "追加剧本链"
+  },
+  {
+   "script": "CC_30A_EN",
+   "n_slots": 937,
+   "block": "追加剧本链"
+  }
+ ],
+ "summary": {
+  "in_scope_scripts": 293,
+  "in_scope_slots": 41924,
+  "out_of_scope_scripts": 35,
+  "out_of_scope_slots": 13388,
+  "boundary": "范围内 = 293 个脚本 / 41,924 格；范围外 = 35 个脚本 / 13388 格。"
+ },
+ "story_blocks": {
+  "共同线": [
+   "CCA0001..CCA0030",
+   "CCB0001..CCB0023"
+  ],
+  "循环/分岐章节": [
+   "CCB1001..CCB1016",
+   "CCB1102",
+   "CCB2001..CCB2021",
+   "CCB2101..CCB2102",
+   "CCC0000..CCC0045",
+   "CCC0101",
+   "CCC3001..CCC3030",
+   "CCC4001..CCC4025",
+   "CCD0000..CCD0023",
+   "CCD0101",
+   "CCD0102",
+   "CCD0201",
+   "CCD3099"
+  ],
+  "个人线": {
+   "MIS 見里": "CCD1001..CCD1001D",
+   "TOU 冬子": "CCD2001..CCD2002B",
+   "KIR 霧": "CCD3001..CCD3003D",
+   "MIK 美希": "CCD4001..CCD4003A",
+   "YOU 曜子": "CCD5001A..CCD5001B",
+   "SAK 桜庭": "CCD6001"
+  },
+  "终章": [
+   "CCX0001",
+   "CCE0001"
+  ],
+  "追加剧本(原版无)": [
+   "CC0TOU",
+   "CC1MIS",
+   "CC2KIR",
+   "CC3MIK",
+   "CC4YOU",
+   "CC5TOM",
+   "CC6SAK",
+   "CC_10A..CC_17A",
+   "CC_20A..CC_27B",
+   "CC_30A"
+  ]
+ }
+}

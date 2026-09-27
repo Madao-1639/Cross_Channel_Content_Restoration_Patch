@@ -1,0 +1,114 @@
+{
+ "_说明": "还原场景的插入范围（就地插入用）。scenes 的先后 = 剧情顺序。lo/hi = 源 WSC 的对话序号（含端点）；keep = 前段保留的宿主对话数；head_overlap = 宿主开头与源内容完全一致的连续块长度。tail_hosts = 需要「截掉与插入段重合的头部」的第二个脚本。",
+ "order": [
+  "CCA0025C",
+  "CCB1014C",
+  "CCB2013",
+  "CCB2101",
+  "CCC0000",
+  "CCC3027",
+  "CCC4022",
+  "CCD0022A",
+  "CCD1001",
+  "CCD4003",
+  "CCD5001"
+ ],
+ "scenes": [
+  {
+   "host": "CCA0025C_en.ws2",
+   "src": "CCA0025C",
+   "lo": 15,
+   "hi": 571,
+   "head_overlap": 0,
+   "keep": 16
+  },
+  {
+   "host": "CCB1014C_en.ws2",
+   "src": "CCB1014C",
+   "lo": 15,
+   "hi": 570,
+   "head_overlap": 0,
+   "keep": 16
+  },
+  {
+   "host": "CCB2013_en.ws2",
+   "src": "CCB2013",
+   "lo": 0,
+   "hi": 546,
+   "head_overlap": 0,
+   "keep": 0
+  },
+  {
+   "host": "CCB2101_en.ws2",
+   "src": "CCB2101",
+   "lo": 0,
+   "hi": 236,
+   "head_overlap": 6,
+   "keep": 6
+  },
+  {
+   "host": "CCC0000_en.ws2",
+   "src": "CCC0000",
+   "lo": 195,
+   "hi": 363,
+   "head_overlap": 0,
+   "keep": 211
+  },
+  {
+   "host": "CCC3027_en.ws2",
+   "src": "CCC3027",
+   "lo": 85,
+   "hi": 808,
+   "head_overlap": 0,
+   "keep": 84
+  },
+  {
+   "host": "CCC4022_en.ws2",
+   "src": "CCC4022",
+   "lo": 135,
+   "hi": 614,
+   "head_overlap": 6,
+   "keep": 141
+  },
+  {
+   "host": "CCD0022A_en.ws2",
+   "src": "CCD0022A",
+   "lo": 7,
+   "hi": 348,
+   "head_overlap": 0,
+   "keep": 18
+  },
+  {
+   "host": "CCD1001B_en.ws2",
+   "src": "CCD1001",
+   "lo": 980,
+   "hi": 1560,
+   "head_overlap": 13,
+   "keep": 337
+  },
+  {
+   "host": "CCD4003A_en.ws2",
+   "src": "CCD4003",
+   "lo": 486,
+   "hi": 865,
+   "head_overlap": 0,
+   "keep": 539
+  },
+  {
+   "host": "CCD5001A_en.ws2",
+   "src": "CCD5001",
+   "lo": 450,
+   "hi": 1111,
+   "head_overlap": 0,
+   "keep": 444
+  }
+ ],
+ "tail_hosts": [
+  {
+   "host": "CCD5001B_en.ws2",
+   "src": "CCD5001",
+   "from_dialogue": 220,
+   "from_src": 1112
+  }
+ ]
+}

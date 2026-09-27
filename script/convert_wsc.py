@@ -233,7 +233,6 @@ def main():
         got_dialogues = []
         got_voices = []
         got_images = []
-        from tool.wsc2ws2 import SPEAKER_MAP
         for i in out_instrs:
             if i.opcode == 0x2e:
                 got_voices.append(i.fields['file'])

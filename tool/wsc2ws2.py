@@ -9,9 +9,12 @@
 3. 字节模板全部取自 Steam 原生脚本语料（tmp/ws2_analysis/opcode_table.md）与
    Res303 实测可玩的 CNR 块，见各 emit_* 函数，勿随手改动。
 """
+import json
+import os
 import re
 import struct
 
+from tool import speaker
 from tool.wsc import disassemble
 
 # `0x48` 的形态判据：名字属于立绘族（Steam 侧是 `.PNA`）才发立绘块，其余一律发图像块。
@@ -19,62 +22,25 @@ from tool.wsc import disassemble
 PORTRAIT_RE = re.compile(r'^T[CB]')
 
 # ---------------------------------------------------------------------------
-# 说话人映射（WSC 日文 -> Steam 英文 %LC 名）
-# 依据：两语料说话人频次对齐 + Res303 CNR 实测（Youko/Taichi 等）。
-# 低置信度条目（Matron/Lunch Lady/Hayasugi 等）在 doc/wsc_to_ws2_conversion.md
-# 中单独列出，待实机校对；表外名字原样保留并产生 warning。
+# 说话人映射与语音通道：**从 `resource/speaker_map.json` 读**，本文件不再内联一份。
+# 原先这里内联了 33 条日文->英文（SPEAKER_MAP）与 12 条前缀->通道（VOICE_CHANNEL），
+# 与 script/rename_speakers.py、script/insert_deleted_dialogues.py 及文档各写一份、
+# 已经漂移。现在由 `tool/speaker.py` 统一读表（表见 resource/README.md）。
+# 键名保持不变，下游 `from tool.wsc2ws2 import SPEAKER_MAP` 不用改。
+# 表外名字原样保留进 `%LC` 并产生 warning（低置信度条目待实机校对，表里标了
+# `confidence: low`）。
 # ---------------------------------------------------------------------------
-SPEAKER_MAP = {
-    '太一': 'Taichi',
-    '見里': 'Misato',
-    '美希': 'Miki',
-    '霧': 'Kiri',
-    '冬子': 'Touko',
-    '曜子': 'Youko',
-    '友貴': 'Tomoki',
-    '七香': 'Nanaca',
-    '桜庭': 'Sakuraba',
-    '遊紗': 'Yusa',
-    '新川': 'Shinkawa',
-    '少女': 'Girl',
-    '少年': 'Boy',
-    'みゆき': 'Miyuki',
-    'ママン': 'Matron',
-    '声': 'Voice',
-    'おばちゃん': 'Lunch Lady',
-    '俺': 'Taichi',
-    '二人': 'Both',
-    '腹の虫': 'Stomach',
-    '三人': 'All 3',
-    '＊＊': '???',
-    '曜子先生': 'Hayasugi',
-    '冬子･見里･美希･友貴': 'All 4',
-    '友貴の死体': 'Dead Tomoki',
-    '＊': '??',
-    '部長': 'Club President',
-    '霧・太一': 'Kiri/Taichi',
-    '老カラデ家': 'Karade Master',
-    '政宗': 'Masamune',
-    '豊': 'Yutaka',
-    '重蔵': 'Juuzou',
-    '女': 'Woman',
-}
-
-# BGM 曲目 -> Steam 音乐鉴赏 id（原生语料规则：id = 1049 + 曲目号，BGM015->1064）
-BGM_ID_BASE = 1049
+SPEAKER_MAP = speaker.ja_to_en()
 
 # 原版语音名前缀 -> Steam 语音通道名。**不能套「char + 前缀」**：原版前缀是日文名首字母
 # （`MSA`=見里、`FYU`=冬子、`YKI`=友貴、`MMN`=ママン），Steam 通道用的是英文名
-# （`charMIS`/`charTOU`/`charTOM`/`charOBA`）。表来自 doc/localization.md「角色名称映射」，
-# 其「Steam 通道」列由 Steam 自己的 `2e` 指令与紧随的 `%LC` 逐句配对得出（原生 10,693 条），
-# 且这 12 个通道名在原生语料里都真实存在。
+# （`charMIS`/`charTOU`/`charTOM`/`charOBA`）。表来自资源表的 channel 列。
 # 注：Steam 侧**自身**的语音名（`MIK_0686.OGG` 等）确实满足「char + 前缀」，
 # 但那与这套原版前缀是两码事，不要混用。
-VOICE_CHANNEL = {
-    'MSA': 'charMIS', 'MKI': 'charMIK', 'KRI': 'charKIR', 'FYU': 'charTOU',
-    'YKI': 'charTOM', 'YOU': 'charYOU', 'NNK': 'charNNK', 'SKU': 'charSAK',
-    'YSA': 'charYUS', 'SHI': 'charSIN', 'MYK': 'charMIY', 'MMN': 'charOBA',
-}
+VOICE_CHANNEL = speaker.voice_channel()
+
+# BGM 曲目 -> Steam 音乐鉴赏 id（原生语料规则：id = 1049 + 曲目号，BGM015->1064）
+BGM_ID_BASE = 1049
 
 # WS2 常量字节模板（全部取自原生语料，勿改）
 VOICE_TAIL = bytes(10) + b'\x0a\x00\x00\x65' + bytes(8)           # 2e 的 22B 恒定尾
@@ -85,6 +51,160 @@ LAYER_ORDER = b'\x04LAYER_ORDER\x00'
 VAR_10_13 = b''.join(b'\x09\x00' + bytes([v]) + b'\x00\x00\x00\x80\x3f'
                      for v in (0x0a, 0x0b, 0x0c, 0x0d))           # 图层透明度 1.0 x4
 PORTRAIT_ATTRS = b'\x02\x01\x04\x03\x00\x00\x00\x01\x00\x02\x00'  # 39 槽位属性(c=4 形)
+# `39 DisplayCharacterImage <通道> NUL <02 01 c> [c 个 u16 帧号]`
+# **帧号 = PNA 记录表的下标（0-based）**，`c` = 画几条；形态只与目标 PNA 的**记录数**有关
+# （原生交叉表零例外，见 doc/engine-mechanics.md）：
+#   4 条记录 -> c=4，帧号 [3, 0, 1, 2] = 大图 + 3 个表情补丁（先大图后叠补丁）
+#   1 条记录 -> c=1，帧号 [0]           = 唯一一条（也是大图）
+# 另有一种「只用大图」形态 `c=1 [3]`（原生 29 处，渲染上静态），**不是槽的属性**而是逐次显示
+# 的选择；本补丁统一用上面的形态，与周边原生段落一致（宿主 265 块里 263 块如此）。
+# 记录数未知时按 4 条形态发射并逐条告警 —— 照抄 4 条形态去调 1 条记录的 PNA 会**越位**。
+PORTRAIT_ATTRS_BY_LAYERS = {
+    1: b'\x02\x01\x01\x00\x00',
+    4: b'\x02\x01\x04\x03\x00\x00\x00\x01\x00\x02\x00',
+}
+# 「只用大图」形态（4 条记录的 PNA 只画下标 3 那一张）。当前**未使用**，留作对照与将来可选。
+PORTRAIT_ATTRS_BIG_ONLY = b'\x02\x01\x01\x03\x00'
+# 46 的「重置」形态：cfg = 06 00 f0，四个 f32 是 10/11/12/13 的占位值。
+# 全语料 7,668 组 `34`+`39` 块里，这一条**恒为**紧跟 LAYER_ORDER 的第一条 46，不随场景变化。
+PORTRAIT_46_RESET = (b'\x06\x00\xf0'
+                     b'\x00\x00\x20\x41'      # 10.0
+                     b'\x00\x00\x30\x41'      # 11.0
+                     b'\x00\x00\x40\x41'      # 12.0
+                     b'\x00\x00\x50\x41')     # 13.0
+
+# 立绘：「句柄」与「位置」是**两条不同的东西**。
+#   * `34 <通道名> <PNA>` 只是把资源绑到一个具名句柄（`st01`..`st12`），回答"哪一层"，
+#     **不回答"画在哪"**。同一通道名在语料里左右两侧都出现过。
+#   * **位置由 `46 MoveBackground <通道名> <u8×3> <f32 x> <f32 y> …` 给出**（原点=屏幕中心，
+#     单位像素，立绘 `y` 恒 `-40`）。实测三人同框：`st03=-180 / st05=+400 / st07=-399`。
+#     站位词表 `{0, ±275, ±400}`；多人组合 `(-275,+275)`=左|右、`(-399,0,+400)`=左|中|右。
+# 句柄选择只求"别撞上宿主正在用的那一个"（同句柄 → 新图顶掉旧图；不同句柄 → 两层并存）：
+#   * 在场 1 人                -> st03（全语料 5128/5603 = 92%）
+#   * 源槽 3 且槽 4 同时在屏   -> st05（「同框第二张」；角色偏侧是 73–89% 的惯例，不是规则）
+#   * 其余                     -> st03
+# 本补丁 12 个宿主的插入段：33/34 个时刻是单人，全部落在高置信分支。
+# 位置由原版 `48` 的 `xabspos` 经 `steam_x()` 量化为 Steam 的 `{0, ±275, ±400}` 之一。
+# ⚠️ **这只是启发式，未获真值验证**。曾用「角色代码 + 同角色内 x 排序」配对两侧，得一致率 94.7%，
+# 但**基准是配对本身**（配对错则一致率无意义），不是误差度量 —— 那个标定脚本已随锚点输入清理而删除。
+# 抽查分歧可见**真实反例**：CCA0007 里原版 `TCST` x=237（中），Steam 却给 -275（左），与「237→中」矛盾。
+# 根因：**Steam 对场景重新编排**——同一角色的站位取决于当时谁在场，**不存在纯 x 的函数**。
+# 精确复现须按**对白内容**对齐两侧帧（尚未做）；现表只保证大致的左/中/右。
+# 详见 doc/wsc_to_ws2_conversion.md §3.3。
+PORTRAIT_SLOT_MAIN = 'st03'
+PORTRAIT_SLOT_SECOND = 'st05'
+
+# 原版 x（**有符号** u16；800 宽屏幕）-> Steam 站位（屏幕中心为原点，1280 宽）。
+# ⚠️ **启发式，未验证为真值**（见上方说明；那个 94.7% 是自指一致率）。
+# 元组为 (上界, 输出值)，`None` = 兜底。
+POSITION_TIERS = (
+    (0, -399.0),        # 远左
+    (150, -275.0),      # 左
+    (350, 0.0),         # 中（原版 187…300 的主簇）
+    (470, 275.0),       # 右（原版 362…450 的主簇）
+    (None, 400.0),      # 远右
+)
+PORTRAIT_Y = -40.0      # 立绘标准高度（全语料 7,663/7,849 = 98%，这一条是实测的）
+
+
+def steam_x(x_raw):
+    """原版 `48.xabspos`（无符号读出的 u16）-> Steam `46` 的 x。见上方 POSITION_TIERS。"""
+    x = x_raw - 0x10000 if x_raw >= 0x8000 else x_raw
+    if x == 0:          # ⚠️ 原版 x==0 是**贴左缘**（引擎无分支，见 doc/engine-mechanics.md）；
+                        # 此处特判成 0 是**已知偏差**，会与同屏居中角色叠（CCD0022A 实证）。
+                        # 保留原行为待定；精确处理走 resource/position_overrides.json。
+        return 0.0
+    for bound, val in POSITION_TIERS:
+        if bound is None or x < bound:
+            return val
+    return 0.0
+
+
+# 立绘位置**覆盖表**（`resource/position_overrides.json`）：逐条记录**不符合 `steam_x()`** 的
+# `(源脚本, 源行, 角色) -> Steam x`。⚠️ 它是**已定稿的输入**：生成它的标定脚本因锚点输入
+# （原判定链的语音锚点）已清理而**不可重跑**；要重标定须先重建锚点。
+# 命中就用表值、未命中走 `steam_x()`。**懒加载、只读**；表缺失时为空（退化为纯 `steam_x()`）。
+_OVERRIDES = None
+
+
+def _load_overrides():
+    global _OVERRIDES
+    if _OVERRIDES is None:
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            'resource', 'position_overrides.json')
+        try:
+            with open(path, encoding='utf-8') as fh:
+                _OVERRIDES = json.load(fh).get('overrides', {})
+        except FileNotFoundError:
+            _OVERRIDES = {}
+    return _OVERRIDES
+
+
+def position_override(stem, dialogue_row, char):
+    """查覆盖表：`(源脚本 stem, 源行 dialogue_row(1-based), 角色代码)` -> x；无则 None。"""
+    return _load_overrides().get(stem, {}).get(str(dialogue_row), {}).get(char)
+
+
+def _lead_code(name):
+    """立绘文件名 -> 角色代码（前导字母，如 `TCMM0002` -> `TCMM`）。
+    `position_overrides.json` 的键按**同一规则**生成，键才能对上。"""
+    m = re.match(r'[A-Za-z]+', name or '')
+    return m.group().upper() if m else (name or '').upper()
+
+
+# 场景级立绘位置覆盖（`resource/portrait_position_overrides.json`）：**手工**维护，
+# 修正 `steam_x()` 处理不了的（如还原场景里 `x==0` 是贴左缘）。**优先级高于**自动覆盖表。
+_SCENE_OVERRIDES = None
+
+
+def _load_scene_overrides():
+    global _SCENE_OVERRIDES
+    if _SCENE_OVERRIDES is None:
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            'resource', 'portrait_position_overrides.json')
+        try:
+            with open(path, encoding='utf-8') as fh:
+                _SCENE_OVERRIDES = json.load(fh).get('rules', [])
+        except FileNotFoundError:
+            _SCENE_OVERRIDES = []
+    return _SCENE_OVERRIDES
+
+
+def scene_portrait_x(stem, char, x_src):
+    """查场景级覆盖：`(源脚本, 角色, 源 x)` -> x_steam；无匹配则 None。先匹配先胜。"""
+    for r in _load_scene_overrides():
+        if r.get('script') != stem:
+            continue
+        if r.get('char') not in (None, char):
+            continue
+        if 'when_x' in r and r['when_x'] != x_src:
+            continue
+        return r['x_steam']
+    return None
+
+
+def portrait_slots(instrs):
+    """预处理每个立绘 `48` 的 Steam 槽位，返回 {wsc_offset: 'stNN'}。
+
+    槽位开关 `49` 出现在 `48` **之后**，而 `48` 是发射时机，所以必须先扫一遍。
+    这是**近似**（见上方说明），不是从原版推导出来的对应关系。
+    """
+    vis = {}            # 原版槽号 -> 是否在屏
+    out = {}
+    for k, i in enumerate(instrs):
+        if i.opcode == 0x49:
+            a, b = i.fields.get('a'), i.fields.get('b')
+            if a is not None and b is not None:
+                vis[a] = (b == 1)
+        elif i.opcode == 0x48 and PORTRAIT_RE.match(i.fields.get('name', '')):
+            src = None
+            for j in instrs[k + 1:k + 6]:
+                if j.opcode == 0x49 and j.fields.get('b') == 1:
+                    src = j.fields.get('a')
+                    break
+            second = (src == 3 and vis.get(4))
+            out[i.offset] = PORTRAIT_SLOT_SECOND if second else PORTRAIT_SLOT_MAIN
+    return out
 
 # WSC 0x03/0x49/0x47 等引擎状态原语 —— WS2 由图层块/引擎默认承担，跳过
 SKIPPED_OPS = None  # 由 default 分支统一处理并计数
@@ -119,8 +239,22 @@ class ConvertOptions:
         #   * 抑制开头的 `16 01 00`（宿主此时对话框已开）
         self.slice_mode = kw.get('slice_mode', False)
         # 运行时可用的资源名集合（大写）。给了才做「不存在就不发射」的防御；
-        # 目前只用于蒙版（见 emit_mask）。
+        # 目前只用于蒙版（见 emit_mask）与立绘（见 emit_portrait_block）。
         self.available = kw.get('available', None)
+        # 立绘槽位判定（`portrait_slots`）要用**整脚本**的指令流才有上下文 ——
+        # 切片转换（`convert_range`）里它只看得到切片那几条，会把「同框第二张」判成主槽。
+        # 给了它就按它算槽位（切片只决定**转哪一段**，不决定槽位判定）。
+        self.slot_context = kw.get('slot_context', None)
+        # `{立绘族(前4字符): 槽名}` —— **沿用宿主/骨架给该角色用的那一个槽**。
+        # 不给的话，注入的立绘可能落到别的槽，而骨架在同段时间里也摆着同一个角色 ⇒ **两个同屏**。
+        # 见 doc/wsc_to_ws2_conversion.md §3.3「句柄选择的实质是「别撞上宿主正在用的那一个」」。
+        self.family_slots = kw.get('family_slots', {}) or {}
+        # {PNA 名(大写): 记录数} —— 决定 `39` 的帧号形态（见 PORTRAIT_ATTRS_BY_LAYERS）。
+        # 不传时按 4 条形态发射并逐条告警：1 条记录的 PNA 用 4 条形态会**帧号越位**。
+        self.pna_layers = kw.get('pna_layers', {})
+        # True = 立绘一律用「只用大图」形态（`c=1 [3]`，渲染上静态），不叠加表情补丁。
+        # 默认 False：与周边 Steam 原生段落一致（宿主 265 块里 263 块用「大图+补丁」）。
+        self.portrait_big_only = kw.get('portrait_big_only', False)
 
 
 def _f32(x):
@@ -136,10 +270,13 @@ def _u32(x):
 
 
 class _Emitter:
-    def __init__(self, stem, instrs, opts):
+    def __init__(self, stem, instrs, opts, dialogue_row_base=0):
         self.stem = stem
         self.instrs = instrs
         self.opts = opts
+        # 覆盖表(`position_overrides`)的行号是**全脚本** 1-based；切片转换时
+        # `report['dialogues']` 只数切片内的对白，须加上切片前已发的对白数才是绝对行。
+        self.dialogue_row_base = dialogue_row_base
         self.out = bytearray()
         self.fixups = []        # (out_off, wsc_target_offset | 'EXIT')
         self.labels = {}        # wsc_offset -> out_off
@@ -167,8 +304,7 @@ class _Emitter:
         self.pending_voice = None
         self.pending_fade = None
         self.suppress_next_wait = False
-        self.last_was_15 = True   # 脚本开头无需清框，抑制首条 maybe_clear
-        self.portrait_slot = 0
+        self.portrait_slots = portrait_slots(opts.slot_context or instrs)   # 见模块顶部说明
         self.exit_label_off = None
         self.has_choice = False
         self.pool_index = opts.pool_start  # 字符串池序号：`14` 的 id 与 `0f` 的 strid 共用
@@ -193,13 +329,16 @@ class _Emitter:
 
     def raw(self, b):
         self.out += b
-        self.last_was_15 = False
 
-    def maybe_clear(self):
-        """对话/出口前需要 15 清框；连续两条 15 无害但保持单条更贴近原生语料。"""
-        if not self.last_was_15:
-            self.out += b'\x15\x00\x00'
-            self.last_was_15 = True
+    def emit_name_clear(self):
+        """发一条名字框清框 `15 00 00`。
+
+        **只用在每句台词之后**（原生写法：`15[设名] 14 15[清框]`，逐句成对）。
+        实测原生 97,904 条 `15` **没有一条游离在 `14` 之外** —— 背景块 / 出口 / 选项表
+        之前**都不清框**。此前有个 `maybe_clear()` 在这三处插清框，注释写「保持单条更贴近
+        原生语料」，实测**正好相反**（原生每句两条）—— 已删。
+        """
+        self.out += b'\x15\x00\x00'
 
     def rename(self, name):
         return self.opts.rename_map.get(name, name)
@@ -226,9 +365,10 @@ class _Emitter:
         ch = VOICE_CHANNEL.get(pre)
         if ch:
             return ch
-        if pre != self.opts.voice_channel:
-            self.warn('语音前缀 %s 不在通道映射表里，回退到 %s' % (pre, self.opts.voice_channel))
-        return self.opts.voice_channel
+        # ⚠️ 静默兜底（回退 `charCN`）已废（2026-09-24）：`charCN` 在原生语料里**不存在**，
+        # 回退会把通道名写错却不报错。查不到就**报错** —— 映射表已覆盖原生全部 25 种通道。
+        raise ValueError('语音前缀 %s（%s）不在通道映射表里 —— 请先登记到 resource/speaker_map.json'
+                         % (pre, name))
 
 
     def emit_dialogue(self, ins):
@@ -267,8 +407,14 @@ class _Emitter:
         # 显示文本由同名 .lng 按位置整体替换（原生 CCA0001_en 32 句 ↔ 32 条 lng
         # 逐条对应，见 doc/localization.md）。早期写过 "CN line N" 占位符，会丢掉
         # 原文、让 lng 缺条目时露出占位串，并让往返忠实性校验永远失败。
-        self.raw(b'\x15' + prefix + b'\x00')
+        # `%N`/`%P` 纯翻页标记格：原生**不带任何 `15`**（实测 1,378 例零前导 `15`）——
+        # 它沿用当前名字框。若也给它发 `15[空前缀]`，会把名字框**误清**。
+        marker = bool(text_bytes) and not text_bytes.replace(b'%N', b'').replace(b'%P', b'')
+        if not marker:
+            self.raw(b'\x15' + prefix + b'\x00')
         self.raw(b'\x14' + _u16(did) + b'\x00\x00char\x00' + text_bytes + b'\x00\x00')
+        if not marker:
+            self.emit_name_clear()  # 原生：每句之后自带清框 `15[]`（`15[设名] 14 15[清框]`）
         self.expire_fade()
         self.count('dialogue')
         self.report['dialogues'] += 1
@@ -287,7 +433,6 @@ class _Emitter:
         """0x46 与 0x48-05 -> 背景块（bg01 槽 + LAYER_ORDER + 65 渐变）。"""
         fname = self.rename(name) + '.PNG'
         self.report['images'].append(('bg', name, fname))
-        self.maybe_clear()
         self.raw(b'\x16\x00\x00\x64\x00\x37\x2a\x00'
                  + b'\x33' + self.opts.bg_slot.encode('ascii') + b'\x00'
                  + fname.encode('ascii') + b'\x00\x01\x01'
@@ -299,15 +444,47 @@ class _Emitter:
         self.expire_fade()
         self.count('image_block')
 
-    def emit_portrait_block(self, name):
-        """0x48-04 -> 立绘块（34+39+LAYER_ORDER，槽位取最近 0x64）。"""
+    def emit_portrait_block(self, name, offset, x_raw, x_override=None):
+        """0x48-04 -> 立绘块（34 + 39 + LAYER_ORDER + 46 重置 + 46 位置）。
+
+        句柄选择见模块顶部说明；**位置**由原版 `xabspos` 经 `steam_x()` 量化而来 ——
+        位置不在句柄里（`46` 才是位置），两条 `46` 是 Steam 原生块的标准形态。
+        `x_override` 非 None 时改用覆盖表值（见 `position_override`），跳过 `steam_x()`。
+        """
         fname = self.rename(name) + '.PNA'
-        slot = 'st%02d' % (self.portrait_slot + 1)
+        # 目标 PNA 不在可用集合里 ⇒ **不发射**（绝不产出悬空引用，与 `emit_mask` 同款防御）。
+        # 原版有些立绘变体在 Steam 侧没有同档对应物（如 `TCDY0003S`），或双字母变体
+        # （`TCYM0000AA`）—— 这类只能跳过并计数。
+        if self.opts.available is not None and fname.upper() not in self.opts.available:
+            self.count('portrait_skipped_missing')
+            self.warn('立绘 %s（-> %s）在归档里不存在，已跳过' % (name, fname))
+            return
+        # **槽位**：优先沿用「本脚本里该角色（立绘族=名前4字符）用的那一个」（`family_slots`）——
+        # 否则注入的立绘可能落到别的槽，而骨架在同段时间里也摆着同一个角色 ⇒ **两个同屏重叠**
+        # （实测 `CCA0015` 見里：骨架 st07、注入 st03）。这正是模块顶部说的
+        # 「句柄选择的实质是「别撞上宿主正在用的那一个」」。
+        slot = self.opts.family_slots.get(fname[:4].upper()) \
+            or self.portrait_slots.get(offset, PORTRAIT_SLOT_MAIN)
+        s = slot.encode('ascii') + b'\x00'
+        # `39` 的帧号形态必须匹配目标 PNA 的记录数（见 PORTRAIT_ATTRS_BY_LAYERS）。
+        layers = self.opts.pna_layers.get(fname.upper())
+        if self.opts.portrait_big_only and layers == 4:
+            attrs = PORTRAIT_ATTRS_BIG_ONLY          # 只用大图（渲染上静态）
+        else:
+            attrs = PORTRAIT_ATTRS_BY_LAYERS.get(layers)
+        if attrs is None:
+            self.warn('立绘 %s 的 PNA 记录数未知（%r），按 4 条形态发射' % (fname, layers))
+            attrs = PORTRAIT_ATTRS
+        x_out = steam_x(x_raw) if x_override is None else x_override
+        if x_override is not None:
+            self.count('portrait_x_override')
         self.report['images'].append(('portrait', name, fname))
-        self.raw(b'\x34' + slot.encode('ascii') + b'\x00'
-                 + fname.encode('ascii') + b'\x00\x01\x01'
-                 + b'\x39' + slot.encode('ascii') + b'\x00' + PORTRAIT_ATTRS
-                 + LAYER_ORDER)
+        self.raw(b'\x34' + s + fname.encode('ascii') + b'\x00\x01\x01'
+                 + b'\x39' + s + attrs
+                 + LAYER_ORDER
+                 + b'\x46' + s + PORTRAIT_46_RESET
+                 + b'\x46' + s + b'\x00\x00\x00'
+                 + _f32(x_out) + _f32(PORTRAIT_Y) + _f32(0.0) + _f32(0.0))
         self.expire_fade()
         self.count('portrait_block')
 
@@ -362,8 +539,7 @@ class _Emitter:
         self.count('wait')
 
     def emit_exit(self, target, b_flag, source):
-        """15 00 00 | 07 <target> | ff a b —— WS2 场景出口固定搭配。"""
-        self.maybe_clear()
+        """07 <target> | ff a b —— WS2 场景出口。"""
         self.exit_label_off = len(self.out)
         if target:
             self.raw(b'\x07' + target.encode('ascii') + b'\x00')
@@ -422,7 +598,6 @@ class _Emitter:
 
         self.report['choices'].append({'count': count, 'mode': mode,
                                        'texts': [it['text'] for it in items]})
-        self.maybe_clear()
         self.raw(b'\x0e\x0b\x00' + bytes([count]) + b'\x00\x01')
         self.raw(b'\x0f' + bytes([count]))
         for i, item in enumerate(items):
@@ -486,11 +661,21 @@ class _Emitter:
                 # 立绘族只有 `TC**`/`TB**`（Steam 侧 `.PNA`），其余（BGCC/SGCC/EFCC/EVCC）
                 # 都是整屏图（`.PNG`）。
                 if PORTRAIT_RE.match(name):
-                    self.emit_portrait_block(name)
+                    x_raw = struct.unpack_from('<H', ins.operands, 1)[0]
+                    char = _lead_code(name)
+                    x_signed = x_raw - 0x10000 if x_raw >= 0x8000 else x_raw
+                    # 场景级覆盖优先（还原场景用）；未命中再查自动覆盖表
+                    # （键：绝对源行(1-based) = 切片前对白数 + 切片内已发对白数 + 1）
+                    x_ov = scene_portrait_x(self.stem, char, x_signed)
+                    if x_ov is None:
+                        x_ov = position_override(
+                            self.stem,
+                            self.dialogue_row_base + self.report['dialogues'] + 1, char)
+                    self.emit_portrait_block(name, ins.offset, x_raw, x_ov)
                 else:
                     self.emit_image_block(name, self.take_fade())
             elif op == 0x64:
-                self.portrait_slot = ins.fields['a']   # 立绘槽位(0..4) -> st01..st05
+                # `64` 既不是句柄也不是位置（见模块顶部说明），不参与发射，只计数
                 self.count(None, op)
             elif op == 0x02:
                 self._stage_choice_raw(ins)
@@ -650,11 +835,14 @@ def convert_range(wsc_decrypted, stem, opts=None, start_offset=0, end_offset=Non
     字符串池从 `opts.pool_start` 起算 —— 三条都是「接在宿主中间」所必需的。
     """
     opts = opts or ConvertOptions()
-    instrs = [i for i in disassemble(wsc_decrypted)
+    all_ins = disassemble(wsc_decrypted)
+    instrs = [i for i in all_ins
               if i.offset >= start_offset and (end_offset is None or i.offset < end_offset)]
     if not instrs:
         raise ValueError('切片为空：offset [%s, %s)' % (start_offset, end_offset))
-    em = _Emitter(stem, instrs, opts)
+    # 切片前已发的对白数：覆盖表(`position_overrides`)行号是全脚本 1-based
+    row_base = sum(1 for i in all_ins if i.opcode in (0x41, 0x42) and i.offset < start_offset)
+    em = _Emitter(stem, instrs, opts, dialogue_row_base=row_base)
     data = em.run()
     em.report['ws2_size'] = len(data)
     em.report['slice'] = {'start_offset': start_offset, 'end_offset': end_offset,

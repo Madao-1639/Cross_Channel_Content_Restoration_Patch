@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 ws2_disasm.py - Linear disassembler for AdvHD engine .WS2 script format
-(CROSS†CHANNEL Steam; corpus files in tmp/corpus are already rot6-decoded).
+(CROSS†CHANNEL Steam; corpus files in resource/corpus are already rot6-decoded).
 
 Usage:
     from ws2_disasm import disassemble, Instruction, UnknownInstruction
@@ -19,6 +19,48 @@ every one of the 363 Steam .ws2 files + 12 Res303 CNR*.ws2 files (375 files,
 100% byte coverage, see verify_corpus.py).
 """
 import struct
+
+# AdvHD 系引擎的 opcode -> 函数名。同一引擎家族的各游戏共用这套编号
+# （`33`/`34`/`37`/`39`/`3f`/`04`/`14`/`15` 等在多款游戏里逐字节同构）。
+# 「Unk*」是尚未定名的部分；本项目的语料只触及其中一小部分。
+# 完整对照表与来源说明见 doc/file-formats.md「引擎函数名对照表」。
+OPCODE_NAMES = {
+    0x00: 'Undefined',        0x01: 'Condition',          0x02: 'Jump2',
+    0x04: 'RunFile',          0x05: 'Unk05',              0x06: 'Jump',
+    0x07: 'NextFile',         0x08: 'Unk08',              0x09: 'LayerConfig',
+    0x0a: 'Unk0A',            0x0b: 'SetFlag',            0x0d: 'Unk0D',
+    0x0e: 'Unk0E',            0x0f: 'ShowChoice',         0x11: 'SetTimer',
+    0x12: 'StartTimer',       0x13: 'Unk13',              0x14: 'DisplayMessage',
+    0x15: 'SetDisplayName',   0x16: 'Unk16',              0x17: 'Unk17',
+    0x18: 'AddMessageToLog',  0x19: 'Unk19',              0x1a: 'OpenTitle',
+    0x1b: 'Unk1B',            0x1c: 'ExecuteFunction',    0x1d: 'Unk1D',
+    0x1e: 'PlayMusic',        0x1f: 'StopMusic',          0x20: 'MusicUnk1',
+    0x28: 'SoundEffect',      0x29: 'SoundUnk1',          0x2a: 'SoundUnk2',
+    0x2e: 'CharMessageStart', 0x30: 'SoundEffectUnk30',   0x32: 'VariableUnk32',
+    0x33: 'SetBackground',    0x34: 'UsePnaPackage',      0x35: 'PlayMovie',
+    0x36: 'PrepareBackgroundArea', 0x37: 'ClearLayer',    0x38: 'VariableUnk3',
+    0x39: 'DisplayCharacterImage', 0x3a: 'UnkBackground2', 0x3b: 'BackgroundMessage',
+    0x3d: 'Unk3D',            0x3e: 'Unk3E',              0x3f: 'LayersList',
+    0x40: 'SetMask',          0x41: 'UnkBackground3',     0x42: 'Unk42',
+    0x43: 'Unk43',            0x44: 'Effect44',           0x45: 'DragBackground',
+    0x46: 'MoveBackground',   0x47: 'Effect1',            0x48: 'Effect2',
+    0x4a: 'Unk4A',            0x51: 'VariableUnk51',      0x52: 'VariableUnk2',
+    0x53: 'VariableUnk4',     0x56: 'RainStart',          0x57: 'UnkBackground1',
+    0x58: 'Effect3',          0x5b: 'InitKeyName',        0x5c: 'RainEnd',
+    0x64: 'Unk64',            0x65: 'C65',                0x66: 'ShowGraphic',
+    0x67: 'Unk67',            0x68: 'Unk68',              0x6e: 'SetVariable',
+    0x6f: 'VariableUnk',      0x73: 'SetPnaFile',         0x75: 'Unk75',
+    0x78: 'Unk78',            0x7a: 'Unk7A',              0x7b: 'Unk7B',
+    0x84: 'Unk84',            0x97: 'Unk97',              0xb0: 'UnkB0',
+    0xe6: 'ConditionalJump',  0xf0: 'UnkScreen',          0xfb: 'UnkFB',
+    0xfc: 'UnkFC',            0xfd: 'UnkFD',              0xff: 'FileEnd',
+}
+
+
+def opcode_name(op):
+    """opcode -> 引擎函数名（未收录时返回 None）。"""
+    return OPCODE_NAMES.get(op)
+
 
 class UnknownInstruction(Exception):
     def __init__(self, offset, opcode, msg=''):
@@ -178,7 +220,7 @@ def _op_05(data, pos, op_offset):
     return 10, p, {'a': p[0], 'b': _u32(p, 1), 'c': _u32(p, 5)}
 
 def _op_04(data, pos, op_offset):
-    # 04 <name NUL>  (subroutine call, e.g. LAYER_ORDER)
+    # 04 RunFile <name NUL>   (engine subroutine call; 绝大多数是 LAYER_ORDER)
     name, end = _read_cstring(data, pos)
     _chk(_is_name(name), op_offset, 0x04, 'name bad: %r' % name[:40])
     return end - op_offset, data[pos + 1:end], {'name': _dec_str(name)}
@@ -231,7 +273,7 @@ def _op_12(data, pos, op_offset):
                                                         'tail': tail.hex()}
 
 def _op_14(data, pos, op_offset):
-    # 14 <u16 id> <u16 0x0000> <char NUL> <text NUL> <u8 0>
+    # 14 DisplayMessage <u16 id> <u16 0x0000> <char NUL> <text NUL> <u8 0>
     # text contains %K/%P/%N markers and \d..\d delays
     if pos + 5 > len(data):
         raise UnknownInstruction(op_offset, 0x14, 'truncated')
@@ -249,7 +291,7 @@ def _op_14(data, pos, op_offset):
                                         'text': _dec_str(text)}
 
 def _op_15(data, pos, op_offset):
-    # 15 <prefix NUL> 00   ; clear dialog box; prefix usually '' or '%LC<speaker>'
+    # 15 SetDisplayName <prefix NUL> 00   ; 清框/设说话人；前缀空或 '%LC<名>'
     s, end = _read_cstring(data, pos, limit=300)
     if end >= len(data):
         raise UnknownInstruction(op_offset, 0x15, 'truncated')
@@ -393,7 +435,7 @@ def _op_2e(data, pos, op_offset):
     return size, data[pos + 1:end2 + TAIL], {'chan': _dec_str(chan), 'file': _dec_str(fn)}
 
 def _op_33(data, pos, op_offset):
-    # 33 <slot NUL> <file NUL> <2 bytes flags>   (load image into layer slot)
+    # 33 SetBackground <slot NUL> <file NUL> <2 bytes flags>   (硬载入，缺资源会卡死)
     slot, end1 = _read_cstring(data, pos)
     _chk(_is_name(slot) and len(slot) > 0, op_offset, 0x33, 'slot bad')
     fn, end2 = _read_cstring(data, end1)
@@ -406,7 +448,9 @@ def _op_33(data, pos, op_offset):
                                           'flags': flags.hex()}
 
 def _op_34(data, pos, op_offset):
-    # 34 <u8 tag> <slot NUL> <file NUL> <2 bytes flags>   (PNA character sprite)
+    # 34 UsePnaPackage <u8 tag> <slot NUL> <file NUL> <2 bytes flags>
+    #    把资源**绑定**到一个具名句柄（tag 字节与 slot 是同一个串，如 's'+'t01'）；
+    #    句柄只回答"哪一层"，位置在 46（见下）。
     a = data[pos]
     slot, end1 = _read_cstring(data, pos + 1)
     _chk(_is_name(slot) and len(slot) > 0, op_offset, 0x34, 'slot bad')
@@ -434,7 +478,9 @@ def _op_35(data, pos, op_offset):
                                                           'file': _dec_str(n2)}
 
 def _op_39(data, pos, op_offset):
-    # 39 <name NUL> 02 01 <c> <d> 00 [when c==4: 00 00 01 00 02 00]
+    # 39 DisplayCharacterImage <name NUL> 02 01 <c> <d> 00
+    #    [when c==4: 00 00 01 00 02 00 —— 共 c 个 u16 帧号]
+    #    选该 PNA 的哪几帧；帧号**不是坐标**。
     name, end = _read_cstring(data, pos)
     _chk(_is_name(name), op_offset, 0x39, 'name bad')
     if end + 5 > len(data):
@@ -454,7 +500,7 @@ def _op_39(data, pos, op_offset):
                                                         'params': p.hex()}
 
 def _op_3f(data, pos, op_offset):
-    # 3f <u8 count> <count x name NUL>   (layer order list, used by LAYER_ORDER.ws2)
+    # 3f LayersList <u8 count> <count x name NUL>   (LAYER_ORDER.ws2 的全部内容)
     if pos >= len(data):
         raise UnknownInstruction(op_offset, 0x3f, 'truncated')
     count = data[pos]
@@ -468,7 +514,8 @@ def _op_3f(data, pos, op_offset):
     return p - op_offset, data[pos + 1:p], {'count': count, 'names': names}
 
 def _op_45(data, pos, op_offset):
-    # 45 <name NUL> <u16 0> <f32 v1> <f32 v2> <f32 v3> <f32 v4>   (18 params)
+    # 45 DragBackground <通道 NUL> <u8 dragType> <u8 cfg> <f32 x> <f32 y> <f32 u> <f32 v>
+    # 与 46 同为"图层变换"，区别是 45 带 2 个 u8 而 46 带 3 个。
     name, end = _read_cstring(data, pos)
     _chk(_is_name(name), op_offset, 0x45, 'name bad: %r' % name[:40])
     N = 18
@@ -481,7 +528,12 @@ def _op_45(data, pos, op_offset):
         'v3': round(_f32(p, 10), 4), 'v4': round(_f32(p, 14), 4), 'raw': p.hex()}
 
 def _op_46(data, pos, op_offset):
-    # 46 <name NUL> <19 raw bytes>   (layer effect params)
+    # 46 MoveBackground <通道 NUL> <u8 cfg0> <u8 cfg1> <u8 cfg2> <f32 x> <f32 y>
+    #                  <f32 u> <f32 v>
+    # **这条才是图层的位置**（通道名可以是 bg01，也可以是 st01..st12）。
+    # 原点在屏幕中心、单位像素（同引擎的 `46 bg01 0 0 0 -640 -360 0 0` = 1280×720 左上角）；
+    # 立绘 `y` 恒 -40。`cfg0 == 0x06` 是"重置"形态（四个 f32 为 10/11/12/13 占位值），
+    # 只有 `cfg0 == 0x00` 的那条才是真实坐标 —— 见 doc/engine-mechanics.md。
     name, end = _read_cstring(data, pos)
     _chk(_is_name(name), op_offset, 0x46, 'name bad: %r' % name[:40])
     N = 19
@@ -489,7 +541,9 @@ def _op_46(data, pos, op_offset):
         raise UnknownInstruction(op_offset, 0x46, 'truncated')
     p = data[end:end + N]
     return end + N - op_offset, data[pos + 1:end + N], {
-        'name': _dec_str(name), 'raw': p.hex()}
+        'name': _dec_str(name), 'cfg': tuple(p[:3]),
+        'x': round(_f32(p, 3), 4), 'y': round(_f32(p, 7), 4),
+        'u': round(_f32(p, 11), 4), 'v': round(_f32(p, 15), 4), 'raw': p.hex()}
 
 def _op_0f(data, pos, op_offset):
     # 0f <u8 count> count x (<u16 strid> <text NUL> 00 <u16 label> <jump>)
@@ -537,7 +591,7 @@ def _op_44(data, pos, op_offset):
                                                           'name2': _dec_str(n2), 'a': a}
 
 def _op_58(data, pos, op_offset):
-    # 58 <slot NUL> <effect NUL> <7 raw bytes>  (effect stop dispatch)
+    # 58 Effect3 <通道 NUL> <特效名 NUL> <7 raw bytes>
     n1, end1 = _read_cstring(data, pos)
     _chk(_is_ascii(n1), op_offset, 0x58, 'name1 bad')
     n2, end2 = _read_cstring(data, end1)
@@ -550,7 +604,7 @@ def _op_58(data, pos, op_offset):
                                                           'tail': tail.hex()}
 
 def _op_66(data, pos, op_offset):
-    # 66 <name NUL> 65 <u8 tag> 00 00 <f32> <u32 0> [<u16 2>]   (effect mask)
+    # 66 ShowGraphic <名 NUL> 65 <u8 tag> 00 00 <f32> <u32 0> [<u16 2>]   (遮罩)
     name, end = _read_cstring(data, pos)
     _chk(_is_name(name), op_offset, 0x66, 'name bad: %r' % name[:40])
     N = 12
@@ -567,7 +621,7 @@ def _op_66(data, pos, op_offset):
         'mode2': bool(extra)}
 
 def _op_47(data, pos, op_offset):
-    # 47 <name1 NUL> <name2 NUL> <30 raw bytes>
+    # 47 Effect1 <通道 NUL> <特效名 NUL> <u8×4> <f32×6> <u8×2>   (30B)
     #    [0..3] flags, f32 v1@4, f32 v2@8, 8x0@12, f32 v3@20, u32 0@24, u16 w@28
     n1, end1 = _read_cstring(data, pos)
     _chk(_is_ascii(n1), op_offset, 0x47, 'name1 bad: %r' % n1[:40])
@@ -584,7 +638,8 @@ def _op_47(data, pos, op_offset):
         'v3': round(_f32(p, 20), 6), 'w': _u16(p, 28), 'raw': p.hex()}
 
 def _op_48(data, pos, op_offset):
-    # 48 <name1 NUL> <name2 NUL> <u32 0> <u8 a> [name3 NUL when a==2]
+    # 48 Effect2 <通道 NUL> <特效名 NUL> <u8×5>
+    #    注意：这是 **WS2** 的 48，与 WSC 的 48（立绘显示）完全无关。
     n1, end1 = _read_cstring(data, pos)
     _chk(_is_ascii(n1), op_offset, 0x48, 'name1 bad')
     n2, end2 = _read_cstring(data, end1)

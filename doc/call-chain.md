@@ -54,7 +54,7 @@
 
 Steam 删除 H 场景时，会把该场景压成**删节版**留在宿主脚本里（实测宿主是**按序跑完整场**的，
 H 段被压成零头）。Res303 把完整的还原脚本追加在宿主末尾，于是宿主先播完整场删节版、还原脚本
-再完整播一遍 —— **顺序倒置 + 局部重复**（详见 [lessons-learned.md](lessons-learned.md) §18）。
+再完整播一遍 —— **顺序倒置 + 局部重复**（详见 [call-chain.md](call-chain.md)「就地插入接线」）。
 
 ### 统一形状
 
@@ -107,6 +107,26 @@ lo_eff = lo + 首端重合长度
    `hi` 是**交接点**时只能取到该句末尾 —— 否则会一路吞到文件尾、把后继脚本的内容也搬进来。
 3. **插入部分横跨两个脚本时，全放在前一个脚本的末尾**（`CCD5001`），后一个脚本只做
    「去掉与插入段重合的头部」。
+
+### 接缝定位统一
+
+插入段两侧各有一个接缝：**入口**（宿主前段 → 插入段）与**出口**（插入段 → 宿主尾段）。
+立绘的坐标由 `46` 决定（**不在槽号里**，见 [engine-mechanics.md](engine-mechanics.md)），
+所以两处都要保证**同一个角色跨过接缝时不跳位**：
+
+| 情形 | 处理 |
+|---|---|
+| 前段末尾该槽有角色在屏，且插入段**首条连续链**是同一角色 | 该链的立绘块**沿用前段的 x** |
+| 尾段开头会绑定该槽，且插入段**末条连续链**是同一角色 | 该链的立绘块**改用尾段的 x** |
+| 两端冲突（同一链被两侧锁定且值不同） | **入口优先**，并计入 report |
+| 插入段**中段**新登场 / 换了角色的立绘 | 用还原出来的原版坐标（`steam_x()` 量化） |
+
+「连续链」= 同一槽内 family 不变、中间没有 `37` 清槽的一段；换角色或清槽都会开新链，
+**新链不参与接缝对齐**（那本来就是新登场）。实现在
+`script/splice_restoration.py` 的 `align_seam_positions()`，随流水线自动执行。
+
+**现状**：入口 5 个宿主在 `st03` 有同角色在屏且 x 都是 `0.0`；出口 12 个**全部无绑定**（尾段没有立绘）。
+故当前构建**没有一处需要改写** —— 这条规则是**防未来漂移**的，改动与不改动产物逐字节相同。
 
 ### 末尾跳转的处理
 
@@ -201,7 +221,7 @@ python script/final_verification.py      # 全量验收
 
 同一段剧情在两章里各有一份脚本（**26 对**，编号规律 `CCA00nn` ↔ `CCB10(nn-9)`）。
 两者**都可正常到达**（前一个脚本的选项表 `0f` 各有一条指向它们），所以**各自都要还原、
-不能合并**。详见 [lessons-learned.md](lessons-learned.md) §16。
+不能合并**。详见 [lessons-learned.md](lessons-learned.md) 「姊妹场景各自都要还原」。
 
 ---
 
@@ -224,8 +244,7 @@ python script/final_verification.py      # 全量验收
 
 | 路径 | 内容 |
 |---|---|
-| `tmp/corpus/wsc/` | 324 个已解密的原版 WSC |
-| `tmp/corpus/ws2/` | Steam 版 WS2 |
+| `resource/corpus/wsc/` | 324 个已解密的原版 WSC（原生 WS2 不落副本，直读 `backup/Rio.arc`） |
 | `../cross-channel_chinese-localization_project/Scripts/20150412/` | 汉化组 CCS 逐行译文（`>1●NNNN●` 的 NNNN = 原版 WSC 对话 id + 1） |
 | `../CROSS_CHANNEL_Steam_CN_Restored_v3.0.3/` | Res303 构建 + `docs/report.json`（只读探针） |
 | `../CROSS_CHANNEL_Original/` | 原版游戏（老式归档，`tool.arcbuild.read_old_arc` 可读） |
@@ -235,4 +254,4 @@ python script/final_verification.py      # 全量验收
 
 - Res 303 补丁的调用链组织方式
 - A Sky Full of Stars 项目的穿插式调用链经验
-- [lessons-learned.md](lessons-learned.md) §18 / §19 —— 接缝错位与就地插入的技术要点
+- [call-chain.md](call-chain.md)「就地插入接线」 / [call-chain.md](call-chain.md)「就地插入接线」 —— 接缝错位与就地插入的技术要点

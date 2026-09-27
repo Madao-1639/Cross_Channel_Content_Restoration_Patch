@@ -1,0 +1,8 @@
+{
+  "_note": "Graphic.arc 中被汉化组重制的整屏图替换清单。key = 归档名，value = 归档内成员名列表；替换图 = 本目录（resource/graphic_overrides/）下的同名文件。素材来源与加工参数见 doc/localization.md「图片汉化」。",
+  "Graphic.arc": [
+    "efcca0030.png",
+    "SGCC0003.png",
+    "sgcc0011.png"
+  ]
+}

@@ -1,0 +1,404 @@
+{
+ "_说明": "事件 CG 的改名映射：原版名 -> 本补丁 EVCC9XXX 名。同名且内容一致的不入表（默认用相同名字）。识别方式=像素。refs = [宿主, 源对话序号]，列表。还原范围见 scene_slices.json。`all` = **完整**映射（原版名 -> 本补丁名，含未改名/未引用者），供 `script/build_restored_cgs.py` 从原版重建补丁 CG。",
+ "renamed": {
+  "EVCC0002.PNG": {
+   "patch": "EVCC9005.PNG",
+   "refs": [
+    [
+     "CCC0000",
+     209
+    ]
+   ]
+  },
+  "EVCC0002B.PNG": {
+   "patch": "EVCC9005B.PNG",
+   "refs": [
+    [
+     "CCC0000",
+     251
+    ]
+   ]
+  },
+  "EVCC0012.PNG": {
+   "patch": "EVCC9000.PNG",
+   "refs": [
+    [
+     "CCA0025C",
+     47
+    ],
+    [
+     "CCB1014C",
+     43
+    ],
+    [
+     "CCD1001",
+     992
+    ]
+   ]
+  },
+  "EVCC0013.PNG": {
+   "patch": "EVCC9001.PNG",
+   "refs": [
+    [
+     "CCA0025C",
+     283
+    ],
+    [
+     "CCB1014C",
+     283
+    ],
+    [
+     "CCD1001",
+     994
+    ]
+   ]
+  },
+  "EVCC0013A.PNG": {
+   "patch": "EVCC9001A.PNG",
+   "refs": [
+    [
+     "CCA0025C",
+     497
+    ],
+    [
+     "CCB1014C",
+     493
+    ]
+   ]
+  },
+  "EVCC0014A.PNG": {
+   "patch": "EVCC9002A.PNG",
+   "refs": [
+    [
+     "CCB2013",
+     143
+    ]
+   ]
+  },
+  "EVCC0014B.PNG": {
+   "patch": "EVCC9002B.PNG",
+   "refs": [
+    [
+     "CCB2013",
+     57
+    ]
+   ]
+  },
+  "EVCC0015.PNG": {
+   "patch": "EVCC9003.PNG",
+   "refs": [
+    [
+     "CCB2013",
+     181
+    ],
+    [
+     "CCB2013",
+     182
+    ]
+   ]
+  },
+  "EVCC0015A.PNG": {
+   "patch": "EVCC9003A.PNG",
+   "refs": [
+    [
+     "CCB2013",
+     510
+    ]
+   ]
+  },
+  "EVCC0017B.PNG": {
+   "patch": "EVCC9006B.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     227
+    ]
+   ]
+  },
+  "EVCC0018.PNG": {
+   "patch": "EVCC9012.PNG",
+   "refs": [
+    [
+     "CCD0022A",
+     19
+    ]
+   ]
+  },
+  "EVCC0018A.PNG": {
+   "patch": "EVCC9012A.PNG",
+   "refs": [
+    [
+     "CCD0022A",
+     62
+    ],
+    [
+     "CCD0022A",
+     94
+    ]
+   ]
+  },
+  "EVCC0018B.PNG": {
+   "patch": "EVCC9012B.PNG",
+   "refs": [
+    [
+     "CCD0022A",
+     79
+    ],
+    [
+     "CCD0022A",
+     121
+    ]
+   ]
+  },
+  "EVCC0019.PNG": {
+   "patch": "EVCC9010.PNG",
+   "refs": [
+    [
+     "CCC4022",
+     147
+    ]
+   ]
+  },
+  "EVCC0019A.PNG": {
+   "patch": "EVCC9010A.PNG",
+   "refs": [
+    [
+     "CCC4022",
+     267
+    ]
+   ]
+  },
+  "EVCC0020.PNG": {
+   "patch": "EVCC9011.PNG",
+   "refs": [
+    [
+     "CCC4022",
+     366
+    ]
+   ]
+  },
+  "EVCC0020A.PNG": {
+   "patch": "EVCC9011A.PNG",
+   "refs": [
+    [
+     "CCC4022",
+     602
+    ]
+   ]
+  },
+  "EVCC0027B.PNG": {
+   "patch": "EVCC9007B.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     332
+    ]
+   ]
+  },
+  "EVCC0030.PNG": {
+   "patch": "EVCC9017.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     931
+    ]
+   ]
+  },
+  "EVCC0030A.PNG": {
+   "patch": "EVCC9017A.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     474
+    ]
+   ]
+  },
+  "EVCC0030B.PNG": {
+   "patch": "EVCC9017B.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     583
+    ],
+    [
+     "CCD5001",
+     925
+    ]
+   ]
+  },
+  "EVCC0030C.PNG": {
+   "patch": "EVCC9017C.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     838
+    ]
+   ]
+  },
+  "EVCC0031.PNG": {
+   "patch": "EVCC9018.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     976
+    ]
+   ]
+  },
+  "EVCC0031A.PNG": {
+   "patch": "EVCC9018A.PNG",
+   "refs": [
+    [
+     "CCD5001",
+     1042
+    ]
+   ]
+  },
+  "EVCC0034.PNG": {
+   "patch": "EVCC9013.PNG",
+   "refs": [
+    [
+     "CCD1001",
+     1180
+    ]
+   ]
+  },
+  "EVCC0034A.PNG": {
+   "patch": "EVCC9013A.PNG",
+   "refs": [
+    [
+     "CCD1001",
+     1302
+    ]
+   ]
+  },
+  "EVCC0035.PNG": {
+   "patch": "EVCC9014.PNG",
+   "refs": [
+    [
+     "CCD1001",
+     1348
+    ]
+   ]
+  },
+  "EVCC0037.PNG": {
+   "patch": "EVCC9015.PNG",
+   "refs": [
+    [
+     "CCD4003",
+     522
+    ]
+   ]
+  },
+  "EVCC0038.PNG": {
+   "patch": "EVCC9016.PNG",
+   "refs": [
+    [
+     "CCD4003",
+     562
+    ]
+   ]
+  },
+  "EVCC0038A.PNG": {
+   "patch": "EVCC9016A.PNG",
+   "refs": [
+    [
+     "CCD4003",
+     683
+    ]
+   ]
+  },
+  "EVCC0047.PNG": {
+   "patch": "EVCC9009.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     613
+    ]
+   ]
+  },
+  "EVCC0047A.PNG": {
+   "patch": "EVCC9009A.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     784
+    ]
+   ]
+  },
+  "EVCC0048.PNG": {
+   "patch": "EVCC9008.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     504
+    ]
+   ]
+  },
+  "EVCC0048A.PNG": {
+   "patch": "EVCC9008A.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     519
+    ]
+   ]
+  },
+  "EVCC0048B.PNG": {
+   "patch": "EVCC9008B.PNG",
+   "refs": [
+    [
+     "CCC3027",
+     594
+    ]
+   ]
+  },
+  "SGCC0020.PNG": {
+   "patch": "EVCC9004.PNG",
+   "refs": [
+    [
+     "CCB2101",
+     11
+    ]
+   ]
+  }
+ },
+ "all": {
+  "EVCC0012.PNG": "EVCC9000.PNG",
+  "EVCC0013.PNG": "EVCC9001.PNG",
+  "EVCC0013A.PNG": "EVCC9001A.PNG",
+  "EVCC0014.PNG": "EVCC9002.PNG",
+  "EVCC0014A.PNG": "EVCC9002A.PNG",
+  "EVCC0014B.PNG": "EVCC9002B.PNG",
+  "EVCC0015.PNG": "EVCC9003.PNG",
+  "EVCC0015A.PNG": "EVCC9003A.PNG",
+  "SGCC0020.PNG": "EVCC9004.PNG",
+  "EVCC0002.PNG": "EVCC9005.PNG",
+  "EVCC0002B.PNG": "EVCC9005B.PNG",
+  "EVCC0017B.PNG": "EVCC9006B.PNG",
+  "EVCC0027B.PNG": "EVCC9007B.PNG",
+  "EVCC0048.PNG": "EVCC9008.PNG",
+  "EVCC0048A.PNG": "EVCC9008A.PNG",
+  "EVCC0048B.PNG": "EVCC9008B.PNG",
+  "EVCC0047.PNG": "EVCC9009.PNG",
+  "EVCC0047A.PNG": "EVCC9009A.PNG",
+  "EVCC0019.PNG": "EVCC9010.PNG",
+  "EVCC0019A.PNG": "EVCC9010A.PNG",
+  "EVCC0020.PNG": "EVCC9011.PNG",
+  "EVCC0020A.PNG": "EVCC9011A.PNG",
+  "EVCC0018.PNG": "EVCC9012.PNG",
+  "EVCC0018A.PNG": "EVCC9012A.PNG",
+  "EVCC0018B.PNG": "EVCC9012B.PNG",
+  "EVCC0034.PNG": "EVCC9013.PNG",
+  "EVCC0034A.PNG": "EVCC9013A.PNG",
+  "EVCC0035.PNG": "EVCC9014.PNG",
+  "EVCC0037.PNG": "EVCC9015.PNG",
+  "EVCC0038.PNG": "EVCC9016.PNG",
+  "EVCC0038A.PNG": "EVCC9016A.PNG",
+  "EVCC0030.PNG": "EVCC9017.PNG",
+  "EVCC0030A.PNG": "EVCC9017A.PNG",
+  "EVCC0030B.PNG": "EVCC9017B.PNG",
+  "EVCC0030C.PNG": "EVCC9017C.PNG",
+  "EVCC0031.PNG": "EVCC9018.PNG",
+  "EVCC0031A.PNG": "EVCC9018A.PNG"
+ }
+}

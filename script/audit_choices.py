@@ -4,7 +4,7 @@
 ----
 WS2 的 `14`（对话）与 `0f`（选项）共用**同一个字符串池**，池按文件出现顺序填充：
 第 N 个 `14` 的 id 与第 N 组 `0f` 条目的 strid 都等于「到它为止的池位置」
-（见 doc/lessons-learned.md §8）。lng 是**位置对应**的：引擎拿池位置去查 lng 第 N 条。
+（见 [file-formats.md](file-formats.md)「字符串池」）。lng 是**位置对应**的：引擎拿池位置去查 lng 第 N 条。
 
 选项错位的典型成因：**lng 条数比池槽位数少**，于是某个位置之后整体提前一格 ——
 表现为「第一个选项的译文显示在台词槽位、第二个选项显示成第一个、最后一个槽位取不到
@@ -136,6 +136,9 @@ def main():
                     fixable.append((stem, head, L))
 
     print('含选项表的脚本 %d 个，选项条目 %d 个' % (n_scripts, n_opt))
+    if n_scripts == 0:
+        print('⚠ 未审计任何脚本（没有可核的 `.LNG`）—— 闸不得空转，视为失败')
+        return 1
     if not problems:
         print('✅ 三项检查全部通过')
     for stem, nl, pool, br in problems:
@@ -148,9 +151,7 @@ def main():
         if not args.write:
             print('\n（未指定 --write，未写入）')
         return 0
-    if BACKUP.exists():
-        print('\n[备份] 已存在 %s' % BACKUP)
-    else:
+    if not (BACKUP.exists() and arcbuild.same_file(BACKUP, RIO)):
         arcbuild.write_arc(arcbuild.read_raw(RIO), BACKUP)
         print('\n[备份] asset/Rio.arc -> %s' % BACKUP)
     out = []

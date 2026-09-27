@@ -119,6 +119,9 @@ tool/
 ├── wsc.py           （原版 WSC 反汇编）
 ├── wsc2ws2.py       （WSC→WS2 转换，含切片模式）
 ├── lng.py           （LNG 编解码 + CCS 解析）
+├── pna.py           （PNA 分层图像只读解析）
+├── saveadv.py       （AdvHD 存档 CCST 快照链只读解析）
+├── speaker.py       （角色名称映射表 resource/speaker_map.json 的读取层）
 ├── luac53.py        （Lua 5.3 字节码解析）
 ├── luadis53.py      （Lua 5.3 反汇编）
 └── install.py       （安装器入口）
@@ -131,8 +134,7 @@ python script/build_patch.py            # 按方案产出 asset/（完整文件�
 python script/generate_payload.py       # 生成增量补丁到 payload/（含回读校验）
 python script/final_verification.py     # 全量验收
 python script/audit_inline.py           # 就地插入回归守卫
-python script/verify_ws2_conventions.py # 转换器约定回归
-```
+python script/verify_ws2_conventions.py # 转换器约定回归```
 
 各脚本的职责见 `doc/technical-solutions.md`「工具链」。
 
@@ -244,7 +246,7 @@ if pattern in decoded:
 每次重大修改后必须执行：
 
 1. 运行 `final_verification.py` 全量验证
-2. **流水线复跑必须 0 处改动** —— `build_patch.py` 与其各步（含 `realign_lng_to_ws2.py`）都是幂等的；复跑报出改动即说明某步破坏了自己的输入
+2. **流水线复跑必须 0 处改动** —— 须**先把 `asset/Rio.arc` 复位到流水线基线再复跑**（`build_patch.py` 不复位素材，其末步不幂等；机制见 `doc/technical-solutions.md`）；复跑报出改动即说明某步破坏了自己的输入
 3. 检查调用链完整性
 4. 验证资源配对正确性
 5. 验证 Arc 文件规范化（无 null padding）

@@ -29,6 +29,10 @@ CCS_DIR = ROOT / '..' / 'cross-channel_chinese-localization_project' / 'Scripts'
 _S = re.compile(r'\\d|%K%P|%K|%P|%N')
 _Q = '“”「」『』\'"'
 
+# 对齐用 `difflib` 是模糊匹配，允许少量源行未被覆盖；**这是已知噪声底、不是"可以通过"** ——
+# 命中时会在下面显式打印未覆盖行号，并在总结里累计报出（评审 2026-09-27 要求可见）。
+MAX_UNCOVERED = 12
+
 
 def norm(t):
     t = _S.sub('', t)
@@ -39,6 +43,7 @@ def main():
     members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'asset/Rio.arc')}
     steam = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'backup/Rio.arc')}
     ok_all = True
+    total_miss = 0
     print('%-20s %-9s %-9s %-9s %-9s %-9s %s'
           % ('宿主', '插入段', '对话数', 'lng数', '未覆盖', '重复', '出口'))
     print('-' * 108)
@@ -62,15 +67,16 @@ def main():
         covered = set(mp)
         miss = [k for k in range(lo_eff, hi + 1) if k not in covered]
         dup = [k for k, v in mp.items() if len(v) > 1]
-        ordered = all((a['pos'] <= b['pos']) for a, b in
-                      zip(sorted((dict(pos=j, src=i) for i, js in mp.items() for j in js),
-                                 key=lambda x: x['pos']),
-                          sorted((dict(pos=j, src=i) for i, js in mp.items() for j in js),
-                                 key=lambda x: x['pos'])[1:]))
+        # 「倒序」= 沿**产物播放序**看，**源序号**必须单调不减。
+        # ⚠️ 此前写成「把 (pos,src) 按 pos 排序后再比 pos」—— 排序后比 pos **恒真**，
+        #    该列永不报警（评审 2026-09-27 指出）。改为比 `src`。
+        pairs = sorted((j, i) for i, js in mp.items() for j in js)   # (产物位置, 源序号)
+        ordered = all(pairs[k][1] <= pairs[k + 1][1] for k in range(len(pairs) - 1))
         exits = [i.fields.get('name') for i in ii if i.opcode == 0x07]
         s_ii = ws2disasm.disassemble(ws2.decode(steam[host]))
         s_exits = [i.fields.get('name') for i in s_ii if i.opcode == 0x07]
-        good = (len(miss) <= 12 and not dup and ordered and exits == s_exits
+        total_miss += len(miss)
+        good = (len(miss) <= MAX_UNCOVERED and not dup and ordered and exits == s_exits
                 and len(dl) == len(L))
         ok_all &= good
         print('%-20s %-9s %-9d %-9d %-9d %-9d %-9s %s'
@@ -95,7 +101,8 @@ def main():
               % (th['host'], '截头@%d' % th['from_src'], len(dl), len(L), '-', '-',
                  '单调', ('✅' if good else '⚠') + ' 出口=%s' % exits))
     print()
-    print('总结：%s' % ('全部通过' if ok_all else '**有场景未通过**'))
+    print('总结：%s%s' % ('全部通过' if ok_all else '**有场景未通过**',
+                        '（未覆盖源行合计 %d，见上）' % total_miss if total_miss else ''))
     return 0 if ok_all else 1
 
 

@@ -156,6 +156,11 @@ def generate():
             'members': members_with_type,
         }
 
+    # ⚠️ **METADATA 只放归档条目，不带任何 `_` 前缀元信息键**：安装器的安装后校验
+    # （`tool/install.py`）把 METADATA 的**每一个键**当归档名、去游戏目录取该文件核哈希 ⇒
+    # 一个 `_provenance` / `_toolchain` 之类的键会让它**每次安装都报一条「文件不存在」的 FAIL**。
+    # 产物完整性已由各归档的 `checksum` + 下面的回读校验负责，不需要额外的指纹或出处键。
+
     metadata_file = PAYLOAD_DIR / 'METADATA.json'
     metadata_file.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
 

@@ -17,6 +17,7 @@ import collections
 import glob
 import io
 import os
+import struct
 import sys
 from pathlib import Path
 
@@ -29,14 +30,35 @@ from tool.wsc2ws2 import VOICE_TAIL, SE_TAIL, ConvertOptions, convert  # noqa: E
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-WSC_DIR = ROOT / 'tmp' / 'corpus' / 'wsc'
-WS2_DIR = ROOT / 'tmp' / 'corpus' / 'ws2'
+WSC_DIR = ROOT / 'resource' / 'corpus' / 'wsc'
+BACKUP_RIO = ROOT / 'backup' / 'Rio.arc'          # 原生语料的唯一来源
 RIO = ROOT / 'asset' / 'Rio.arc'
 
 # 原生 `28` 尾段的模态形态（1086/1556），也是转换器应当发射的形态
 SE_TAIL_NATIVE = bytes(10) + b'\x0a\x00' + bytes(5) + b'\x01' + bytes(4)
 # 原生 `1e` 尾段恒定部分（音量字段除外）
 BGM_TAIL_NATIVE = bytes(8) + b'\xff\xff' + b'\x0a\x00\x01' + bytes(4)
+
+
+def load_pna_layers():
+    """{PNA 名(大写): 记录数} —— 用于检查 `39` 的帧号是否越位。
+
+    本检查跑的是**未注入 `rename_map`** 的转换（为了逐字节比对文本/id），所以产物里还是
+    原版的档位 0 名（`TCSK0002.PNA`）。这里按本补丁的改名规则（档位 `0` → `1`）把对应
+    档位 1 资源的层数也登记进来，否则守卫会空转（实测 277 种里 242 种查不到）。
+    """
+    out = {}
+    p = ROOT / 'backup' / 'Graphic.arc'
+    if not p.exists():
+        return out
+    for n, d in arcbuild.read_raw(p):
+        name = n.decode('utf-16-le').upper()
+        if name.endswith('.PNA') and d[:4] == b'PNAP':
+            out[name] = struct.unpack_from('<I', d, 0x10)[0]
+    for name, L in list(out.items()):
+        if len(name) > 8 and name[4] == '1':          # TCxx 1 nnn [变体].PNA
+            out.setdefault(name[:4] + '0' + name[5:], L)
+    return out
 
 _results = []
 
@@ -69,8 +91,16 @@ def runs_of_15(d):
 
 
 def native_scripts():
-    return [(os.path.basename(f), open(f, 'rb').read())
-            for f in sorted(glob.glob(str(WS2_DIR / '*.ws2')))]
+    """Steam 原生 WS2 语料 —— **直读 `backup/Rio.arc`**（未打补丁的 Steam 原档）。
+
+    原先读 `resource/corpus/ws2/` 的 375 个副本；那是**同一批字节的派生缓存**，且其唯一
+    另一消费者（立绘位置标定）已因锚点输入被清而不可重跑 ⇒ 副本已删，改为直读归档
+    （「不落派生副本」与 `apply_text_map.en_of_from` 同一口径）。
+    """
+    if not BACKUP_RIO.exists():
+        return []
+    members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(BACKUP_RIO)}
+    return [(k, ws2.decode(v)) for k, v in sorted(members.items()) if k.endswith('.WS2')]
 
 
 def shipped_cnr():
@@ -84,7 +114,7 @@ def shipped_cnr():
 def main():
     native = native_scripts()
     if not native:
-        print('tmp/corpus/ws2 缺失；语料相关检查跳过')
+        print('backup/Rio.arc 缺失；语料相关检查跳过')
     print('原生语料 %d 个脚本' % len(native))
     # 反汇编只做一次（每个脚本被多项检查用到）
     disasm = []
@@ -166,11 +196,15 @@ def main():
 
     # ---- 6. 转换器：324 个 WSC 全量往返 ----
     if not WSC_DIR.exists():
-        print('tmp/corpus/wsc 缺失；转换检查跳过')
+        print('resource/corpus/wsc 缺失；转换检查跳过')
     else:
-        opts = ConvertOptions()
+        pna_layers = load_pna_layers()
+        opts = ConvertOptions(pna_layers=pna_layers)
         conv_bad = []
+        blk_bad = []                 # 立绘块形态违规
+        pos46 = collections.Counter()  # 发射出的站位 x 分布
         n_choice_ok = n_choice = 0
+        n39 = 0                      # 做了层数校验的 39 条数
         n_id_ok = 0
         n_files = 0
         for p in sorted(glob.glob(str(WSC_DIR / '*.WSC'))):
@@ -213,16 +247,46 @@ def main():
             r = runs_of_15(out)
             if set(r) - {1, 2}:
                 conv_bad.append('%s: 15-run %s' % (stem, dict(r)))
-            for i in oins:
+            for k, i in enumerate(oins):
                 if i.opcode == 0x34:
                     s, _ = cstr(out, i.offset + 1, 20)
                     if not s.startswith(b'st'):
                         conv_bad.append('%s: 0x34 slot %r' % (stem, s))
                         break
+                    # 立绘块形态：34 + 39 + 04 LAYER_ORDER + 46(重置) + 46(位置)。
+                    # **位置由 46 承载，不在句柄里** —— 少发/发错都会让立绘落到默认位
+                    # 或与宿主重叠（见 doc/engine-mechanics.md「0x46 MoveBackground」）。
+                    nxt = oins[k + 1:k + 5]
+                    if len(nxt) < 4 or [j.opcode for j in nxt] != [0x39, 0x04, 0x46, 0x46]:
+                        blk_bad.append('%s@%x: %s' % (stem, i.offset,
+                                                      [hex(j.opcode) for j in nxt]))
+                        continue
+                    r1, r2 = nxt[2], nxt[3]
+                    if r1.fields['cfg'] != (6, 0, 240):
+                        blk_bad.append('%s@%x: reset cfg %s' % (stem, i.offset, r1.fields['cfg']))
+                    if r2.fields['cfg'] != (0, 0, 0) or r2.fields['y'] != -40.0:
+                        blk_bad.append('%s@%x: pos cfg %s y %s'
+                                       % (stem, i.offset, r2.fields['cfg'], r2.fields['y']))
+                    pos46[r2.fields['x']] += 1
+                    # `39` 的帧号必须落在目标 PNA 的层数内（层数 1 用 4 层形态 = 子图层越位）
+                    attrs = bytes.fromhex(nxt[0].fields['params'])
+                    c = attrs[2]
+                    ids = [struct.unpack_from('<H', attrs, 3 + 2 * x)[0] for x in range(c)]
+                    L = pna_layers.get(str(i.fields.get('file', '')).upper())
+                    if L is not None:
+                        n39 += 1
+                        if max(ids) >= L:
+                            blk_bad.append('%s@%x: PNA %s 层数 %d 却请求帧号 %s'
+                                           % (stem, i.offset, i.fields.get('file'), L, ids))
         check('转换 324 个 WSC：文本/id/槽名/15 连跑', not conv_bad,
               '%d 文件, 对话 id+文本一致 %d, 选项表 %d/%d%s'
               % (n_files, n_id_ok, n_choice_ok, n_choice,
                  '' if not conv_bad else ' | ' + '; '.join(conv_bad[:3])))
+        check('立绘块 = 34+39+LAYER_ORDER+46(重置)+46(位置)', not blk_bad,
+              '%d 个块, x 分布 %s%s'
+              % (sum(pos46.values()), dict(sorted(pos46.items())),
+                 '' if not blk_bad else ' | ' + '; '.join(blk_bad[:3])))
+        check('39 帧号 <= 目标 PNA 记录数', n39 > 0, '%d 条已校验' % n39)
 
     n_bad = sum(1 for _, ok, _ in _results if not ok)
     print()

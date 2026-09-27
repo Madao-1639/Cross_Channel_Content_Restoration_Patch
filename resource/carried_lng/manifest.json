@@ -1,0 +1,145 @@
+{
+ "_说明": "本项目处理集之外、需随产物发布的汉化 lng（取自 Res303 Rio.arc）。基线构建（build_patch --bootstrap）时由 build_patch 显式带回 asset/Rio.arc。",
+ "members": {
+  "CC0TOU_en.lng": {
+   "bytes": 24430,
+   "sha256": "d78a3f1c00b08346"
+  },
+  "CC1MIS_en.lng": {
+   "bytes": 18704,
+   "sha256": "a075c417eed3979a"
+  },
+  "CC2KIR_en.lng": {
+   "bytes": 36490,
+   "sha256": "849be27703106784"
+  },
+  "CC3MIK_en.lng": {
+   "bytes": 19690,
+   "sha256": "7007220e2c7e2016"
+  },
+  "CC4YOU_en.lng": {
+   "bytes": 20400,
+   "sha256": "504159fd16bdd1f4"
+  },
+  "CC5TOM_en.lng": {
+   "bytes": 24944,
+   "sha256": "83c7bab86b71e1e3"
+  },
+  "CC6SAK_en.lng": {
+   "bytes": 48566,
+   "sha256": "6787671542c8edaa"
+  },
+  "CC_10A_en.lng": {
+   "bytes": 3290,
+   "sha256": "1a09178689c91da0"
+  },
+  "CC_11A_en.lng": {
+   "bytes": 23162,
+   "sha256": "c29e4d4009924dc8"
+  },
+  "CC_12A_en.lng": {
+   "bytes": 38160,
+   "sha256": "66350370d2fe026b"
+  },
+  "CC_13A_en.lng": {
+   "bytes": 29860,
+   "sha256": "38987785adfba673"
+  },
+  "CC_14A_en.lng": {
+   "bytes": 33916,
+   "sha256": "b4ddaa16eab68c5b"
+  },
+  "CC_15A_en.lng": {
+   "bytes": 34954,
+   "sha256": "ee2b91432aa29891"
+  },
+  "CC_16A_en.lng": {
+   "bytes": 5140,
+   "sha256": "a71f133c2bf8eadd"
+  },
+  "CC_17A_en.lng": {
+   "bytes": 5490,
+   "sha256": "043298305733c548"
+  },
+  "CC_20A_en.lng": {
+   "bytes": 4140,
+   "sha256": "746fee07aefe7c5a"
+  },
+  "CC_21A_en.lng": {
+   "bytes": 11532,
+   "sha256": "f89aeac2ebfaa493"
+  },
+  "CC_21Aa_en.lng": {
+   "bytes": 10524,
+   "sha256": "97e975b24344696a"
+  },
+  "CC_21Ab_en.lng": {
+   "bytes": 17196,
+   "sha256": "c51eb16f8b0f5236"
+  },
+  "CC_22A_en.lng": {
+   "bytes": 4106,
+   "sha256": "6e55aaac08c80463"
+  },
+  "CC_22Aa_en.lng": {
+   "bytes": 340,
+   "sha256": "f13ceb2d080c259e"
+  },
+  "CC_22B_en.lng": {
+   "bytes": 18962,
+   "sha256": "8048bd5de9f51212"
+  },
+  "CC_22C_en.lng": {
+   "bytes": 20398,
+   "sha256": "0cc446ad6f61ade8"
+  },
+  "CC_22D_en.lng": {
+   "bytes": 16872,
+   "sha256": "511374552e59622b"
+  },
+  "CC_22E_en.lng": {
+   "bytes": 12076,
+   "sha256": "971954824f0a1967"
+  },
+  "CC_22Xa_en.lng": {
+   "bytes": 1754,
+   "sha256": "2260bc5c14c51ccd"
+  },
+  "CC_22Xb_en.lng": {
+   "bytes": 2356,
+   "sha256": "484e280645ad729a"
+  },
+  "CC_22Xc_en.lng": {
+   "bytes": 3502,
+   "sha256": "a11e75a81f93b4a1"
+  },
+  "CC_22Xd_en.lng": {
+   "bytes": 1286,
+   "sha256": "6668c90c52c63153"
+  },
+  "CC_26A_en.lng": {
+   "bytes": 1214,
+   "sha256": "3542e72fb953659a"
+  },
+  "CC_26B_en.lng": {
+   "bytes": 11782,
+   "sha256": "fb0d4b369578972d"
+  },
+  "CC_26C_en.lng": {
+   "bytes": 7568,
+   "sha256": "75eabe93991bc006"
+  },
+  "CC_27A_en.lng": {
+   "bytes": 13594,
+   "sha256": "8bd8f8e7eefa430f"
+  },
+  "CC_27B_en.lng": {
+   "bytes": 1620,
+   "sha256": "08eedec2a45b0c40"
+  },
+  "CC_30A_en.lng": {
+   "bytes": 34302,
+   "sha256": "228900d4da24bf37"
+  }
+ }
+}

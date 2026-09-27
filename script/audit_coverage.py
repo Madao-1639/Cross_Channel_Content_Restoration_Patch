@@ -38,7 +38,7 @@ if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 CCS_DIR = ROOT / '..' / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
-WSC_DIR = ROOT / 'tmp' / 'corpus' / 'wsc'
+WSC_DIR = ROOT / 'resource' / 'corpus' / 'wsc'
 RES303_REPORT = (ROOT / '..' / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3'
                  / 'docs' / 'report.json')
 _STRIP = re.compile(r'\\d|%K%P|%K|%P|%N')

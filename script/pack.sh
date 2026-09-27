@@ -13,13 +13,13 @@ mkdir -p "$RELEASE_DIR"
 rm -rf build *.spec
 
 # 使用 mamba 环境执行 PyInstaller 打包
-mamba run -n asky_patch pyinstaller \
+mamba run -n GalRev pyinstaller \
     --onefile \
     --add-data "tool/arcbuild.py;." \
     --add-data "payload;payload" \
     --add-data "VERSION;." \
-    --add-data "script/icon.ico;." \
-    --icon "script/icon.ico" \
+    --add-data "resource/icon.ico;." \
+    --icon "resource/icon.ico" \
     --name "CROSS_CHANNEL_Content_Restoration_Patch_Installer_${VERSION}" \
     --distpath "${RELEASE_DIR}" \
     --clean \

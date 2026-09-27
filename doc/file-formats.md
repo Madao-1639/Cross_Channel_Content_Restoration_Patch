@@ -93,7 +93,7 @@ def encode(data):
 `0xff <u32 a> <u32 b>` 才是"脚本结束/交出控制权"，与 `07` 组合成 WS2 的出口惯用形：
 
 ```
-15 00 00 | 07 <target> 00 | ff <u32 a> <u32 b>
+07 <target> 00 | ff <u32 a> <u32 b>
 ```
 
 - `<target>`: 目标脚本名（ASCII 大写、不带扩展名，如 `CCC0001_EN`）
@@ -102,10 +102,13 @@ def encode(data):
 
 示例:
 ```
-\x15\x00\x00\x07CCA0002_EN\x00\xff\x08\x00\x00\x00\x00\x00\x00\x00
+\x07CCA0002_EN\x00\xff\x08\x00\x00\x00\x00\x00\x00\x00
 ```
 
-**重要**: 出口前必须是 `\x15\x00\x00`（清框），**不能**是 `\x16\x00\x00`（图层命令块起始）——
+⚠️ **出口前不带清框** `15 00 00` —— 实测原生 369 条出口里只有 27 条前面是 `15`
+（都是紧接末句的那条尾清框），其余前面直接是演出块（`33`/`46`/`65`/`66` 等）。**不要在这里补 `15`**。
+
+**重要**: 出口前**不能**是 `\x16\x00\x00`（图层命令块起始）——
 `16` 会被引擎当作图层命令块的参数读入，脚本随即解析失败。
 
 **`0x04` - 引擎子调用 (Call)**
@@ -133,16 +136,36 @@ def encode(data):
 对话文本标记:
 - `%K`: 对话结束，等待玩家点击
 - `%P`: 清除文本框 (常与 `%K` 组合: `%K%P`)
-- `%N`: 空白占位 (立即跳过)
+- `%N`: 空白占位（**「立即跳过」未经实证**）
 - `%L<name>\x00`: 设置说话角色名（在 `0x15` 的前缀里，不在正文）
 - `\d...\d`: 延迟显示效果
+
+**结构不变量**（两版语料**零例外**；全库唯一能独立证伪「尾标记整体丢失」的判据，不需要任何外部参照）：
+
+- **对话格（`0x14`）正文必带**尾部控制符：Steam 原档 51,452/51,452；源 WSC 41,629/41,629（全是 `%K%P`）。
+- **选项条目（`0f` 的每个条目）正文必不带**：Steam 原档 127/127。
+- ⇒ 引擎不等待点击会让一屏堆满对话，所以「对话格缺尾」是硬错误。已接线为**写盘期断言**
+  （`script/apply_text_map.py` 的 `check_tails`，逐脚本中止）与**产物级验收**
+  （`script/final_verification.py` 的 `check_tails`）。
+- 该断言只判**有无**，不决定补什么尾巴 —— 补尾的取值仍按 `resource/text_map.json`（见 [localization.md](localization.md)）。
+
+处置口径：`%N` / `%P` 格**一律保留** —— 它们是 **Steam 原档的演出**
+- 原版侧 41,629 条对话里零空白、零纯控制符，即这些空格全是 MoeNovel 加的
+- 处理它们的目的**只是避免「空行 / 空翻页」等异常显示** —— 落实为：lng **原样回填标记串本身**（`resource/text_map.json` 的 `op:"ctrl"`，`zh` == 标记串），**不删格、不改文本**
+- 唯一的例外是**「藏住了原版行」的占位档**（见 [restoration-targets.md](restoration-targets.md)），那是「还原被删内容」的处置，与本口径无关。
 
 **`0x15` - 清除对话框 / 设置说话人**
 
 格式: `\x15<prefix>\x00\x00`，`<prefix>` 为空或 `%LC<说话人英文名>`
 
-作用: 清框并（如带前缀）设置名字框。**每条 `0x14` 前发一条**（原生 `15→14` 54,176 次是主流
-惯用形）；`\x16\x00\x00` 是图层命令块起始，**不能**拿来当"清框"。
+作用: 清框并（如带前缀）设置名字框。**原生是「每句成对」** —— `15[设名] 14 15[清框]`：
+
+- `14` **前**一条：空前缀 = 旁白、`%LC<英文名>` = 设名；
+- `14` **后**一条：前缀恒空 = 清框。
+
+实测原生 97,904 条 `15` **没有一条游离在 `14` 之外**（背景块 / 出口 / 选项表前都不清框）。
+**例外：`%N`/`%P` 纯标记格不带任何 `15`**（实测 1,378 例零前导 `15`），它沿用当前名字框。
+`\x16\x00\x00` 是图层命令块起始，**不能**拿来当"清框"。
 
 #### 图层/背景控制指令
 
@@ -174,8 +197,9 @@ def encode(data):
 
 **背景切换块**：完整字节模板（含 `65` 渐变指令，首操作数恒 `0x00`）见
 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.3，此处不再重复；要点是
-`15 00 00` → `16 00 00 64 00 37 2a 00` → `33` 载图 → `04 LAYER_ORDER` → `09`×4 透明度 →
-`46` 无补间 → `65 00 00 00 <f32 秒> 00000000 0200` → `16 01 00`。
+`16 00 00 64 00 37 2a 00` → `33` 载图 → `04 LAYER_ORDER` → `09`×4 透明度 →
+`46` 无补间 → `65 00 00 00 <f32 秒> 00000000 0200` → `16 01 00`
+（**块前不清框** —— 清框只属于紧邻的台词，见上）。
 
 **`0x66` - 特效遮罩**
 
@@ -258,7 +282,7 @@ def encode(data):
 **会跳过选项文本占用的号**（选项条目的 strid 与 id 同池）。
 
 **违反后果**：文本与说话人错位、选项串位、回溯系统异常。
-完整池模型见 [lessons-learned.md](lessons-learned.md) §8。
+完整池模型见 [file-formats.md](file-formats.md)「字符串池」。
 
 #### 出口惯用形
 
@@ -277,6 +301,7 @@ def encode(data):
 | 0x07 | 场景转移 | `<target>\x00`（无参数尾；其后跟独立的 `0xff` 出口指令） |
 | 0x09 | 设置变量 | `\x00<var_id:u16><f32>` |
 | 0x0b | 设置变量(短) | `<u16 id><u8 01>` |
+| 0x0f | 选项表 | `<count:u8>` + `count × (<strid:u16><text>\x00\x00<u16 标签><jump>)` |
 | 0x11 | 启动计时器 | `<name>\x00\x00<f32 秒>` |
 | 0x12 | 等待计时器 | `<name>\x00\x00\x00` |
 | 0x14 | 对话块 | `<id:u16>\x00\x00<char>\x00<text>\x00\x00` |
@@ -287,6 +312,11 @@ def encode(data):
 | 0x2e | 语音播放 | `\x28<通道>\x00<file>\x00<22B 参数>` |
 | 0x33 | 加载槽位 | `<slot>\x00<file>\x00<flags>` |
 | 0x34 | 显示 PNA | `<slot>\x00<file>\x00\x01\x01`（槽名是**一个**整串，如 `st01`） |
+| 0x37 | 解绑图层 | `<slot>\x00`；`37 *\x00` = 解绑全部 |
+| 0x39 | 选显示帧 | `<通道>\x00<02 01 N>\x00` + `N × u16` 帧号（**帧号不是坐标**） |
+| 0x3f | 图层清单 | `<count:u8>` + `count × <名>\x00`（`LAYER_ORDER.ws2` 的全部内容） |
+| 0x45 | 拖拽图层 | `<通道>\x00<u8×2><f32×4>` |
+| 0x46 | **图层定位** | `<通道>\x00<i16 mode><u8 mask><f32 x><f32 y><f32 u><f32 v>`（原点=屏幕中心；立绘 `y=-40`；`mask` 位控预设索引，见 [pna-resources.md](pna-resources.md)「图形指令」） |
 | 0x65 | 渐变 | `\x00\x00\x00<f32 秒>00000000<u16 mode>`（首操作数恒 `0x00`） |
 | 0x66 | 特效遮罩 | `<名>.PNG\x00 65 64 00 00 <f32>00000000 02 00` |
 | 0xff | 脚本结束 / 出口 | `<u32 a><u32 b>`（`a=8` 可玩；`b` 见 `07` 节） |
@@ -294,6 +324,69 @@ def encode(data):
 定长尾段（`0x1e` = 17B、`0x28`/`0x2e` = 22B）的逐字节布局见
 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.6——**按整条指令读**，少读 1 字节都会让
 后续指令整体错位。
+
+### 引擎函数名对照表
+
+AdvHD 系引擎的 opcode 与**函数名**存在固定对应，同一引擎家族的各游戏共用一套编号。
+下表是完整对照（**CROSS†CHANNEL 用到的以加粗标出**）；有了它就不必再靠猜语义读指令：
+
+| op | 函数名 | op | 函数名 | op | 函数名 |
+|---|---|---|---|---|---|
+| `00` | Undefined | `33` | **SetBackground**（硬载入） | `57` | UnkBackground1 |
+| `01` | **Condition** | `34` | **UsePnaPackage**（绑定 PNA） | `58` | **Effect3** |
+| `02` | Jump2 | `35` | PlayMovie | `5b` | InitKeyName |
+| `04` | **RunFile**（引擎子调用） | `36` | PrepareBackgroundArea | `5c` | RainEnd |
+| `05` | Unk05（音效全停） | `37` | **ClearLayer**（解绑） | `64` | Unk64 |
+| `06` | Jump | `38` | VariableUnk3 | `65` | **渐变**（引擎名 `C65`，未定名） |
+| `07` | **NextFile**（场景转移） | `39` | **DisplayCharacterImage**（选帧） | `66` | **ShowGraphic**（蒙版） |
+| `08` | Unk08 | `3a` | UnkBackground2 | `67` | Unk67 |
+| `09` | **LayerConfig**（图层权重） | `3b` | BackgroundMessage | `68` | Unk68 |
+| `0a` | Unk0A | `3d` | Unk3D | `6e` | SetVariable |
+| `0b` | **SetFlag** | `3e` | Unk3E | `6f` | VariableUnk |
+| `0d` | Unk0D | `3f` | **LayersList**（`LAYER_ORDER`） | `73` | SetPnaFile |
+| `0e` | Unk0E | `40` | SetMask | `75` | Unk75 |
+| `0f` | **ShowChoice**（选项表） | `41` | UnkBackground3 | `78`/`7a`/`7b` | Unk78/7A/7B |
+| `11` | SetTimer | `42` | Unk42 | `84` | Unk84 |
+| `12` | StartTimer | `43` | Unk43 | `97` | Unk97 |
+| `13` | Unk13 | `44` | Effect44 | `b0` | UnkB0 |
+| `14` | **DisplayMessage**（对话） | `45` | **DragBackground** | `e6` | ConditionalJump |
+| `15` | **SetDisplayName**（说话人） | `46` | **MoveBackground**（图层定位） | `f0` | UnkScreen |
+| `16` | **Unk16**（图层命令块） | `47` | **Effect1** | `fb`/`fc`/`fd` | UnkFB/FC/FD |
+| `17` | Unk17 | `48` | **Effect2** | `ff` | **FileEnd**（出口） |
+| `18` | AddMessageToLog | `4a` | Unk4A | | |
+| `19` | Unk19 | `51` | VariableUnk51 | | |
+| `1a` | OpenTitle | `52` | VariableUnk2 | | |
+| `1b` | Unk1B | `53` | VariableUnk4 | | |
+| `1c` | ExecuteFunction | `56` | RainStart | | |
+| `1d` | Unk1D | | | | |
+| `1e` | **PlayMusic** | | | | |
+| `1f` | StopMusic | | | | |
+| `20` | MusicUnk1 | | | | |
+| `28` | **SoundEffect**（SE） | | | | |
+| `29`/`2a` | SoundUnk1/2 | | | | |
+| `2e` | **CharMessageStart**（语音） | | | | |
+| `30` | SoundEffectUnk30 | | | | |
+| `32` | VariableUnk32 | | | | |
+
+> 同一函数名在不同游戏里**编号一致**：`33`/`34`/`37`/`39`/`3f`/`04`/`14`/`15` 等在多款
+> AdvHD 游戏里逐字节同构，所以这张表可以跨游戏用；但**具体游戏的脚本只用其中一部分**
+> （CROSS†CHANNEL 的 363 个脚本就只触及上表加粗的那些）。
+> 「`Unk*`」是尚未定名的部分——它们在本项目语料里大多不出现，不影响转换。
+>
+> ⚠️ **这张表的名字是标签，不是引擎符号**：实测在 ASF 的 `AdvHD.exe` 里，
+> `DisplayCharacterImage`/`UsePnaPackage`/`SetBackground`/`LayersList` 等名字**一个字符串都没有**
+> （count=0），说明它们**不是**从 exe 的字符串/符号表来的。
+>
+> ✅ **编号与逐字节布局已在引擎里确证**：ASF exe 的脚本 VM 有 `opcode → handler` 表
+> （`obj+0x1B18`，按原始 opcode 字节索引）与 `opcode → 操作数格式串` 表
+> （`off_5EE2A8`）。**编号与本表零偏差**；逐字节操作数布局见
+> [engine-mechanics.md](engine-mechanics.md)「WS2 脚本 VM」与
+> `resource/ws2_operand_formats.json`（164 个 opcode 的完整格式表）。
+>
+> ⚠️ **`48` 在两套引擎里是两条完全不同的指令**：本表是 **WS2/AdvHD** 的 `48 = Effect2`
+> （两条 NUL 串 + 5 字节）；**WSC/WillPlus** 的 `48` 是立绘显示（带位号与 `xabspos` 坐标），
+> 见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.3。读原版脚本时不要混用。
+> 代码里的判据是**栈**：`tool/wsc.py` 的 `_op_48` 对 WSC，`tool/ws2disasm.py` 的 `_op_48` 对 WS2。
 
 ### 命名规则
 
@@ -369,7 +462,7 @@ LNG 是 AdvHD 引擎的文本替换机制，每个含文本的 `.ws2` 对应一�
 - **单条字符串 = UTF-16LE 编码，每字节再 XOR 0x2C**。容器本身**不做 rot6**。
 - 终端 `%K`/`%P`/`%N` 等控制标记以普通文本形式随条目携带（如 `终于说出话来。%K%P`）。
 - **按位置替换**：引擎把播放序第 N 条文本替换为 lng 第 N 条目。完整的池槽位模型
-  （`lng 条数 == 14 条数 + Σ(0f 的 count)`）见 [lessons-learned.md](lessons-learned.md) §20。
+  （`lng 条数 == 14 条数 + Σ(0f 的 count)`）见 [localization.md](localization.md)「lng 位置对应」。
 - 说话人名**不经 lng**，走 `NameTable.txt`（见下）。
 
 ## Script.arc（Lua 脚本）

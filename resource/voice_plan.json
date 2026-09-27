@@ -1,0 +1,325 @@
+{
+"_说明": "已作废：这一版借的是 Steam 录音；按规范应新增原版，见 build_voice_plan.py 重写。",
+"CCA0002_EN": {
+"52": {
+"f": "SKU002A0002.OGG",
+"why": "imported-original"
+},
+"53": {
+"f": "SKU003A0002.OGG",
+"why": "imported-original"
+},
+"60": {
+"f": "SKU005A0002.OGG",
+"why": "imported-original"
+},
+"61": {
+"f": "SKU006A0002.OGG",
+"why": "imported-original"
+},
+"62": {
+"f": "SKU007A0002.OGG",
+"why": "imported-original"
+}
+},
+"CCA0010_EN": {
+"82": {
+"f": "MSA029A0010.OGG",
+"why": "imported-original"
+},
+"84": {
+"f": "MSA029A0010.OGG",
+"why": "imported-original"
+},
+"86": {
+"f": "MSA029A0010.OGG",
+"why": "imported-original"
+}
+},
+"CCB1001_EN": {
+"154": {
+"f": "MSA029A0010.OGG",
+"why": "imported-original"
+}
+},
+"CCA0012_EN": {
+"25": {
+"f": "FYU001A0012.OGG",
+"why": "imported-original"
+},
+"27": {
+"f": "FYU002A0012.OGG",
+"why": "imported-original"
+},
+"29": {
+"f": "FYU003A0012.OGG",
+"why": "imported-original"
+},
+"31": {
+"f": "FYU004A0012.OGG",
+"why": "imported-original"
+}
+},
+"CCA0013_EN": {
+"39": {
+"f": "MSA000A0013.OGG",
+"why": "imported-original"
+}
+},
+"CCA0016_EN": {
+"291": {
+"f": "MSA065A0016.OGG",
+"why": "imported-original"
+}
+},
+"CCA0019_EN": {
+"85": {
+"f": "YKI030A0019.OGG",
+"why": "row-original-restore（换回原版录音，替 TOM_0077.OGG——该 Steam 录音实测是 r80 那句的英文，非本行）"
+}
+},
+"CCB1006_EN": {
+"291": {
+"f": "MSA065A0016.OGG",
+"why": "imported-original"
+},
+"167": {
+"f": "MSA044A0016.OGG",
+"why": "imported-original"
+}
+},
+"CCA0027_EN": {
+"66": {
+"f": "YKI004A0027.OGG",
+"why": "imported-original"
+},
+"89": {
+"f": "YKI006A0027.OGG",
+"why": "imported-original"
+},
+"75": {
+"f": "YKI005A0027.OGG",
+"why": "split-first-fragment"
+}
+},
+"CCA0030_EN": {
+"69": {
+"f": "SKU001A0030.OGG",
+"why": "imported-original"
+},
+"186": {
+"f": "FYU017A0030.OGG",
+"why": "imported-original"
+}
+},
+"CCB0013_EN": {
+"12": {
+"f": "YSA029A0013.OGG",
+"why": "imported-original"
+}
+},
+"CCB1009_EN": {
+"85": {
+"f": "YKI030A0019.OGG",
+"why": "row-original-restore（换回原版录音，替 TOM_0357.OGG——该 Steam 录音实测是 r80 那句的英文，非本行）"
+}
+},
+"CCB2015_EN": {
+"129": {
+"f": "FYU033B2015.OGG",
+"why": "imported-original"
+},
+"152": {
+"f": "FYU131B2013.OGG",
+"why": "gap-attach"
+},
+"154": {
+"f": "FYU132B2013.OGG",
+"why": "gap-attach"
+},
+"155": {
+"f": "FYU133B2013.OGG",
+"why": "gap-attach"
+},
+"137": {
+"f": "FYU127B2013.OGG",
+"why": "split-first-fragment"
+}
+},
+"CCB2019_EN": {
+"119": {
+"f": "FYU023B2019.OGG",
+"why": "imported-original"
+},
+"127": {
+"f": "FYU025B2019.OGG",
+"why": "imported-original"
+},
+"131": {
+"f": "FYU026B2019.OGG",
+"why": "imported-original"
+},
+"134": {
+"f": "FYU027B2019.OGG",
+"why": "imported-original"
+},
+"123": {
+"f": "FYU024B2019.OGG",
+"why": "row-original-restore（换回原版录音，替 TOU_0791.OGG）"
+},
+"137": {
+"f": "FYU028B2019.OGG",
+"why": "row-original-restore（换回原版录音，替 TOU_0795.OGG）"
+}
+},
+"CCC0002_EN": {
+"54": {
+"f": "MKI000C0002.OGG",
+"why": "imported-original"
+},
+"56": {
+"f": "FYU000C0002.OGG",
+"why": "imported-original"
+},
+"57": {
+"f": "MSA000C0002.OGG",
+"why": "imported-original"
+}
+},
+"CCC0044_EN": {
+"26": {
+"f": "MSA003C0044.OGG",
+"why": "imported-original"
+},
+"27": {
+"f": "MSA004C0044.OGG",
+"why": "imported-original"
+},
+"28": {
+"f": "MSA005C0044.OGG",
+"why": "imported-original"
+},
+"29": {
+"f": "MSA006C0044.OGG",
+"why": "imported-original"
+},
+"30": {
+"f": "MSA007C0044.OGG",
+"why": "imported-original"
+},
+"31": {
+"f": "MSA008C0044.OGG",
+"why": "imported-original"
+},
+"32": {
+"f": "MSA009C0044.OGG",
+"why": "imported-original"
+}
+},
+"CCC3018_EN": {
+"153": {
+"f": "SKU000C3018.OGG",
+"why": "imported-original"
+},
+"154": {
+"f": "YKI000C3018.OGG",
+"why": "imported-original"
+}
+},
+"CCC3022_EN": {
+"94": {
+"f": "KRI007C3022.OGG",
+"why": "imported-original"
+}
+},
+"CCC4015_EN": {
+"156": {
+"f": "MKI006C4015.OGG",
+"why": "imported-original"
+}
+},
+"CCC4016_EN": {
+"100": {
+"f": "KRI002C4016.OGG",
+"why": "imported-original"
+}
+},
+"CCD4003A_EN": {
+"426": {
+"f": "MKI140D4001.OGG",
+"why": "imported-original"
+}
+},
+"CCX0001_EN": {
+"919": {
+"f": "NNK016E0001.OGG",
+"why": "imported-original"
+}
+},
+"CCA0011A_EN": {
+"42": {
+"f": "MSA016A0011A.OGG",
+"why": "imported-original"
+},
+"48": {
+"f": "MSA018A0011A.OGG",
+"why": "imported-original"
+},
+"50": {
+"f": "MSA019A0011A.OGG",
+"why": "imported-original"
+}
+},
+"CCB1002A_EN": {
+"42": {
+"f": "MSA016A0011A.OGG",
+"why": "imported-original"
+},
+"48": {
+"f": "MSA018A0011A.OGG",
+"why": "imported-original"
+},
+"50": {
+"f": "MSA019A0011A.OGG",
+"why": "imported-original"
+}
+},
+"CCC0003B_EN": {
+"30": {
+"f": "YOU006C0003B.OGG",
+"why": "imported-original"
+},
+"33": {
+"f": "YOU005C0003B.OGG",
+"why": "imported-original"
+},
+"49": {
+"f": "YOU007C0003B.OGG",
+"why": "imported-original"
+},
+"55": {
+"f": "YOU010C0003B.OGG",
+"why": "imported-original"
+},
+"72": {
+"f": "YOU014C0003B.OGG",
+"why": "imported-original"
+},
+"78": {
+"f": "YOU015C0003B.OGG",
+"why": "imported-original"
+}
+},
+"CCC3012A_EN": {
+"330": {
+"f": "KRI053C3012A.OGG",
+"why": "imported-original"
+}
+},
+"CCD1001B_EN": {
+"337": {
+"f": "MSA020B1101.OGG",
+"why": "gap-attach"
+}
+}
+}

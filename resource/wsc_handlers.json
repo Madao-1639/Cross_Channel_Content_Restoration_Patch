@@ -1,0 +1,1153 @@
+{
+"0x02": {
+"idx": 0,
+"handler": "0x0040fca1"
+},
+"0x03": {
+"idx": 1,
+"handler": "0x0040e627"
+},
+"0x04": {
+"idx": 2,
+"handler": "0x0040f95e"
+},
+"0x05": {
+"idx": 3,
+"handler": "0x0040ea9a"
+},
+"0x06": {
+"idx": 4,
+"handler": "0x0040e901"
+},
+"0x07": {
+"idx": 5,
+"handler": "0x0040e91d"
+},
+"0x08": {
+"idx": 6,
+"handler": "0x0040f092"
+},
+"0x09": {
+"idx": 7,
+"handler": "0x0040e99d"
+},
+"0x0a": {
+"idx": 8,
+"handler": "0x0040ea41"
+},
+"0x0b": {
+"idx": 9,
+"handler": "0x0040eb10"
+},
+"0x0c": {
+"idx": 10,
+"handler": "0x0040eb50"
+},
+"0x0d": {
+"idx": 11,
+"handler": "0x0040e894"
+},
+"0x0e": {
+"idx": 12,
+"handler": "0x0040ec52"
+},
+"0x0f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x10": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x11": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x12": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x13": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x14": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x15": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x16": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x17": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x18": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x19": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x1f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x20": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x21": {
+"idx": 13,
+"handler": "0x0040e223"
+},
+"0x22": {
+"idx": 14,
+"handler": "0x0040e4fc"
+},
+"0x23": {
+"idx": 15,
+"handler": "0x0040ded7"
+},
+"0x24": {
+"idx": 16,
+"handler": "0x0040e207"
+},
+"0x25": {
+"idx": 17,
+"handler": "0x0040da1d"
+},
+"0x26": {
+"idx": 18,
+"handler": "0x0040dcbc"
+},
+"0x27": {
+"idx": 15,
+"handler": "0x0040ded7"
+},
+"0x28": {
+"idx": 19,
+"handler": "0x0040ddc5"
+},
+"0x29": {
+"idx": 20,
+"handler": "0x0040dd46"
+},
+"0x2a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x2b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x2c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x2d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x2e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x2f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x30": {
+"idx": 21,
+"handler": "0x0040e47f"
+},
+"0x31": {
+"idx": 22,
+"handler": "0x0040de3f"
+},
+"0x32": {
+"idx": 23,
+"handler": "0x0040de8b"
+},
+"0x33": {
+"idx": 24,
+"handler": "0x0040e556"
+},
+"0x34": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x35": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x36": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x37": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x38": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x39": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x3f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x40": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x41": {
+"idx": 25,
+"handler": "0x0040a399"
+},
+"0x42": {
+"idx": 26,
+"handler": "0x0040a7fe"
+},
+"0x43": {
+"idx": 27,
+"handler": "0x0040af60"
+},
+"0x44": {
+"idx": 28,
+"handler": "0x0040b4f1"
+},
+"0x45": {
+"idx": 29,
+"handler": "0x0040b554"
+},
+"0x46": {
+"idx": 30,
+"handler": "0x0040b690"
+},
+"0x47": {
+"idx": 31,
+"handler": "0x0040ba0d"
+},
+"0x48": {
+"idx": 32,
+"handler": "0x0040bf0d"
+},
+"0x49": {
+"idx": 33,
+"handler": "0x0040c818"
+},
+"0x4a": {
+"idx": 34,
+"handler": "0x0040cf6a"
+},
+"0x4b": {
+"idx": 35,
+"handler": "0x0040c8ee"
+},
+"0x4c": {
+"idx": 36,
+"handler": "0x0040ca3e"
+},
+"0x4d": {
+"idx": 37,
+"handler": "0x0040d388"
+},
+"0x4e": {
+"idx": 38,
+"handler": "0x0040d548"
+},
+"0x4f": {
+"idx": 39,
+"handler": "0x0040b5d4"
+},
+"0x50": {
+"idx": 40,
+"handler": "0x0040eb7b"
+},
+"0x51": {
+"idx": 41,
+"handler": "0x0040ec02"
+},
+"0x52": {
+"idx": 42,
+"handler": "0x0040ec39"
+},
+"0x53": {
+"idx": 43,
+"handler": "0x0040f3f9"
+},
+"0x54": {
+"idx": 44,
+"handler": "0x0040d059"
+},
+"0x55": {
+"idx": 45,
+"handler": "0x0040d13f"
+},
+"0x56": {
+"idx": 46,
+"handler": "0x0040f4bf"
+},
+"0x57": {
+"idx": 47,
+"handler": "0x0040c895"
+},
+"0x58": {
+"idx": 48,
+"handler": "0x0040b62e"
+},
+"0x59": {
+"idx": 49,
+"handler": "0x0040d924"
+},
+"0x5a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x5b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x5c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x5d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x5e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x5f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x60": {
+"idx": 50,
+"handler": "0x0040d9b1"
+},
+"0x61": {
+"idx": 51,
+"handler": "0x0040ece5"
+},
+"0x62": {
+"idx": 52,
+"handler": "0x0040d510"
+},
+"0x63": {
+"idx": 53,
+"handler": "0x0040c4bc"
+},
+"0x64": {
+"idx": 54,
+"handler": "0x0040c4e8"
+},
+"0x65": {
+"idx": 55,
+"handler": "0x0040c671"
+},
+"0x66": {
+"idx": 56,
+"handler": "0x0040cb53"
+},
+"0x67": {
+"idx": 57,
+"handler": "0x0040ccc2"
+},
+"0x68": {
+"idx": 58,
+"handler": "0x0040b8d0"
+},
+"0x69": {
+"idx": 59,
+"handler": "0x0040cdd3"
+},
+"0x6a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x6b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x6c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x6d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x6e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x6f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x70": {
+"idx": 60,
+"handler": "0x0040cdf0"
+},
+"0x71": {
+"idx": 61,
+"handler": "0x0040af0d"
+},
+"0x72": {
+"idx": 62,
+"handler": "0x0040af47"
+},
+"0x73": {
+"idx": 63,
+"handler": "0x0040ba93"
+},
+"0x74": {
+"idx": 64,
+"handler": "0x0040bcb0"
+},
+"0x75": {
+"idx": 65,
+"handler": "0x0040bd07"
+},
+"0x76": {
+"idx": 66,
+"handler": "0x0040bd9f"
+},
+"0x77": {
+"idx": 67,
+"handler": "0x0040be7f"
+},
+"0x78": {
+"idx": 68,
+"handler": "0x0040f572"
+},
+"0x79": {
+"idx": 69,
+"handler": "0x0040f65c"
+},
+"0x7a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x7b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x7c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x7d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x7e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x7f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x80": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x81": {
+"idx": 70,
+"handler": "0x0040f15b"
+},
+"0x82": {
+"idx": 71,
+"handler": "0x0040f16f"
+},
+"0x83": {
+"idx": 72,
+"handler": "0x0040f289"
+},
+"0x84": {
+"idx": 73,
+"handler": "0x0040f2be"
+},
+"0x85": {
+"idx": 74,
+"handler": "0x0040f0a4"
+},
+"0x86": {
+"idx": 75,
+"handler": "0x0040f0de"
+},
+"0x87": {
+"idx": 76,
+"handler": "0x0040f343"
+},
+"0x88": {
+"idx": 77,
+"handler": "0x0040f379"
+},
+"0x89": {
+"idx": 78,
+"handler": "0x0040f3b0"
+},
+"0x8a": {
+"idx": 79,
+"handler": "0x0040f0c2"
+},
+"0x8b": {
+"idx": 80,
+"handler": "0x0040f307"
+},
+"0x8c": {
+"idx": 81,
+"handler": "0x0040f325"
+},
+"0x8d": {
+"idx": 82,
+"handler": "0x0040c844"
+},
+"0x8e": {
+"idx": 83,
+"handler": "0x0040f69e"
+},
+"0x8f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x90": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x91": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x92": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x93": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x94": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x95": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x96": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x97": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x98": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x99": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9a": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9b": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9c": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9d": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9e": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0x9f": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xa0": {
+"idx": 84,
+"handler": "0x0040b864"
+},
+"0xa1": {
+"idx": 85,
+"handler": "0x0040c3ea"
+},
+"0xa2": {
+"idx": 86,
+"handler": "0x0040febf"
+},
+"0xa3": {
+"idx": 87,
+"handler": "0x0040feef"
+},
+"0xa4": {
+"idx": 88,
+"handler": "0x0040ff31"
+},
+"0xa5": {
+"idx": 89,
+"handler": "0x0040ff73"
+},
+"0xa6": {
+"idx": 90,
+"handler": "0x0040ec85"
+},
+"0xa7": {
+"idx": 91,
+"handler": "0x0040ffb1"
+},
+"0xa8": {
+"idx": 92,
+"handler": "0x00410130"
+},
+"0xa9": {
+"idx": 93,
+"handler": "0x00410180"
+},
+"0xaa": {
+"idx": 94,
+"handler": "0x0040ffe0"
+},
+"0xab": {
+"idx": 95,
+"handler": "0x004101c8"
+},
+"0xac": {
+"idx": 96,
+"handler": "0x004101f6"
+},
+"0xad": {
+"idx": 97,
+"handler": "0x00410252"
+},
+"0xae": {
+"idx": 98,
+"handler": "0x004102e2"
+},
+"0xaf": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xb0": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xb1": {
+"idx": 99,
+"handler": "0x0040cf43"
+},
+"0xb2": {
+"idx": 100,
+"handler": "0x0040f7b0"
+},
+"0xb3": {
+"idx": 101,
+"handler": "0x0040f801"
+},
+"0xb4": {
+"idx": 102,
+"handler": "0x0040f826"
+},
+"0xb5": {
+"idx": 103,
+"handler": "0x0040f88d"
+},
+"0xb6": {
+"idx": 104,
+"handler": "0x0040ac52"
+},
+"0xb7": {
+"idx": 105,
+"handler": "0x0040d18e"
+},
+"0xb8": {
+"idx": 106,
+"handler": "0x0040d35f"
+},
+"0xb9": {
+"idx": 107,
+"handler": "0x0040beea"
+},
+"0xba": {
+"idx": 108,
+"handler": "0x0040f9d9"
+},
+"0xbb": {
+"idx": 109,
+"handler": "0x0040fa89"
+},
+"0xbc": {
+"idx": 110,
+"handler": "0x0040faa8"
+},
+"0xbd": {
+"idx": 111,
+"handler": "0x0040f8fc"
+},
+"0xbe": {
+"idx": 112,
+"handler": "0x0040c3c4"
+},
+"0xbf": {
+"idx": 113,
+"handler": "0x0040f60f"
+},
+"0xc0": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc1": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc2": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc3": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc4": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc5": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc6": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc7": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc8": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xc9": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xca": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xcb": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xcc": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xcd": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xce": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xcf": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd0": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd1": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd2": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd3": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd4": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd5": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd6": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd7": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd8": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xd9": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xda": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xdb": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xdc": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xdd": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xde": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xdf": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xe0": {
+"idx": 114,
+"handler": "0x0040f4d8"
+},
+"0xe1": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xe2": {
+"idx": 115,
+"handler": "0x0040f1d4"
+},
+"0xe3": {
+"idx": 116,
+"handler": "0x0040f1f9"
+},
+"0xe4": {
+"idx": 117,
+"handler": "0x0040f6c1"
+},
+"0xe5": {
+"idx": 118,
+"handler": "0x0040f784"
+},
+"0xe6": {
+"idx": 119,
+"handler": "0x0040fc8f"
+},
+"0xe7": {
+"idx": 120,
+"handler": "0x004101a1"
+},
+"0xe8": {
+"idx": 121,
+"handler": "0x00410301"
+},
+"0xe9": {
+"idx": 122,
+"handler": "0x00410340"
+},
+"0xea": {
+"idx": 123,
+"handler": "0x00410364"
+},
+"0xeb": {
+"idx": 124,
+"handler": "0x004103a4"
+},
+"0xec": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xed": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xee": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xef": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf0": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf1": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf2": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf3": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf4": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf5": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf6": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf7": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf8": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xf9": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xfa": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xfb": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xfc": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xfd": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xfe": {
+"idx": 126,
+"handler": "0x004103bd",
+"default": true
+},
+"0xff": {
+"idx": 125,
+"handler": "0x0040f91d"
+},
+"0x00": {
+"idx": 0,
+"handler": "0x0040fca1"
+},
+"0x01": {
+"idx": 1,
+"handler": "0x0040e627"
+}
+}

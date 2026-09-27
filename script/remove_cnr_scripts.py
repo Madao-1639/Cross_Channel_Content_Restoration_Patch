@@ -69,9 +69,7 @@ def main():
         print('\n（--check 模式，未写入）')
         return 0
 
-    if BACKUP.exists():
-        print('[备份] 已存在 %s' % BACKUP)
-    else:
+    if not (BACKUP.exists() and arcbuild.same_file(BACKUP, RIO)):
         arcbuild.write_arc(members, BACKUP)
         print('[备份] asset/Rio.arc -> %s' % BACKUP)
 

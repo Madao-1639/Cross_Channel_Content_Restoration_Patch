@@ -1,0 +1,2174 @@
+{
+ "0x00": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x01": {
+  "fmt": "00 01 05 04 04 ff",
+  "operands": [
+   "u8",
+   "i16",
+   "f32",
+   "u32",
+   "u32"
+  ],
+  "fixed_bytes_incl_nul": 15,
+  "string_terminators": 0,
+  "tail_bytes": 15,
+  "str_count": 0
+ },
+ "0x02": {
+  "fmt": "04 ff",
+  "operands": [
+   "u32"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 0,
+  "tail_bytes": 4,
+  "str_count": 0
+ },
+ "0x04": {
+  "fmt": "0a 08 ff",
+  "operands": [
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x05": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x06": {
+  "fmt": "04 ff",
+  "operands": [
+   "u32"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 0,
+  "tail_bytes": 4,
+  "str_count": 0
+ },
+ "0x07": {
+  "fmt": "0a 08 ff",
+  "operands": [
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x08": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0x09": {
+  "fmt": "00 01 05 ff",
+  "operands": [
+   "u8",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 0,
+  "tail_bytes": 7,
+  "str_count": 0
+ },
+ "0x0a": {
+  "fmt": "01 05 ff",
+  "operands": [
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 0,
+  "tail_bytes": 6,
+  "str_count": 0
+ },
+ "0x0b": {
+  "fmt": "01 00 ff",
+  "operands": [
+   "i16",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 0,
+  "tail_bytes": 3,
+  "str_count": 0
+ },
+ "0x0c": {
+  "fmt": "01 00 07 01 ff",
+  "operands": [
+   "i16",
+   "u8",
+   "count*",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 0,
+  "tail_bytes": 5,
+  "str_count": 0
+ },
+ "0x0d": {
+  "fmt": "01 01 05 ff",
+  "operands": [
+   "i16",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 8,
+  "string_terminators": 0,
+  "tail_bytes": 8,
+  "str_count": 0
+ },
+ "0x0e": {
+  "fmt": "01 01 00 ff",
+  "operands": [
+   "i16",
+   "i16",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 0,
+  "tail_bytes": 5,
+  "str_count": 0
+ },
+ "0x0f": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0x11": {
+  "fmt": "06 08 00 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 1,
+  "tail_bytes": 5,
+  "str_count": 1
+ },
+ "0x12": {
+  "fmt": "06 08 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 2,
+  "tail_bytes": 1,
+  "str_count": 2
+ },
+ "0x13": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x14": {
+  "fmt": "04 06 08 06 08 00 ff",
+  "operands": [
+   "u32",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 2,
+  "tail_bytes": 5,
+  "str_count": 2
+ },
+ "0x15": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x16": {
+  "fmt": "00 00 ff",
+  "operands": [
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 0,
+  "tail_bytes": 2,
+  "str_count": 0
+ },
+ "0x17": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x18": {
+  "fmt": "00 06 08 ff",
+  "operands": [
+   "u8",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x19": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x1a": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x1b": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0x1c": {
+  "fmt": "06 08 06 08 01 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 2,
+  "tail_bytes": 3,
+  "str_count": 2
+ },
+ "0x1d": {
+  "fmt": "01 ff",
+  "operands": [
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 0,
+  "tail_bytes": 2,
+  "str_count": 0
+ },
+ "0x1e": {
+  "fmt": "06 08 0a 08 05 05 01 01 00 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "f32",
+   "f32",
+   "i16",
+   "i16",
+   "u8",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 19,
+  "string_terminators": 2,
+  "tail_bytes": 17,
+  "str_count": 2
+ },
+ "0x1f": {
+  "fmt": "06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0x20": {
+  "fmt": "06 08 05 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 1,
+  "tail_bytes": 6,
+  "str_count": 1
+ },
+ "0x21": {
+  "fmt": "06 08 01 01 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 1,
+  "tail_bytes": 6,
+  "str_count": 1
+ },
+ "0x22": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x28": {
+  "fmt": "06 08 0a 08 05 05 01 01 00 01 01 00 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "f32",
+   "f32",
+   "i16",
+   "i16",
+   "u8",
+   "i16",
+   "i16",
+   "u8",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 24,
+  "string_terminators": 2,
+  "tail_bytes": 22,
+  "str_count": 2
+ },
+ "0x29": {
+  "fmt": "06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0x2a": {
+  "fmt": "06 08 05 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 1,
+  "tail_bytes": 6,
+  "str_count": 1
+ },
+ "0x2b": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x2c": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x2d": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x2e": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x2f": {
+  "fmt": "06 08 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 1,
+  "tail_bytes": 6,
+  "str_count": 1
+ },
+ "0x32": {
+  "fmt": "0a 08 ff",
+  "operands": [
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x33": {
+  "fmt": "06 08 0a 08 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 2,
+  "tail_bytes": 2,
+  "str_count": 2
+ },
+ "0x34": {
+  "fmt": "06 08 0a 08 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 2,
+  "tail_bytes": 2,
+  "str_count": 2
+ },
+ "0x35": {
+  "fmt": "06 08 0a 08 00 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "u8",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 2,
+  "tail_bytes": 3,
+  "str_count": 2
+ },
+ "0x36": {
+  "fmt": "06 08 05 05 05 05 05 05 05 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 31,
+  "string_terminators": 1,
+  "tail_bytes": 30,
+  "str_count": 1
+ },
+ "0x37": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x38": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x39": {
+  "fmt": "06 08 00 00 07 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "u8",
+   "count*",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0x3a": {
+  "fmt": "06 08 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0x3b": {
+  "fmt": "06 08 06 08 01 01 01 05 05 05 05 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 40,
+  "string_terminators": 2,
+  "tail_bytes": 38,
+  "str_count": 2
+ },
+ "0x3c": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x3d": {
+  "fmt": "01 ff",
+  "operands": [
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 0,
+  "tail_bytes": 2,
+  "str_count": 0
+ },
+ "0x3e": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x3f": {
+  "fmt": "07 06 ff",
+  "operands": [
+   "count*",
+   "str"
+  ],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x40": {
+  "fmt": "06 08 0a 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 2,
+  "tail_bytes": 1,
+  "str_count": 2
+ },
+ "0x41": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x42": {
+  "fmt": "06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0x43": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x44": {
+  "fmt": "06 08 06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 2,
+  "tail_bytes": 1,
+  "str_count": 2
+ },
+ "0x45": {
+  "fmt": "06 08 01 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 19,
+  "string_terminators": 1,
+  "tail_bytes": 18,
+  "str_count": 1
+ },
+ "0x46": {
+  "fmt": "06 08 01 00 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 20,
+  "string_terminators": 1,
+  "tail_bytes": 19,
+  "str_count": 1
+ },
+ "0x47": {
+  "fmt": "06 08 06 08 01 00 00 05 05 05 05 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 32,
+  "string_terminators": 2,
+  "tail_bytes": 30,
+  "str_count": 2
+ },
+ "0x48": {
+  "fmt": "06 08 06 08 01 00 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 3,
+  "tail_bytes": 4,
+  "str_count": 3
+ },
+ "0x49": {
+  "fmt": "06 08 06 08 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 3,
+  "tail_bytes": 0,
+  "str_count": 3
+ },
+ "0x4a": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x4b": {
+  "fmt": "06 08 01 01 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 21,
+  "string_terminators": 1,
+  "tail_bytes": 20,
+  "str_count": 1
+ },
+ "0x4c": {
+  "fmt": "06 08 01 01 00 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 22,
+  "string_terminators": 1,
+  "tail_bytes": 21,
+  "str_count": 1
+ },
+ "0x4d": {
+  "fmt": "06 08 06 08 01 01 00 00 05 05 05 05 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "u8",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 34,
+  "string_terminators": 2,
+  "tail_bytes": 32,
+  "str_count": 2
+ },
+ "0x4e": {
+  "fmt": "06 08 06 08 01 01 00 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 3,
+  "tail_bytes": 6,
+  "str_count": 3
+ },
+ "0x4f": {
+  "fmt": "06 08 06 08 01 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 3,
+  "tail_bytes": 2,
+  "str_count": 3
+ },
+ "0x50": {
+  "fmt": "06 08 06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 2,
+  "tail_bytes": 2,
+  "str_count": 2
+ },
+ "0x51": {
+  "fmt": "06 08 06 08 01 05 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "f32",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 2,
+  "tail_bytes": 7,
+  "str_count": 2
+ },
+ "0x52": {
+  "fmt": "06 08 06 08 05 01 05 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32",
+   "i16",
+   "f32",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 14,
+  "string_terminators": 3,
+  "tail_bytes": 11,
+  "str_count": 3
+ },
+ "0x53": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x54": {
+  "fmt": "06 08 06 08 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 3,
+  "tail_bytes": 0,
+  "str_count": 3
+ },
+ "0x55": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x56": {
+  "fmt": "06 08 00 01 05 05 05 05 05 05 05 05 05 05 05 00 05 05 05 05 00 01 06 08 01",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "u8",
+   "i16",
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 71,
+  "string_terminators": 2,
+  "tail_bytes": 69,
+  "str_count": 2
+ },
+ "0x57": {
+  "fmt": "06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0x58": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x59": {
+  "fmt": "06 08 06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 2,
+  "tail_bytes": 2,
+  "str_count": 2
+ },
+ "0x5a": {
+  "fmt": "06 08 07 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "count*",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0x5b": {
+  "fmt": "06 08 01 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 1,
+  "tail_bytes": 3,
+  "str_count": 1
+ },
+ "0x5c": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x5d": {
+  "fmt": "06 08 06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 2,
+  "tail_bytes": 1,
+  "str_count": 2
+ },
+ "0x5e": {
+  "fmt": "06 08 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 1,
+  "tail_bytes": 8,
+  "str_count": 1
+ },
+ "0x5f": {
+  "fmt": "0a 08 ff",
+  "operands": [
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x60": {
+  "fmt": "01 01 01 01 ff",
+  "operands": [
+   "i16",
+   "i16",
+   "i16",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 8,
+  "string_terminators": 0,
+  "tail_bytes": 8,
+  "str_count": 0
+ },
+ "0x61": {
+  "fmt": "00 05 05 05 05 ff",
+  "operands": [
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 17,
+  "string_terminators": 0,
+  "tail_bytes": 17,
+  "str_count": 0
+ },
+ "0x62": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x63": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x64": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0x65": {
+  "fmt": "01 00 05 05 00 0a 08 ff",
+  "operands": [
+   "i16",
+   "u8",
+   "f32",
+   "f32",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 13,
+  "string_terminators": 1,
+  "tail_bytes": 12,
+  "str_count": 1
+ },
+ "0x66": {
+  "fmt": "0a 08 ff",
+  "operands": [
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x67": {
+  "fmt": "00 00 01 05 05 05 05 05 00 ff",
+  "operands": [
+   "u8",
+   "u8",
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 25,
+  "string_terminators": 0,
+  "tail_bytes": 25,
+  "str_count": 0
+ },
+ "0x68": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0x69": {
+  "fmt": "06 08 00 00 05 05 05 05 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 29,
+  "string_terminators": 1,
+  "tail_bytes": 28,
+  "str_count": 1
+ },
+ "0x6a": {
+  "fmt": "06 08 01 00 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x6b": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x6c": {
+  "fmt": "06 08 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 1,
+  "tail_bytes": 8,
+  "str_count": 1
+ },
+ "0x6e": {
+  "fmt": "09 08 06 08 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x6f": {
+  "fmt": "09 08 ff",
+  "operands": [
+   "str9",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x70": {
+  "fmt": "09 08 01 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0x71": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x72": {
+  "fmt": "09 08 01 01 09 08 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "i16",
+   "i16",
+   "str9",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x73": {
+  "fmt": "09 08 09 08 01 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "str9",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 4,
+  "string_terminators": 2,
+  "tail_bytes": 2,
+  "str_count": 2
+ },
+ "0x74": {
+  "fmt": "09 08 09 08 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "str9",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x75": {
+  "fmt": "09 08 06 08 ff",
+  "operands": [
+   "str9",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x78": {
+  "fmt": "06 08 0a 08 00 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "u8",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 2,
+  "tail_bytes": 3,
+  "str_count": 2
+ },
+ "0x79": {
+  "fmt": "06 08 06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x7a": {
+  "fmt": "06 08 0a 08 05 00 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "f32",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 3,
+  "tail_bytes": 6,
+  "str_count": 3
+ },
+ "0x7b": {
+  "fmt": "06 08 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x7c": {
+  "fmt": "06 08 06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x7d": {
+  "fmt": "06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0x7e": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x7f": {
+  "fmt": "06 08 05 05 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 21,
+  "string_terminators": 1,
+  "tail_bytes": 20,
+  "str_count": 1
+ },
+ "0x80": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x81": {
+  "fmt": "06 08 00 0a 08 05 05 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "str_upper",
+   "nul",
+   "f32",
+   "f32",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 12,
+  "string_terminators": 2,
+  "tail_bytes": 10,
+  "str_count": 2
+ },
+ "0x82": {
+  "fmt": "06 08 0a 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x83": {
+  "fmt": "06 08 06 08 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 10,
+  "string_terminators": 2,
+  "tail_bytes": 8,
+  "str_count": 2
+ },
+ "0x84": {
+  "fmt": "06 08 06 08 06 08 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 13,
+  "string_terminators": 3,
+  "tail_bytes": 10,
+  "str_count": 3
+ },
+ "0x85": {
+  "fmt": "06 08 06 08 00 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 7,
+  "string_terminators": 2,
+  "tail_bytes": 5,
+  "str_count": 2
+ },
+ "0x86": {
+  "fmt": "06 08 05 05 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 13,
+  "string_terminators": 1,
+  "tail_bytes": 12,
+  "str_count": 1
+ },
+ "0x87": {
+  "fmt": "06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0x88": {
+  "fmt": "06 08 06 08 06 08 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 13,
+  "string_terminators": 3,
+  "tail_bytes": 10,
+  "str_count": 3
+ },
+ "0x8c": {
+  "fmt": "06 08 0a 08 06 08 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul",
+   "str",
+   "nul",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 3,
+  "tail_bytes": 2,
+  "str_count": 3
+ },
+ "0x8d": {
+  "fmt": "04 06 08 06 08 00 00 0a 08 ff",
+  "operands": [
+   "u32",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 3,
+  "tail_bytes": 6,
+  "str_count": 3
+ },
+ "0x8e": {
+  "fmt": "04 06 08 06 08 00 00 0a 08 ff",
+  "operands": [
+   "u32",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 9,
+  "string_terminators": 3,
+  "tail_bytes": 6,
+  "str_count": 3
+ },
+ "0x8f": {
+  "fmt": "06 08 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x90": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x96": {
+  "fmt": "01 05 05 05 05 ff",
+  "operands": [
+   "i16",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 18,
+  "string_terminators": 0,
+  "tail_bytes": 18,
+  "str_count": 0
+ },
+ "0x97": {
+  "fmt": "01 00 05 05 05 05 ff",
+  "operands": [
+   "i16",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 19,
+  "string_terminators": 0,
+  "tail_bytes": 19,
+  "str_count": 0
+ },
+ "0x98": {
+  "fmt": "06 08 01 00 00 05 05 05 05 05 01 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "u8",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "f32",
+   "i16",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 31,
+  "string_terminators": 1,
+  "tail_bytes": 30,
+  "str_count": 1
+ },
+ "0x99": {
+  "fmt": "06 08 01 00 00 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16",
+   "u8",
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0x9a": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0x9b": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x9c": {
+  "fmt": "06 08 0a 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0x9d": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0x9e": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0x9f": {
+  "fmt": "06 08 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0xc8": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xc9": {
+  "fmt": "06 08 06 08 01 01 01 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "i16",
+   "i16",
+   "i16",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 10,
+  "string_terminators": 2,
+  "tail_bytes": 8,
+  "str_count": 2
+ },
+ "0xca": {
+  "fmt": "06 08 06 08 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 2,
+  "tail_bytes": 0,
+  "str_count": 2
+ },
+ "0xcb": {
+  "fmt": "06 08 00 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "u8",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0xcc": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xcd": {
+  "fmt": "06 08 06 08 06 08 06 08 06 08 05 00 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32",
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 10,
+  "string_terminators": 5,
+  "tail_bytes": 5,
+  "str_count": 5
+ },
+ "0xce": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0xcf": {
+  "fmt": "06 08 06 08 05 ff",
+  "operands": [
+   "str",
+   "nul",
+   "str",
+   "nul",
+   "f32"
+  ],
+  "fixed_bytes_incl_nul": 6,
+  "string_terminators": 2,
+  "tail_bytes": 4,
+  "str_count": 2
+ },
+ "0xd0": {
+  "fmt": "06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0xd1": {
+  "fmt": "06 08 01 ff",
+  "operands": [
+   "str",
+   "nul",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 3,
+  "string_terminators": 1,
+  "tail_bytes": 2,
+  "str_count": 1
+ },
+ "0xd2": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0xd3": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ },
+ "0xd4": {
+  "fmt": "0a 08 01 01 ff",
+  "operands": [
+   "str_upper",
+   "nul",
+   "i16",
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 5,
+  "string_terminators": 1,
+  "tail_bytes": 4,
+  "str_count": 1
+ },
+ "0xe6": {
+  "fmt": "04 04 ff",
+  "operands": [
+   "u32",
+   "u32"
+  ],
+  "fixed_bytes_incl_nul": 8,
+  "string_terminators": 0,
+  "tail_bytes": 8,
+  "str_count": 0
+ },
+ "0xe7": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xe8": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xf0": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0xf8": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xf9": {
+  "fmt": "00 0a 08 ff",
+  "operands": [
+   "u8",
+   "str_upper",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 1,
+  "tail_bytes": 1,
+  "str_count": 1
+ },
+ "0xfa": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xfb": {
+  "fmt": "00 ff",
+  "operands": [
+   "u8"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 0,
+  "tail_bytes": 1,
+  "str_count": 0
+ },
+ "0xfc": {
+  "fmt": "01 ff",
+  "operands": [
+   "i16"
+  ],
+  "fixed_bytes_incl_nul": 2,
+  "string_terminators": 0,
+  "tail_bytes": 2,
+  "str_count": 0
+ },
+ "0xfd": {
+  "fmt": "ff",
+  "operands": [],
+  "fixed_bytes_incl_nul": 0,
+  "string_terminators": 0,
+  "tail_bytes": 0,
+  "str_count": 0
+ },
+ "0xfe": {
+  "fmt": "06 08 ff",
+  "operands": [
+   "str",
+   "nul"
+  ],
+  "fixed_bytes_incl_nul": 1,
+  "string_terminators": 1,
+  "tail_bytes": 0,
+  "str_count": 1
+ }
+}

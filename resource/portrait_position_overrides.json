@@ -1,0 +1,17 @@
+{
+ "meta": {
+  "purpose": "场景级立绘位置覆盖：修正 `steam_x()` / `position_overrides.json` 处理不了的立绘位置。",
+  "key": "规则列表，字段 script(源脚本,必) / char(角色代码,可选) / when_x(源 x 等于此值才命中,可选) -> x_steam；char/when_x 缺省=不限。先匹配先胜。",
+  "provenance": "手工维护。**用于还原场景**——它们 Steam 侧被删过、没有语音锚点，进不了自动表 position_overrides.json。",
+  "caveat": "每条都应有 why；改前先核原版演出（doc/engine-mechanics.md『原版 WSC 引擎』）。"
+ },
+ "rules": [
+  {
+   "script": "CCD0022A",
+   "char": "TCHY",
+   "when_x": 0,
+   "x_steam": -400.0,
+   "why": "原版 x==0 是**贴屏幕左缘**（引擎无 x==0 分支，实证见 doc/engine-mechanics.md）。`steam_x()` 把 x==0 特判成 0（居中），在本场景会与居中的 TCMM（x=281→0）**叠**。TCHY 全长只出现在 x=0（句14/16），是贴左。取 -400（Steam 原生 -399 有 263 处先例；按 1.6 缩放 0→-358 最接近，分离度对原版误差 1.3%）。"
+  }
+ ]
+}
