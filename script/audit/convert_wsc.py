@@ -27,7 +27,9 @@ from tool.ws2disasm import disassemble as disassemble_ws2
 from tool.wsc2ws2 import ConvertOptions, convert, decrypt_wsc
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ORIGINAL_RIO = Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Original\Rio.arc')
+# 项目外输入（原版游戏 / 上游补丁）与本项目同级；不写死绝对路径。
+SIBLINGS = ROOT.parent
+DEFAULT_ORIGINAL_RIO = SIBLINGS / 'CROSS_CHANNEL_Original' / 'Rio.arc'
 DEFAULT_STEAM_RIO = ROOT / 'backup' / 'Rio.arc'
 # 存在性核对的资源归档（名称大写比对；缺失只记录，不视为错误 —— H 场景资源
 # 本来就要靠补丁 payload 补入）
@@ -36,10 +38,10 @@ DEFAULT_INVENTORY_ARCS = [
     ROOT / 'backup' / 'Chip2.arc',
     ROOT / 'backup' / 'Graphic.arc',
     ROOT / 'backup' / 'Voice.arc',
-    Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Steam_CN_Restored_v3.0.3\Graphic.arc'),
-    Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Steam_CN_Restored_v3.0.3\Voice.arc'),
-    Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Original\Se.arc'),
-    Path(r'D:\My_Code\tmp\GamePatch\Cross_Channel\CROSS_CHANNEL_Original\Bgm.arc'),
+    SIBLINGS / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3' / 'Graphic.arc',
+    SIBLINGS / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3' / 'Voice.arc',
+    SIBLINGS / 'CROSS_CHANNEL_Original' / 'Se.arc',
+    SIBLINGS / 'CROSS_CHANNEL_Original' / 'Bgm.arc',
 ]
 
 

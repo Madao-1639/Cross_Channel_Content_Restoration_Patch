@@ -259,9 +259,10 @@ def rebuild(raw, ins, plan, drops=frozenset(), vc=None, del2e=frozenset(), plan2
     按 drops={占位序} **删格**、按 `vc={占位序: 名}` **同步名字框**、按 `del2e={语音文件名}` **删语音**；
     并重算池序号与**文件内跳转**。
 
-    ⚠️ 跳转回写是 2026-09-19 补的（评审 §7.1）：在此之前 `rebuild` 只重算 `14` 的 id 与
-    `0f` 的 strid，**不碰任何文件内偏移**。做法与 `splice_restoration.rebase_offsets` 同源：
-    先记「旧指令偏移 → 新偏移」，再把每个跳转目标按该映射改写。
+    ⚠️ **文件内跳转必须回写**：`rebuild` 会重算 `14` 的 id、`0f` 的 strid，以及所有
+    **文件内绝对偏移**（`06` 的目标、`0f` 条目内的 `06`、`01` 的 `a`/`b`）。
+    做法与 `splice_restoration.rebase_offsets` 同源：先记「旧指令偏移 → 新偏移」，
+    再把每个跳转目标按该映射改写；映射里找不到目标时如实告警、不回写。
 
     **删格 = 删整格**（2026-09-25 改）：不只去掉那一格的 `14`，连同它的**设名/清框 `15`**
     一并移除（`drop_units`，带「不改动任何存活格名字框」的守卫）。旧行为只删 `14`、留下
@@ -376,8 +377,14 @@ def rebuild(raw, ins, plan, drops=frozenset(), vc=None, del2e=frozenset(), plan2
             new_at = plan.get(at_key, [])             # 「选项块之后」= 最后一个条目之后
         elif i.opcode == 0x06:                        # 独立 `06 <u32>` 无条件跳转
             fix.append((len(out) + 1, i.fields['target']))
-        elif i.opcode == 0x01 and i.fields.get('mode') == 0x85:
-            fix.append((len(out) + 12, i.fields['b']))
+        elif i.opcode == 0x01 and i.fields.get('mode') != 0:
+            # `01` 自带**两个**文件内绝对偏移：`a`（指令内 +8）、`b`（指令内 +12）；0 = 无此目标。
+            # 规则按 **opcode** 定义、与 `mode` 无关（`mode` 只选比较方式与变量形态），
+            # 见 doc/engine-mechanics.md「场景出口与条件双出口」。
+            for _field, _off in (('a', 8), ('b', 12)):
+                _v = i.fields.get(_field) or 0
+                if _v:
+                    fix.append((len(out) + _off, _v))
         out += body
         if i.opcode == 0x34:                     # 骨架自己的立绘绑定也进状态
             _s = _raw_slot34(i)

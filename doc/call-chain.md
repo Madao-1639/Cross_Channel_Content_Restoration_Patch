@@ -142,8 +142,10 @@ lo_eff = lo + 首端重合长度
 | `CCD4003A_en` | `CCD0023A_EN` |
 | `CCD5001A_en` / `CCD5001B_en` | `CCD5001B_EN` / `CCX0001_EN` |
 
-`CCC0000_en` 的条件双出口是**唯一**带文件内偏移的出口：`01` 的 `b` 字段指向
+`CCC0000_en` 的条件双出口是**这一个宿主**里带文件内偏移的出口：`01 mode=0x85` 的 `b` 字段指向
 `07 CCC0002_EN`，必须按新布局重算（`script/splice_restoration.py` 已处理并回读校验）。
+
+⚠️ **`b` 不是 `0x85` 独有** —— `01` 的 `a`/`b` 是**按 opcode 定义**的文件内偏移（不只是某个 mode），重排脚本字节后必须一并重算（`mode=2` 在语料里多达 467 条）。错因与示例见 [lessons-learned.md](lessons-learned.md)「重排脚本必须重算「文件内绝对偏移」」。
 
 ### 逐场景参数
 
@@ -203,10 +205,7 @@ python script/final_verification.py      # 全量验收
 | 语音 | 原名（原版语音名，Steam 侧未重编） | `Voice.arc` |
 | BGM / SE | 原名 | 游戏安装目录（不在本项目分发的归档里）|
 
-**扩覆盖范围要补资源**：把还原段从 Res303 的那一段扩到交接点之后，新覆盖的句子会引用补丁里
-还没有的资源。已实测补入 **186 条语音**（`script/import_missing_voices.py`，
-源：`../CROSS_CHANNEL_Original/Voice.arc`）。`.soundlevel` 不需要——无包络的 OGG 照样播，
-本项目已有实机验证过的先例（`YOU035A5000` 等 8 条）。
+**扩覆盖范围要补资源**：把还原段从 Res303 的那一段扩到交接点之后，新覆盖的句子会引用补丁里还没有的资源。已实测补入 **186 条语音**（`script/import_missing_voices.py`，源：原版游戏的老式归档 `Voice.arc`）。`.soundlevel` 不需要——无包络的 OGG 照样播，本项目已有实机验证过的先例（`YOU035A5000` 等 8 条）。
 
 ## 分支处理
 
@@ -232,7 +231,7 @@ python script/final_verification.py      # 全量验收
 - [ ] `14` 的 `id` 落在连续的字符串池序列上（无误填的 0 基序号）
 - [ ] 配套 lng 条数 == `14` 条数 + `0f` 条目数
 - [ ] 与源 CCS 对位后「恰好一次、无缺失、无重复、无倒序」
-- [ ] `01 mode=0x85` 的 `b` 字段指向正确的 `07`
+- [ ] `01` 的 `a`（非 0 时）与 `b` 都落在指令首字节（重排脚本后必须按新布局重算）
 - [ ] 宿主第一句对话之前的开场件（`SCENETITLE*`、`SGCC*`、鉴赏钩子）仍在
 - [ ] 还原段引用的资源都能解析（`tool/rename_map.py` 的「找不到出处」清单为空）
 
@@ -242,11 +241,13 @@ python script/final_verification.py      # 全量验收
 
 | 路径 | 内容 |
 |---|---|
-| `resource/corpus/wsc/` | 324 个已解密的原版 WSC（原生 WS2 不落副本，直读 `backup/Rio.arc`） |
-| `../cross-channel_chinese-localization_project/Scripts/20150412/` | 汉化组 CCS 逐行译文（`>1●NNNN●` 的 NNNN = 原版 WSC 对话 id + 1） |
-| `../CROSS_CHANNEL_Steam_CN_Restored_v3.0.3/` | Res303 构建 + `docs/report.json`（只读探针） |
-| `../CROSS_CHANNEL_Original/` | 原版游戏（老式归档，`tool.arcbuild.read_old_arc` 可读） |
 | `backup/Rio.arc` | Steam 原档脚本（出口、开场件的比对基准） |
+| `resource/corpus/wsc/` | 324 个已解密的原版 WSC（原生 WS2 不落副本，直读 `backup/Rio.arc`） |
+| `resource/carried_lng/`、`resource/carried_soundlevel.json` | 从上游内化的表外 lng 与 `.soundlevel` 侧车 |
+| `resource/reused_archives/` | 完全复用的上游归档（字体、Lua 界面） |
+
+项目外输入（汉化组逐行译文、原版游戏的老式归档、上游补丁构建）由 `script/internalize/` 一次性
+内化到 `resource/`，此后构建不再依赖它们；`script/gen/` 下的表生成脚本仍会读同级目录。
 
 ## 参考资料
 

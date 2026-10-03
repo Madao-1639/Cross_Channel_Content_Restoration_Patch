@@ -81,7 +81,7 @@ Res 303 的翻译来自两个来源：
 
 1. **主线剧情**：复用 [CROSS†CHANNEL 中文化项目](https://github.com/MewX/cross-channel_chinese-localization_project)（MewX 等）的官方译文
    - 质量较高，人工翻译
-   - 对照文本位于 `../cross-channel_chinese-localization_project/Scripts/20150412/`：
+   - 对照文本为汉化组逐行译文（293 个同名 `.CCS` + `TXT/` 下的纯中文 `.TXT`）：
      - **格式**：293 个 `.CCS` 文件（`CCA0001.CCS`、`CCC0000.CCS` 等，与原版 WSC 脚本同名对应；`TXT/` 子目录另有 293 个同名 `.TXT` 为纯中文译文，**GBK** 编码，内容与 `.CCS` 的 `>1●` 中文行一致）`.CCS` 为 UTF-16LE + CRLF 纯文本，日中逐行对照：
        ```
        >0○0001○最古の記憶は。          ← 0 行：日文原文

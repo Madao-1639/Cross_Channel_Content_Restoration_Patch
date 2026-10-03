@@ -16,3 +16,5 @@ build/
 
 *.local.*
 .mcp.json
+.pi
+.zcode*

@@ -69,8 +69,9 @@ def rebase_offsets(data, base):
     """把切片**内部**的文件内绝对偏移整体平移 `base` 字节（拼接前必须做）。
 
     切片由 `convert_range` 独立生成，它只知道切片自己的坐标系；里面 `06 <u32 目标>`
-    与 `01 mode=0x85 <u32 b>` 记的都是切片内偏移。拼到宿主前缀之后，这些值要整体加
-    `len(prefix)`，否则会指向前缀区里的无关位置（实测 11 处落在指令中间）。
+    与 `01` 的 `a`/`b` 记的都是切片内偏移。拼到宿主前缀之后，这些值要整体加
+    `len(prefix)`，否则会指向前缀区里的无关位置（实测多处落在指令中间）。
+    规则按 **opcode** 定义（`06` 无条件跳转、`01` 条件），**与 `01` 的 `mode` 无关**。
     返回 (新字节, 改动处数)。
     """
     ins = ws2disasm.disassemble(data)
@@ -80,9 +81,12 @@ def rebase_offsets(data, base):
         if i.opcode == 0x06:
             out[i.offset + 1:i.offset + 5] = struct.pack('<I', i.fields['target'] + base)
             n += 1
-        elif i.opcode == 0x01 and i.fields.get('mode') == 0x85:
-            out[i.offset + 12:i.offset + 16] = struct.pack('<I', i.fields['b'] + base)
-            n += 1
+        elif i.opcode == 0x01 and i.fields.get('mode') != 0:
+            for _field, _off in (('a', 8), ('b', 12)):
+                _v = i.fields.get(_field) or 0
+                if _v:
+                    out[i.offset + _off:i.offset + _off + 4] = struct.pack('<I', _v + base)
+                    n += 1
     return bytes(out), n
 
 
@@ -319,8 +323,8 @@ def main():
         if n_slice_dlg != sc['hi'] - lo_eff + 1:
             raise SystemExit('%s 切片对话数 %d != 源区间 %d'
                              % (host, n_slice_dlg, sc['hi'] - lo_eff + 1))
-        # 切片里的**文件内绝对偏移**（`06` 目标 / `01 mode=0x85` 的 `b`）是**切片相对**的，
-        # 拼到宿主里必须整体加上前缀长度，否则会指到别处（实测 11 处目标落在指令中间）。
+        # 切片里的**文件内绝对偏移**（`06` 目标 / `01` 的 `a`/`b`）是**切片相对**的，
+        # 拼到宿主里必须整体加上前缀长度，否则会指到别处（实测多处目标落在指令中间）。
         slice_plain, n_rebase = rebase_offsets(slice_plain, len(prefix))
         if n_rebase:
             print('  %-20s 重定位切片内绝对偏移 %d 处（+%d）' % (host, n_rebase, len(prefix)))
@@ -330,7 +334,7 @@ def main():
         s_dl = [i for i in s_ins if i.opcode == 0x14]
         tail_off = s_dl[-1].offset + s_dl[-1].size
         tail = bytearray(steam[host.upper()][tail_off:])
-        # 尾段里的 `01 mode=0x85`：第二出口的文件内偏移按新布局重算
+        # 尾段里的 `01`：外部偏移按新布局重算（`a`/`b` 都要；与 mode 无关）
         # ---- 接缝定位统一：首尾延续同一角色的立绘沿用接缝另一侧的坐标 ----
         slice_plain, n_seam, n_conf = align_seam_positions(
             slice_plain,
@@ -346,12 +350,16 @@ def main():
         base = len(prefix) + len(seg_enc)
         fixed = 0
         for i in (x for x in s_ins if x.offset >= tail_off):
-            if i.opcode != 0x01 or i.fields.get('mode') != 0x85:
+            if i.opcode != 0x01 or i.fields.get('mode') == 0:
                 continue
-            rel = i.offset - tail_off
-            new_off = base + (i.fields['b'] - tail_off)
-            tail[rel + 12:rel + 16] = ws2.encode(struct.pack('<I', new_off))
-            fixed += 1
+            for _field, _off in (('a', 8), ('b', 12)):
+                _v = i.fields.get(_field) or 0
+                if not _v:
+                    continue
+                rel = i.offset - tail_off
+                tail[rel + _off:rel + _off + 4] = ws2.encode(
+                    struct.pack('<I', base + (_v - tail_off)))
+                fixed += 1
         new_host = bytes(prefix) + seg_enc + bytes(tail)
 
         # ---- 校验 ----
@@ -361,10 +369,19 @@ def main():
         ids = [i.fields['id'] for i in ni if i.opcode == 0x14]
         if ids != list(range(len(ids))):
             raise SystemExit('%s 对话 id 不连续：%s..%s' % (host, ids[:3], ids[-3:]))
-        for x in (y for y in ni if y.opcode == 0x01 and y.fields.get('mode') == 0x85):
-            tgt = next((y.fields.get('name') for y in ni if y.offset == x.fields['b']), None)
-            if tgt is None:
-                raise SystemExit('%s var-133 b=%d 未指向指令' % (host, x.fields['b']))
+        ni_starts = {y.offset for y in ni}
+        n_chk = 0
+        for x in (y for y in ni if y.opcode == 0x01 and y.fields.get('mode') != 0):
+            for _field in ('a', 'b'):
+                _v = x.fields.get(_field) or 0
+                if not _v:
+                    continue
+                n_chk += 1
+                if _v not in ni_starts:
+                    raise SystemExit('%s @0x%x 的 `01` %s=%d 未指向指令'
+                                     % (host, x.offset, _field, _v))
+        if n_chk:
+            print('  %-20s `01` 外部偏移 %d 处全部落在指令首字节' % (host, n_chk))
         results[host.upper()] = new_host
         reports.append((host, len(host_raw), len(new_host), len(ids), sc['keep'],
                         fixed, [i.fields.get('name') for i in ni if i.opcode == 0x07],

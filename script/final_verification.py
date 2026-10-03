@@ -30,7 +30,7 @@ STEAM_IDX = {k.upper(): v for k, v in STEAM_RIO.items()}
 # **不再有 CNR### 还原脚本、不再有额外跳转**。宿主保留 Steam 原档的出口，
 # 所以这里的判据就是「宿主的出口集合 == Steam 原档的出口集合」。
 # 12 个宿主全部没有 `06` / `01` / `0f` 绝对偏移，插入不破坏指针；
-# `CCC0000_en` 的 `01 mode=0x85` 第二出口偏移由 script/splice_restoration.py 重算。
+# `01` 的 `a`/`b`（文件内偏移）在重排脚本后必须重算（写盘器 / 切片重定基）。
 HOSTS_INLINE = ['CCA0025C_en.ws2', 'CCB1014C_en.ws2', 'CCB2013_en.ws2', 'CCB2101_en.ws2',
                 'CCC0000_en.ws2', 'CCC3027_en.ws2', 'CCC4022_en.ws2', 'CCD0022A_en.ws2',
                 'CCD1001B_en.ws2', 'CCD4003A_en.ws2', 'CCD5001A_en.ws2', 'CCD5001B_en.ws2']
@@ -174,6 +174,31 @@ def check_inline_splice(rio):
             fail('CCC0000_en var-133 第二出口偏移 %d 未指向指令' % i.fields['b'])
         else:
             ok('CCC0000_en var-133 第二出口指向 %s' % tgt)
+
+    # `01` 的外部偏移（`a` 指令内 +8 / `b` 指令内 +12）必须落在指令首字节（0 = 无此目标）。
+    # **按 opcode 定义、与 `mode` 无关**（见 doc/engine-mechanics.md「场景出口与条件双出口」）。
+    # 这一条覆盖全库：重排脚本字节（汉化/还原插入删格）后漏重算，引擎就会跳到指令中间。
+    n_off, bad_off = 0, []
+    for _sname in sorted(k for k in idx if k.endswith('.WS2')):
+        _sins = ws2disasm.disassemble(ws2.decode(idx[_sname]))
+        _sstarts = {_x.offset for _x in _sins}
+        for _x in (_y for _y in _sins if _y.opcode == 0x01 and _y.fields.get('mode') != 0):
+            for _field in ('a', 'b'):
+                _v = _x.fields.get(_field) or 0
+                if not _v:
+                    continue
+                n_off += 1
+                if _v not in _sstarts:
+                    bad_off.append('%s @0x%x %s=%d' % (_sname, _x.offset, _field, _v))
+    if n_off == 0:
+        fail('`01` 外部偏移检查数为 0（闸空转）')
+    elif bad_off:
+        for _b in bad_off[:10]:
+            fail('`01` 外部偏移未指向指令：%s' % _b)
+        if len(bad_off) > 10:
+            fail('（另有 %d 处未列出）' % (len(bad_off) - 10))
+    else:
+        ok('`01` 的 a/b 外部偏移 %d 处全部指向指令首字节' % n_off)
 
 
 def check_lng_pairing(rio):

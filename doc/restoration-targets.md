@@ -25,7 +25,7 @@
 | 项 | 数量 | 来源 |
 |---|---:|---|
 | H 场景语音（`*.OGG` + `*.soundlevel`） | 随 `Voice.arc` 整体复用 Res303 | Res303 |
-| 扩覆盖范围所需的原版语音 | **186 条 OGG** | `../CROSS_CHANNEL_Original/Voice.arc`，由 `script/import_missing_voices.py` 补入 |
+| 扩覆盖范围所需的原版语音 | **186 条 OGG** | 原版游戏的老式归档 `Voice.arc`，由 `script/import_missing_voices.py` 补入 |
 
 原版语音**不带** `.soundlevel`（Steam 侧才带逐段音量包络）。无包络的 OGG 照样播 ——
 只补 OGG，不凭空造包络。

@@ -47,10 +47,12 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
          + [出口尾段：Steam 原档「末句对话之后」的字节，含原出口]
 ```
 
-12 个宿主，出口与 Steam 原档**逐一致**；`CCC0000_en` 的 `01 mode=0x85` 条件双出口是唯一
-带文件内偏移的出口，已按新布局重算。判据、逐场景参数与合并规则见
+12 个宿主，出口与 Steam 原档**逐一致**；`CCC0000_en` 的 `01 mode=0x85` 条件双出口的 `b`
+已按新布局重算。判据、逐场景参数与合并规则见
 [call-chain.md](call-chain.md)「就地插入接线」；`script/splice_restoration.py` 是实施脚本，
 `script/audit/audit_inline.py` 是回归守卫。
+
+⚠️ **`01` 的 `a`/`b` 都算**：它们是**按 opcode 定义**的文件内偏移（不只 `0x85`），`tool/writer.py` 与 `script/splice_restoration.py` 对两者一并重算，`0` 表示无此目标。不变式由 `script/final_verification.py` 全库核对（计数 0 即失败）；错因与示例见 [lessons-learned.md](lessons-learned.md)「重排脚本必须重算「文件内绝对偏移」」。
 
 > **为什么不是「宿主截断 + 追加还原脚本」**：Steam 删 H 场景时会把该场景压成删节版留在
 > 宿主里，而宿主是**按序跑完整场**的 —— 追加式会造成顺序倒置 + 局部重复；
@@ -171,7 +173,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 | `tool/ws2disasm.py` | WS2 反汇编（363 个原生脚本 100% 覆盖） |
 | `tool/wsc2ws2.py` | WSC→WS2 逐指令转换（含 `convert_range` 切片模式） |
 | `tool/lng.py` | lng 编解码 + CCS 解析（`parse_ccs` / `parse_ccs_both`）+ **文本体例规则**（`fix_tail` / `normalize_zh`）+ 去说话人包裹 |
-| `tool/writer.py` | **结构写盘器**：还原插入 / 删格 / 名字框同步 / 借用语音删除 → ws2 字节（原 `insert_deleted_dialogues.py`） |
+| `tool/writer.py` | **结构写盘器**：还原插入 / 删格 / 名字框同步 / 借用语音删除 → ws2 字节（原 `insert_deleted_dialogues.py`）。其文件内偏移 `fix` 列表覆盖 `0x06`、`0f` 条目内的 `06`、**`01` 的 `a`（指令内 +8）与 `b`（+12）** |
 | `tool/textplan.py` | **表 → 写盘计划**：逐格处置展开、尾标记、名字框、随行演出（原在写盘器里） |
 | `tool/rename_map.py` | 资源**改名表**（原版名 → 本补丁名；原 `build_rename_map.py`） |
 | `tool/archprobe.py` | 归档探针：运行时可用资源名集合 / PNA 层数（原在 `splice_restoration` 里） |

@@ -51,10 +51,9 @@ BACKUP_RIO = ROOT / 'backup' / 'Rio.arc'
 BACKUP_VOICE = ROOT / 'backup' / 'Voice.arc'
 UNRESOLVED_RE = re.compile(r'^(.+?)（缺 (.+?)）$')
 
-# 目标采样率（对齐 Steam 语料）与 ffmpeg 位置（可用环境变量 `CC_FFMPEG` 覆盖）。
+# 目标采样率（对齐 Steam 语料）与 ffmpeg 位置（用环境变量 `CC_FFMPEG`，或 PATH 上的 `ffmpeg`）。
 TARGET_RATE = 48000
-FFMPEG = (os.environ.get('CC_FFMPEG') or shutil.which('ffmpeg')
-          or r'D:\ffmpeg\bin\ffmpeg.exe')
+FFMPEG = os.environ.get('CC_FFMPEG') or shutil.which('ffmpeg') or 'ffmpeg'
 
 
 def ogg_rate(d):
