@@ -30,10 +30,11 @@
 | `portrait_position_overrides.json` | 场景级立绘位置覆盖（手工，1 条） | `wsc2ws2` |
 | `original_scope.json` | 原版内容覆盖的**剧本范围**（边界定义） | （无代码消费者） |
 | `graphic_overrides/` | **图片汉化**替换清单 + 图（3 张） | `apply_graphic_overrides` |
+| `SysGraphic/` | **UI 图层汉化**替换图库（`<pna 名>/L<图层下标>.png`） | `apply_sysgraphic` |
 | `corpus/wsc/` | **原版 WSC 语料**（324 个） | 见下「corpus」 |
-| `carried_lng/` | 表外**汉化 lng**（35 条，从上游内化） | `build_patch.carry_carried_lng` |
+| `carried_lng/` | 表外**汉化 lng**（35 条，外部来源内化） | `build_patch.carry_carried_lng` |
 | `carried_soundlevel.json` | 补入录音的**音量包络**（967 条） | `build_patch.carry_carried_soundlevel` |
-| `reused_archives/` | **完全复用**的上游归档（字体 / Lua 界面） | `build_patch.bootstrap_copy` |
+| `reused_archives/` | **完全复用**的外部汉化归档（字体 / Lua 界面） | `build_patch.bootstrap_copy` |
 | `ws2_operand_formats.json` | WS2 全部 164 个 opcode 的格式串（参考表） | （无代码消费者） |
 | `wsc_handlers.json` | 原版 WSC 的 256 项 opcode→handler（参考表） | （无代码消费者） |
 | `icon.ico` | 安装器图标 | `script/pack.sh` |
@@ -198,8 +199,8 @@
 - **`renamed` 只记录改了名的**（36 条）；同名且内容一致的（7 条）不入表 —— 不用查表也知道用原名。
 - **`all`**（37 条）是 `script/build_restored_cgs.py` 的输入 —— 该步**从原版 `Chip.arc` 取
   `EVCC####.PNG`**（800×600）**LANCZOS 放大到 1280×960** 后按 `all` 改名写入 `asset/Chip2.arc` ⇒
-  还原 CG **不依赖上游补丁**（只需"目标 CG 一致"，不要求字节级）。
-- **识别方式 = 像素，不是 sha**：上游出货的图是原版 LANCZOS 放大并重编码过的，同一张画的 sha256
+  还原 CG **不依赖任何外部补丁**（只需"目标 CG 一致"，不要求字节级）。
+- **识别方式 = 像素，不是 sha**：第三方出货的图是原版 LANCZOS 放大并重编码过的，同一张画的 sha256
   必然不同。同名图片**至今没有任何一例被确认是内容审查**；「相似度 > 60% 即为审查」的判据是反的
   （高相似恰恰说明是同一张图）。可行判据三条并用：① 同名；② **保宽高比 + 最优对齐后的分块局部差异**；
   ③ 脚本层证据（原版该场景引用了它、且 Steam 同名文件画面不同）。
@@ -234,6 +235,24 @@
 每项登记「哪个归档换掉哪些成员」；替换图 = **同目录**下的同名文件，路径不重复写。
 素材来源与加工口径（内容对齐、阴影边透明）见 [localization.md](../doc/localization.md)「图片汉化」。
 消费方：`script/apply_graphic_overrides.py`（写盘开头，素材快照之后）。
+
+### `SysGraphic/` —— **UI 图层汉化**的替换图库
+
+```text
+SysGraphic/
+└── sys_config_P1/          # 子目录名 = SysGraphic.arc 内的目标 pna 成员（不带 .pna 后缀）
+    ├── L2.png              # 文件名 L<下标>.png = 替换该 pna 内记录下标 <下标> 的图层
+    ├── L3.png
+    └── …（153 张：153 个非空图层全量提供，其中 59 张与原图逐字节相同）
+```
+
+系统界面的文案烙在 PNA 图层里，换图层即完成 UI 汉化。**尺寸允许与原图层不同**
+（中文常比英文宽）：记录表 w/h 与数据块大小随新图更新，x/y 与画布不动。
+目录里出现任何不叫 `L<数字>.png` 的条目都会被 `apply_sysgraphic` 拒绝。
+规则与限制（签名扫描件不支持写回）见 [pna-resources.md](../doc/pna-resources.md)「PNA 图层替换」
+与 [localization.md](../doc/localization.md)「SysGraphic.arc」。
+消费方：`script/apply_sysgraphic.py`（写盘的**最后一步**）；`final_verification.check_sysgraphic`
+是产物级对账的第二道。
 
 ## 名称与语料
 
@@ -279,35 +298,35 @@
 
 ### `carried_lng/` 与 `carried_soundlevel.json` —— **显式带入**的内化数据
 
-基线改从 `backup/`（Steam 原版）起底后，有两样东西**只在 Res303 里有**，必须显式带过（否则静默丢）：
+基线改从 `backup/`（Steam 原版）起底后，有两样东西不在任何 Steam 原档里，必须显式带过（否则静默丢）：
 
 - **`carried_lng/`** = **本项目处理集之外**（脚本不在 `text_map.json` 的 293 个内）但**要保留**的
   35 个汉化 `.lng`（+ `manifest.json` 记名与哈希）。由 `script/internalize/extract_carried_lng.py` 一次性内化。
 - **`carried_soundlevel.json`** = **967 条 `.soundlevel`** 音量包络（按秒 ASCII，与采样率无关）——
   产物需要 16,111 条 = `backup` 的 **15,144**（Steam 对**每条**语音都配了包络，实测 OGG 与侧车的
-  stem 逐一相等）**＋ 967 条（补入的原版录音）**，后者只存在于上游补丁的 `Voice.arc`，不显式带过即
+  stem 逐一相等）**＋ 967 条（补入的原版录音）**，后者不在任何 Steam 原档里，不显式带过即
   静默丢失（`import_missing_voices.py` 只补 OGG）。余下 585 条补入语音没有包络 —— 本来就没有，
   **不凭空造**（引擎容忍缺包络）。由 `script/internalize/extract_carried_soundlevel.py` 提取。
 
 消费方：`build_patch` 的 `carry_carried_lng()` / `carry_carried_soundlevel()`（仅 `--bootstrap` 时）。
 `final_verification` 有产物级断言「侧车条数 ≥ backup + 内化清单」。
 
-### `reused_archives/` —— **完全复用**的上游归档
+### `reused_archives/` —— **完全复用**的外部汉化归档
 
-`Fonts.arc`（汉字字体）+ `Script.arc`（Lua 系统界面）—— 上游汉化产出，**原样采用、不涉裁定**。
+`Fonts.arc`（汉字字体）+ `Script.arc`（Lua 系统界面）—— 外部汉化产出，**原样采用、不涉裁定**。
 由 `script/internalize/extract_reused_archives.py` 一次性内化（+ `manifest.json` 记哈希）。
-`build_patch` 的 `bootstrap_copy()` 据此带入 `asset/` ⇒ **构建期不再依赖任何外部上游目录**。
-（`SysGraphic.arc` 属另一类：其 UI 汉化图**不采用**，取 `backup/` 的 Steam 原版。）
+`build_patch` 的 `bootstrap_copy()` 据此带入 `asset/` ⇒ **构建期不再依赖任何仓库外目录**。
+（`SysGraphic.arc` **不整包采用外部产物**：基线取 `backup/` 的 Steam 原版，UI 汉化改为按图层
+替换 —— 素材见上文「SysGraphic/」。）
 
 ## 参考表（无代码消费者）
 
 - `ws2_operand_formats.json` —— WS2 全部 **164 个 opcode** 的格式串（`tool/ws2disasm.py` 的对照表）。
   见 [engine-mechanics.md](../doc/engine-mechanics.md)。
 - `wsc_handlers.json` —— 原版 WSC 的 **256 项** opcode→handler 表。见 [wsc_to_ws2_conversion.md](../doc/wsc_to_ws2_conversion.md)。
-- （**不再保留上游补丁的语料**：它对流水线**零引用** —— 真正要的文本已内化为 `carried_lng/`。）
 
 ## 待办
 
 - **`voice_map.json`** —— 语音的完整对照表：Steam 文件名 ↔ 原版录音 ↔ 时长指纹 ↔ 所属槽位。
   目前只有**逐格补挂计划** `voice_plan.json`（⚠️ 它被 `build_voice_plan.py` **整体重写**，
-  手工补的条目重跑生成器会丢，见 [lessons-learned](../doc/lessons-learned.md)）。
+  手工补的条目重跑生成器会丢）。

@@ -49,12 +49,12 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
   —— 一张 CG 被多处引用，故 `refs` 是**列表**。
 
 **「同名冲突」的判定必须比像素，不能比 sha**：
-Res303 出货的图是把原版 **LANCZOS 放大到 1280×960** 并重编码过的，所以同一张画的
+第三方补丁出货的图是把原版 **LANCZOS 放大到 1280×960** 并重编码过的，所以同一张画的
 sha256 必然不同。早期据此把 `EVCC0017`/`EVCC0027`/`EVCC0049`/`EVCC0058`/`EVCC0063`
 等判成「冲突」，实测**全部是同名同内容**（降到 200×150 灰度后平均绝对差 0.14–0.22）。
 `build_cg_map.py` 用像素识别来源，`patch` 为 `null` 即表示「用 Steam 侧同名文件、不改名」。
 放大方法的确定性已用对照验证：把原版 `EVCC0017B.PNG` 按 LANCZOS 放大到 1280×960，
-与 Res303 的 `CN_EVCC0017B.PNG` **逐像素完全相同（最大差 0）**。
+与第三方补丁产出的同名图 **逐像素完全相同（最大差 0）**。
 
 **改名必须限定在还原宿主内**：同一个原版名在不同脚本里含义不同 ——
 `SGCC0020.PNG` 在 `CCB2101_en.ws2` 的**插入段**指原版系统图（该用 `EVCC9004.PNG`），
@@ -153,9 +153,9 @@ same_file = sha256(orig_data) == sha256(steam_data)
 | **Chip1.arc** | 背景图片 | PNG | `BGCC*.png` |
 | **Chip2.arc** | 事件 CG | PNG | `EVCC*.png`（包括 `EVCC9XXX` 补丁 CG） |
 
-### 与 Res 303 的差异
+### 与第三方补丁的差异
 
-Res 303 把全部 37 个新增 `CN_*` 资源都堆进 **Graphic.arc**（事件 CG 混入立绘存储区），
+第三方补丁把全部 37 个新增 `CN_*` 资源都堆进 **Graphic.arc**（事件 CG 混入立绘存储区），
 且用 `CN_EVCC` 前缀 —— 因引擎白名单导致 CG 全部加载不了。
 
 本项目：
@@ -305,6 +305,44 @@ PNA 的图层按**动画相位分组**，通过 `u0`（unknown_0）字段标记�
 - LAYER_ORDER 中只有基础槽位（ev, st01-st12, bg01-bg03 等）
 - **无 blink/talk 子图层**：与 A Sky Full of Stars 不同，CROSS†CHANNEL 的 LAYER_ORDER 不包含眨眼/口型子图层
 - 引擎可能仍根据 PNA 内部结构处理动画，但不显式注册子图层
+
+## PNA 图层替换（SysGraphic UI 汉化的写回规则）
+
+系统界面文案烙在 `SysGraphic.arc` 的 PNA 图层里；PNA 的**每个非空数据块本身就是一张完整的
+PNG**，所以换图层 = 换数据块 + 同步记录表，可以做到对未替换部分逐字节保真。
+
+### 素材约定
+
+```
+resource/SysGraphic/<pna 名>/L<记录下标>.png
+```
+
+* 子目录名 = 归档内的 pna 成员（大小写不敏感匹配，成员名字节原样保留）；
+* 文件名 = 图层**记录下标**（`39` 显示指令的帧号就是它）；目录里出现任何不合约定的
+  条目，`apply_sysgraphic` 直接报错，不静默忽略。
+
+### 写回规则（`tool/pna.py` 的 `serialize`）
+
+| 项 | 规则 |
+|---|---|
+| 图层数据 | 替换图必须是一张**完整 PNG**（签名 + chunk 链到 IEND、无尾随字节，`png_dimensions` 校验） |
+| 记录表 w/h | **必须随新图的 IHDR 更新** —— 「记录表 w/h == 内嵌 PNG IHDR」是写回的唯一硬不变量（原档即如此） |
+| 数据块大小 | 记录表 +0x14 字段随新 PNG 字节数更新；数据区按记录顺序紧邻重排 |
+| x/y / 相位字段 / 画布 | **一律不动**（左上角锚点、`u0`/相位哨兵、画布尺寸保持原样） |
+| 记录数 | 不变（不新增/删除图层） |
+
+### 限制与验证
+
+* **签名扫描件不支持写回**：`SYS_GalleryBrowser.pna` 与 `Sys_Msw.pna` 的记录表未覆盖全文件
+  （数据区尾部有机制未查明的字节，`Pna.scanned=True`）—— 重排数据区可能破坏它，
+  `serialize` 对它们报 `PnaError`，`apply_sysgraphic` 直接拒跑（不猜）；
+* **往返回归**：`serialize(parse(blob)) == blob` 已对归档内全部 24 个规整 pna 逐字节验证
+  （2 个扫描件验证「正确拒绝」）；
+* **消费方**：`script/apply_sysgraphic.py`（流水线写盘的最后一步，预演/落盘两用、幂等）；
+  `final_verification.check_sysgraphic()` 是产物级对账（替换图 == 产物图层、未替换图层
+  与 Steam 原档逐字节相同、不变量全库成立）。
+
+方案与决策背景见 [localization.md](localization.md)「SysGraphic.arc」。
 
 ## 资源统计
 

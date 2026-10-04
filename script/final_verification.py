@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tool import arcbuild, lng as lngmod, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, lng as lngmod, pna, ws2, ws2disasm  # noqa: E402
 
 # 控制台按 UTF-8 输出（与流水线里其余脚本一致）。缺这一句时，**失败消息里任何 GBK 编不出的字符
 # 都会在 `print` 处抛 UnicodeEncodeError、把整套验收中止** —— 而失败消息恰恰是带 `−`/`⇒` 那些。
@@ -78,11 +78,12 @@ def check_arc_integrity():
     # 未改动的归档不必分发：缺失即表示安装器保留玩家原文件
     # 不分发的归档（安装器保留玩家原文件）：
     #   Chip1.arc —— 与 Steam 原档逐字节相同（本补丁不改背景）
-    #   SysGraphic.arc —— 系统界面暂不汉化，沿用 Steam 版（2026-09-11 决定）
+    #   （SysGraphic.arc 原「系统界面暂不汉化、不分发」的 2026-09-11 决定已于 2026-10-05
+    #    翻转：系统界面**图层汉化**落地，asset/ 必须带 SysGraphic.arc，见 doc/localization.md）
     # 注：Graphic.arc 自 2026-09-27 起**要分发**了 —— 三张整屏图被汉化版替换
     # （efcca0030 / SGCC0003 / sgcc0011，见 resource/graphic_overrides/manifest.json），
     # 不再与 Steam 原档逐字节相同。
-    OPTIONAL = {'Chip1.arc', 'SysGraphic.arc'}
+    OPTIONAL = {'Chip1.arc'}
     for f in ['Rio.arc', 'Graphic.arc', 'Chip2.arc', 'Voice.arc', 'Fonts.arc',
               'Script.arc', 'SysGraphic.arc']:
         path = ASSET / f
@@ -320,9 +321,106 @@ def _same_file(a, b, chunk=1 << 22):
                 return True
 
 
+def check_sysgraphic():
+    """**UI 汉化（SysGraphic 图层替换）的产物级断言** —— 与 `apply_sysgraphic.py` 同一判据
+    的独立第二道（该步自身的回读校验管「写坏了没有」，这里管「写没写、写的是不是资源库里那份」）：
+
+      * `resource/SysGraphic/<pna>/L<下标>.png` 的每一张都必须逐字节等于 `asset/SysGraphic.arc`
+        里对应 pna 的对应图层；
+      * 对应 pna 必须已与 `backup/` 的原档不同（替换生效），画布与记录数不变；
+      * **未列入替换的图层逐字节原样**、坐标/相位字段不变（防顺手改动）；
+      * 全部图层的「记录表 w/h == 内嵌 PNG IHDR」不变量成立（PNA 写回的唯一硬不变量）；
+      * 资源目录一个替换子目录都没有时，asset 不得与 Steam 原档有差异（多出来的差异来源不明）。
+    """
+    print('\n== SysGraphic UI layers ==')
+    res = Path('resource') / 'SysGraphic'
+    arc_path = ASSET / 'SysGraphic.arc'
+    if not arc_path.exists():
+        fail('SysGraphic.arc missing from asset/（UI 汉化产物必须随补丁分发）')
+        return
+    if not res.is_dir():
+        fail('resource/SysGraphic 缺失（UI 汉化素材库；没有替换也应留空目录占位）')
+        return
+    asset = {name_of(m).lower(): m[1] for m in arcbuild.read_raw(arc_path)}
+    backup = {name_of(m).lower(): m[1] for m in arcbuild.read_raw(Path('backup') / 'SysGraphic.arc')}
+    subs = sorted(p for p in res.iterdir() if p.is_dir())
+    if not subs:
+        diff = [k for k in asset if asset[k] != backup.get(k)]
+        if diff:
+            fail('没有配置替换子目录，但 asset/SysGraphic.arc 仍与 Steam 原档不同：%s' % diff[:8])
+        else:
+            ok('没有配置替换，SysGraphic.arc 与 Steam 原档逐字节相同')
+        return
+
+    n_layers = n_pna = 0
+    for sub in subs:
+        key = (sub.name + '.pna').lower()
+        if key not in asset or key not in backup:
+            fail('%s: SysGraphic.arc（asset 或 backup）里没有 %s.pna' % (sub.name, sub.name))
+            continue
+        if asset[key] == backup[key]:
+            fail('%s.pna 与 Steam 原档逐字节相同 —— 替换未生效' % sub.name)
+            continue
+        pa = pna.parse(asset[key], path=sub.name + '.pna(asset)')
+        pb = pna.parse(backup[key], path=sub.name + '.pna(backup)')
+        if pa.scanned or pb.scanned:
+            fail('%s.pna 是签名扫描件，不支持图层替换（见 doc/engine-mechanics.md）' % sub.name)
+            continue
+        if (pa.width, pa.height, pa.count) != (pb.width, pb.height, pb.count):
+            fail('%s.pna 画布/记录数与 Steam 原档不同（%dx%d/%d != %dx%d/%d）'
+                 % (sub.name, pa.width, pa.height, pa.count,
+                    pb.width, pb.height, pb.count))
+            continue
+        want = set()
+        bad = False
+        for f in sorted(sub.iterdir()):
+            m = re.fullmatch(r'L(\d+)\.png', f.name)
+            if m is None:
+                fail('%s: 不合约定的条目 %r（只允许 L<图层下标>.png）' % (sub.name, f.name))
+                bad = True
+                continue
+            k = int(m.group(1))
+            if k >= pa.count or pa.layers[k].data is None:
+                fail('%s: %s 的图层下标越界或指向空图层' % (sub.name, f.name))
+                bad = True
+                continue
+            want.add(k)
+            if pa.layers[k].data != f.read_bytes():
+                fail('%s.pna L%d 与替换图不一致' % (sub.name, k))
+                bad = True
+        if bad:
+            continue
+        n_pna += 1
+        n_layers += len(want)
+        untouched = bad_field = 0
+        for k, (la, lb) in enumerate(zip(pa.layers, pb.layers)):
+            if k in want:
+                continue
+            if la.data != lb.data:
+                fail('%s.pna L%d 不在替换清单里，图层内容却被改动' % (sub.name, k))
+                bad_field += 1
+            elif (la.x, la.y, la.u0, la.phase, la.opacity, la.width, la.height) != \
+                    (lb.x, lb.y, lb.u0, lb.phase, lb.opacity, lb.width, lb.height):
+                fail('%s.pna L%d 不在替换清单里，记录字段却被改动' % (sub.name, k))
+                bad_field += 1
+            else:
+                untouched += 1
+        for l in pa.png_layers:
+            if pna.png_dimensions(l.data) != (l.width, l.height):
+                fail('%s.pna L%d 记录表 w/h(%dx%d) != IHDR(%dx%d)'
+                     % (sub.name, l.index, l.width, l.height, *pna.png_dimensions(l.data)))
+                bad_field += 1
+        if not bad_field:
+            ok('%s.pna：%d 个替换图层全部兑现，其余 %d 个图层逐字节原样'
+               % (sub.name, len(want), untouched))
+    if n_pna == len(subs) and n_pna:
+        ok('SysGraphic UI 汉化：%d 个 pna / %d 张替换图全部兑现（核了 %d 个替换子目录）'
+           % (n_pna, n_layers, len(subs)))
+
+
 def check_idempotency():
     print('\n== Idempotency (rebuild stability) ==')
-    for f in ['Rio.arc', 'Graphic.arc', 'Chip2.arc']:
+    for f in ['Rio.arc', 'Graphic.arc', 'Chip2.arc', 'SysGraphic.arc']:
         path = ASSET / f
         if not path.exists():
             ok('%s not shipped; nothing to rebuild' % f)
@@ -594,6 +692,7 @@ def main():
     check_row_once(rio)
     check_voice_channels(rio)
     check_voice_format_and_sidecar()
+    check_sysgraphic()
     check_idempotency()
 
     print('\n== Summary ==')

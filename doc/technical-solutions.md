@@ -16,9 +16,11 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 | `Rio.arc` | 12 个宿主脚本就地插入原版内容；补入 328 个 `.lng` 与 `NameTable.txt` |
 | `Chip2.arc` | 补入 37 个 `EVCC9XXX.PNG`（还原 CG） |
 | `Voice.arc` | 补入 186 条原版语音 |
-| `Fonts.arc` | 整体复用 Res 303 的中文字体 |
-| `Script.arc` | 整体复用 Res 303 的 Lua 系统界面（Steam 原版无此归档） |
-| `Graphic.arc` / `Chip1.arc` / `SysGraphic.arc` / `SysVoice.arc` | **不改动，不打包**（安装器保留玩家原文件） |
+| `Fonts.arc` | 整体采用内化归档的中文字体（`resource/reused_archives/`） |
+| `Script.arc` | 整体采用内化归档的 Lua 系统界面（`resource/reused_archives/`；Steam 原版无此归档） |
+| `Graphic.arc` | 3 张整屏图换汉化版（`resource/graphic_overrides/`，同名替换） |
+| `SysGraphic.arc` | UI 汉化：`resource/SysGraphic/` 的图层换进同名 pna（见「系统界面」） |
+| `Chip1.arc` / `SysVoice.arc` | **不改动，不打包**（安装器保留玩家原文件） |
 
 ---
 
@@ -64,15 +66,14 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 ⚠️ 补入时**一律重采样到 48000 Hz**（`resample_ogg()`，ffmpeg `-ar 48000 -c:a libvorbis`）——
 原版有一批 44100 录音，而 Steam 语料 99.86% 是 48000；偏离语料形态会走宿主几乎不走的解码路径
 （一次概率性崩溃即由此，见 [engine-mechanics.md](engine-mechanics.md)「语音采样率」与
-[lessons-learned.md](lessons-learned.md) 「概率性崩溃：导入的 44100 语音」）。仅 `--bootstrap` 从零重建会触发本步；
+[lessons-learned.md](lessons-learned.md) 「概率性崩溃（堆损坏，未根治）」）。仅 `--bootstrap` 从零重建会触发本步；
 常规复跑因「只增不改」为 no-op。
 
 ## 3. 文本汉化：lng 位置对应
 
 - **机制**：lng 里没有 id，引擎按播放序把**第 N 条文本**替换为 lng 第 N 条目。
   严格等式 `lng 条数 == 14 条数 + Σ(0f 的 count)`（选项条目各占一槽）。
-- **来源**：主线复用汉化组官方译文（CCS，`CCS 序号 = 原版 WSC 对话 id + 1`），
-  Steam 新增的 7 条角色线与后日谈来自 Res303 的机翻。
+- **来源**：主线复用汉化组官方译文（CCS，`CCS 序号 = 原版 WSC 对话 id + 1`），Steam 新增的 7 条角色线与后日谈以机翻为底稿，已随全量语义复审逐行修订。
 - **宿主 lng 重建**：就地插入后宿主的位置全部变了，lng 必须整体重建 ——
   **现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**（原
   `script/build_host_lng.py` 已废弃：只写 `.LNG`、输出必被覆写）。
@@ -87,14 +88,17 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 
 ## 4. 字体支持
 
-复用 Res 303 的 `Fonts.arc`（`FOT-MatissePro-B/M.PTF`，各 18.5 MB，含汉字字形；
-Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示的关键。
+采用内化归档 `resource/reused_archives/` 的 `Fonts.arc`（外部汉化产出，**原样采用**；`FOT-MatissePro-B/M.PTF`，各 18.5 MB，含汉字字形；Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示的关键。
 
 ## 5. 系统界面
 
-- **复用 Res 303 的 `Script.arc`**（14 个成员：13 个 Lua 字节码 + `LegacyGame.inc`），
-  提供图形化菜单/设置/画廊。Steam 原版不含此归档。
-- **`SysGraphic.arc` 不做**：暂不处理图片汉化，沿用 Steam 原版（不打包）。
+- **采用内化归档 `resource/reused_archives/` 的 `Script.arc`**（外部汉化产出，**原样采用**；14 个成员：13 个 Lua 字节码 + `LegacyGame.inc`），提供图形化菜单/设置/画廊。Steam 原版不含此归档。
+- **`SysGraphic.arc` UI 图层汉化**：系统界面文案烙在 PNA 图层里，按
+  「同名 pna、同名图层」替换 —— 素材在 `resource/SysGraphic/<pna 名>/L<图层下标>.png`
+  （由项目负责人制作导入），`script/apply_sysgraphic.py` 把它们换进 `asset/SysGraphic.arc`
+  （**写盘的最后一步**）。中文常比英文宽，**尺寸可不同**：记录表 w/h 与数据块大小随新图
+  更新，x/y 与画布不动。写回规则见 [pna-resources.md](pna-resources.md)「PNA 图层替换」，
+  方案详情见 [localization.md](localization.md)「SysGraphic.arc」。
 
 ---
 
@@ -106,10 +110,10 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 
 | 带入项 | 来源 |
 |---|---|
-| `Fonts.arc` / `Script.arc` | **复用 Res303**（汉字字体、Lua 系统界面）—— 唯二保留的 Res303 依赖 |
+| `Fonts.arc` / `Script.arc` | 内化归档 `resource/reused_archives/`（外部汉化产出，**原样采用**）—— 仅有的两个非生成归档 |
 | 35 个表外汉化 lng | 内化数据 `resource/carried_lng/` |
-| 967 条 `.soundlevel` 侧车（补入录音的包络） | 内化数据 `resource/carried_soundlevel.json`（`backup` 只带自己那 15,144 条的包络；这 967 条只存在于 Res303，不显式带过即静默丢失） |
-| 补入的原版录音 | `CROSS_CHANNEL_Original/Voice.arc`（并统一重采样 48000） |
+| 967 条 `.soundlevel` 侧车（补入录音的包络） | 内化数据 `resource/carried_soundlevel.json`（`backup` 只带自己那 15,144 条的包络；这 967 条不在任何 Steam 原档里，不显式带过即静默丢失） |
+| 补入的原版录音 | 原版游戏的老式归档 `Voice.arc`（并统一重采样 48000） |
 | 37 张还原 CG | `build_restored_cgs.py`：原版 `Chip.arc` 的 `EVCC####.PNG` 放大到 1280×960（只需目标一致，不必字节级） |
 
 其余全部由后续步骤从 `resource/text_map.json` + 源 WSC（`resource/corpus/wsc`）生成。
@@ -177,7 +181,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 | `tool/textplan.py` | **表 → 写盘计划**：逐格处置展开、尾标记、名字框、随行演出（原在写盘器里） |
 | `tool/rename_map.py` | 资源**改名表**（原版名 → 本补丁名；原 `build_rename_map.py`） |
 | `tool/archprobe.py` | 归档探针：运行时可用资源名集合 / PNA 层数（原在 `splice_restoration` 里） |
-| `tool/pna.py` | PNA 分层图像只读解析：图层表 + 内嵌 PNG 切分（见 `engine-mechanics.md`「PNA 二进制布局」） |
+| `tool/pna.py` | PNA 分层图像解析：图层表 + 内嵌 PNG 切分（读）；重序列化 `serialize` / 换图校验 `png_dimensions`（写，SysGraphic UI 汉化的图层替换用；签名扫描件不支持写回）。见 `engine-mechanics.md`「PNA 二进制布局」 |
 | `tool/luac53.py` / `tool/luadis53.py` | Lua 5.3 字节码解析 / 反汇编 |
 | `tool/install.py` | 安装器（PyInstaller 入口，`merge_arc` 按 METADATA 重组归档） |
 
@@ -189,12 +193,13 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 **流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：
 `verify_text_map_structure` · `check_reset_state` · `apply_graphic_overrides` ·
 `splice_restoration` · `remove_cnr_scripts` · `build_original_stage` · `apply_text_map` ·
-`import_missing_voices` · `audit_choices` · `build_nametable` · `verify_text_map` · `final_verification`；
+`import_missing_voices` · `audit_choices` · `build_nametable` · `apply_sysgraphic` ·
+`verify_text_map` · `final_verification`；
 **引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。
 
 **目录分组**（`script/` 根只放入口与流水线步骤）：
 
-- `script/internalize/` —— 把**上游产物搬进仓库**，各跑一次；跑完构建不再需要外部目录：
+- `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：
   `extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`
 - `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：
   `build_original_audio` · `build_voice_plan`
@@ -222,7 +227,7 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
 `fix_nametable_prefix.py`、`rename_speakers.py`、**判定链的 39 个 `textfix_*.py`**，
 以及判定链的**下游**：`build_text_map.py`（表生成器）、`speaker_map_sheet.py`（对照卡）、
 `build_position_overrides.py` / `calibrate_positions.py`（立绘位置标定，锚点输入已清）。
-判定链的**中间层（`tmp/textfix/`）也随之清理** ⇒ 整条链**不可再跑**，且它本就**顺序敏感、表已成准据**
+判定链的**中间层**也随之清理 ⇒ 整条链**不可再跑**，且它本就**顺序敏感、表已成准据**
 —— **要改某一格，改表**。
 （`build_text_map.py` 里仍被复用的两条文本体例规则 `fix_tail` / `normalize_zh` 已移入 `tool/lng.py`。）
 - 原理：原始槽位 `k` = ws2 里 `14` 与 `0f` 条目按指令序编号；表的 `items` 给出每格显示什么 +
@@ -276,16 +281,3 @@ Steam 原版只有 7.0–7.6 MB）。`CharSet = GB2312_CHARSET` 是简体显示�
    产出 `releases/..._Installer_v{VERSION}.exe`。
 
 > `asset/` 或 `backup/` 任一变动后**必须**重新生成 `payload/`。
-
-## 遗留与风险
-
-> ⚠️ **本表已停止维护** —— 仍开放的项已并入
-> [restoration-targets.md](restoration-targets.md) 的「剩余工作」统一维护。下表仅存历史记录。
-
-| 项 | 状态 |
-|---|---|
-| 实机测试 | `CCC0000` 试点已通过，其余 11 个场景待测；lng 重排处待确认（名字框显示已通过） |
-| lng 语义复审 | Res303 自述 `TEXT_QA_PASS: false`；已确认的 6 条错配已修，全量复审待重开 |
-| `ev` 槽特性 | stem 长度限制、前缀容忍度未实测（Steam 语料中未见 `0x34` 用 `ev` 槽） |
-| 原版资源补入 | **不能**从原版二进制直接提取（引擎不兼容，见 [lessons-learned.md](lessons-learned.md) 「原版与 Steam 是两套引擎」）；语音是唯一的例外（OGG 通用） |
-| `asset/*.arc` 在 Git LFS 下 | 已多次因 `.git/lfs/tmp` 堆积写满磁盘，根治（移出 LFS）待执行 |

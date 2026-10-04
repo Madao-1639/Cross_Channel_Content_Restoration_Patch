@@ -28,7 +28,8 @@
 - **资源补全**：从原版补入 Steam 缺失的资源（语音可直接复用 OGG）
 - **文本汉化**：lng 文件按池槽位替换文本，人名走 `NameTable.txt`
 - **字体替换**：复用支持汉字的字体文件
-- **参考但仍需验证**：Res 303 的方案可作参考，但其产物未经 Steam 版验证
+- **UI 图层汉化**：`SysGraphic.arc` 内同名 pna 的图层替换（素材在 `resource/SysGraphic/`，尺寸可不同）
+- **第三方补丁**：其汉化数据（字体、系统界面归档、语音包络等）可直接复用，已内化进 `resource/`；其还原脚本未经 Steam 版实测、与引擎不兼容，不直接采用
 
 ## 工程约定
 
@@ -54,7 +55,7 @@
 - ✅ 忠实的文本汉化
 
 **原则**：
-1. **原版数据是权威信源** - 场景内容、资源引用、演出时序一律以**解密后的原版 WSC**为准；Res 303 的产物只作参考（其还原脚本未经 Steam 版验证，且存在格式错误）
+1. **原版数据是权威信源** - 场景内容、资源引用、演出时序一律以**解密后的原版 WSC**为准；第三方补丁的产物只作参考、不作信源
 1. **缺少的信息不应猜测补全** - 如果无法从原版确认某个设计，保持现状并如实记录
 2. **演出问题应报告而非修改** - 如果发现演出异常（如 BGM 消失），记录问题但不擅自修改，除非能从原版游戏确认正确行为
 
@@ -119,7 +120,7 @@ tool/
 ├── wsc.py           （原版 WSC 反汇编）
 ├── wsc2ws2.py       （WSC→WS2 转换，含切片模式）
 ├── lng.py           （LNG 编解码 + CCS 解析）
-├── pna.py           （PNA 分层图像只读解析）
+├── pna.py           （PNA 分层图像读写：图层表 + 内嵌 PNG 切分 + 重序列化）
 ├── saveadv.py       （AdvHD 存档 CCST 快照链只读解析）
 ├── speaker.py       （角色名称映射表 resource/speaker_map.json 的读取层）
 ├── luac53.py        （Lua 5.3 字节码解析）
@@ -133,6 +134,7 @@ tool/
 python script/build_patch.py            # 按方案产出 asset/（完整文件）
 python script/generate_payload.py       # 生成增量补丁到 payload/（含回读校验）
 python script/final_verification.py     # 全量验收
+python script/apply_sysgraphic.py       # SysGraphic UI 图层汉化（预演/落盘两用）
 python script/audit/audit_inline.py           # 就地插入回归守卫
 python script/audit/verify_ws2_conventions.py # 转换器约定回归```
 
@@ -257,7 +259,7 @@ if pattern in decoded:
 - `arcbuild.verify()` 会检测表末尾的 null padding 并拒绝
 - 若发现 padding，运行 `arcbuild.normalize_arc_padding(path)` 清理
 - 规范化后哈希稳定，安装器校验通过
-- 详见 `doc/lessons-learned.md` §6
+- 详见 `tool/arcbuild.py`（`verify()` / `normalize_arc_padding()`）与 [doc/lessons-learned.md](doc/lessons-learned.md)「安装包元数据必须取产物的成员顺序」
 
 ### 6. 备份策略
 

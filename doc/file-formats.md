@@ -477,7 +477,7 @@ LNG 是 AdvHD 引擎的文本替换机制，每个含文本的 `.ws2` 对应一�
 
 ## Script.arc（Lua 脚本）
 
-Res 303 新增的归档，包含游戏系统界面的 Lua 脚本。
+包含游戏系统界面的 Lua 脚本的归档。
 
 ### 成员列表（14 个）
 
@@ -499,7 +499,7 @@ Res 303 新增的归档，包含游戏系统界面的 Lua 脚本。
 - 支持多语言切换
 - 替代原版的纯文本系统界面
 
-**注意**：Steam 版 CROSS†CHANNEL 不含此归档（本项目由 Res 303 借入）；
+**注意**：Steam 版 CROSS†CHANNEL 不含此归档（本补丁提供）；
 同引擎的 A Sky Full of Stars 原版即带有 `Script.arc`，其官方简中语言包另有
 `zh-CN/Script.arc`（只含一个 `ui_language.lua`）覆盖。
 
@@ -516,16 +516,16 @@ Res 303 新增的归档，包含游戏系统界面的 Lua 脚本。
 | `LUAC_INT` | `0x5678`（8 字节） |
 | `LUAC_NUM` | `370.5`（double，8 字节） |
 
-**与上游 Lua 5.3 的两处差异**（穷举验证的唯一解，详见
+**与官方 Lua 5.3 的两处差异**（穷举验证的唯一解，详见
 [engine-mechanics.md](engine-mechanics.md)）：
 
-1. **字符串长度字段是 1 字节**（上游为 `sizeof(size_t)` = 4 字节）；
+1. **字符串长度字段是 1 字节**（官方为 `sizeof(size_t)` = 4 字节）；
 2. **opcode 枚举在索引 9 处多一个**，其后全部后移 1 位 ——
-   `op=10` 是 `SETTABLE`、`op=11` 是 `NEWTABLE`（上游为 9/10）。
+   `op=10` 是 `SETTABLE`、`op=11` 是 `NEWTABLE`（官方为 9/10）。
 
 `LegacyGame.inc` 是**纯文本**的 include 清单（CRLF，每行 `include "xxx"`），
 决定实际加载哪些成员。**`LegacyGame.lua` 不在清单里，是死代码**
-（ASF 原版同样如此，非 Res 303 的改动）。
+（ASF 原版同样如此，非补丁的改动）。
 
 工具：`tool/luac53.py`（解析）/ `tool/luadis53.py`（反汇编，`--all` 可全量）。
 

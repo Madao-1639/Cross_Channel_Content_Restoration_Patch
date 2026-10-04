@@ -134,7 +134,7 @@ CC 的 `AdvHD.exe` 的 `.text` 是**加壳**的（熵 8.00，开头即随机字�
 
 ### CROSS†CHANNEL 的 LAYER_ORDER
 
-Steam 版与 Res 303 的 LAYER_ORDER 内容完全相同：
+Steam 版与第三方补丁的 LAYER_ORDER 内容完全相同：
 
 ```
 0x3f 0x13 ev\x00 bg01\x00 bg02\x00 st01\x00 st02\x00 st03\x00 st04\x00 st05\x00 
@@ -374,10 +374,17 @@ PNA 是分层图像容器。**每个非空图层的数据块本身就是一张�
 | +0x14 | u32 | 数据块字节数（0 表示该图层无数据） |
 | +0x18 | u32 | `u0`：动画相位标记。0 = 基础帧，1/2 = 子图层组边界哨兵 |
 | +0x1c | u32 | 相位计数器（同组内递减，组末为 -1） |
-| +0x20 | s32 | 图层左上角 x（**最后一条记录没有这两个字段**） |
-| +0x24 | s32 | 图层左上角 y（同上） |
+| +0x20 | s32 | 图层左上角 x |
+| +0x24 | s32 | 图层左上角 y |
+
+⚠️ **最后一条记录只有 24 字节：+0x18 起的 `u0`/相位/x/y 四个字段全都不存在**（「步长 40、最后一条 24」少的正是这尾随 16 字节）。
+若解析器对最后一条也按 40 字节记录读 `u0`/相位，实际读到的是数据区里 PNG 的头 8 字节；只读不写时无害。
+**写回（重序列化）时会把假字段写回去、每个文件多出 8 字节**，`serialize` 往返回归会抓出该问题（见 [pna-resources.md](pna-resources.md)「PNA 图层替换」）。
 
 数据区起点固定为 `0x24 + 40 * layer_count - 16`，各数据块按记录顺序紧邻排列。
+基于这一布局，`tool/pna.py` 支持**重序列化**（`serialize`）：头部与记录表逐字段重建、
+数据区顺序拼接 —— 对未改动的 pna 逐字节保真；换图层只需改对应图层的记录与数据块
+（SysGraphic UI 汉化用；签名扫描件不支持写回）。
 
 **记录数 ≠ 图片数**：`layer_count` 是记录条数，空图层（`size == 0`）不占数据区。
 例如 `SYS_AUTO.pna` 有 6 条记录，只对应 4 张图。
@@ -459,7 +466,7 @@ v11 = dword_92A374[idx]         // 每槽一张表（音量等，初始化为 -1
 | 语料 | 48000 Hz | 44100 Hz |
 |---|--:|--:|
 | Steam 自带语音（`backup/Voice.arc`，15,144 条） | **15,144** | 0 |
-| 原版录音（`CROSS_CHANNEL_Original/Voice.arc`，8,704 条） | 0 | **8,704** |
+| 原版录音（原版游戏归档 `Voice.arc`，8,704 条） | 0 | **8,704** |
 
 两版**各自内部完全统一**，但互不相同 ⇒ 补入的原版录音**无一例外**都要重采样
 （这就足以解释该步的必要性，与下面那条崩溃嫌疑无关）。
@@ -584,7 +591,7 @@ if ( !v13 )                       // v13 = 比较结果
 | 事件 CG 槽 | 双槽（`ev01`/`ev02`） | 单槽（`ev`） |
 | ev 槽限制 | 7 字节 stem 硬限制 | **待实测** |
 | blink/talk 子图层 | ✅ 有（`ev01blink`/`ev01talk` 三元组，用于眨眼、口型） | ❌ LAYER_ORDER 不包含（引擎可能仍按 PNA 内部结构处理动画，但不显式注册子图层） |
-| `Script.arc` | Steam 版无 | Res 303 借入 |
+| `Script.arc` | Steam 版无 | 第三方补丁借入 |
 | `.text` 段 | 明文，可反汇编 | 加密（结论以外推为准） |
 
 ## E-mote 表情系统
@@ -633,9 +640,9 @@ AdvHD 引擎使用 Lua 5.3 作为脚本系统的扩展。
 之前"解不出"是因为拿 utf-8 / utf-16le / gbk / cp932 去解**字节码**（而非源码文本）。
 `tool/ws2.py` 的 rot6 也不适用。
 
-与上游 Lua 5.3 有**两处差异**，都是穷举验证出的唯一解：
+与官方 Lua 5.3 有**两处差异**，都是穷举验证出的唯一解：
 
-| 项 | 上游 5.3 | 本引擎 |
+| 项 | 官方 5.3 | 本引擎 |
 |---|---|---|
 | 字符串长度字段 `LoadSize` | `sizeof(size_t)` = 4 字节 | **1 字节** |
 | opcode 枚举 | 47 个 | 在**索引 9 处多一个**，其后全部后移 1 位 |
@@ -646,8 +653,8 @@ AdvHD 引擎使用 Lua 5.3 作为脚本系统的扩展。
 没有长度 ≥ 256 的字符串。
 
 **多出的 opcode**：该码（索引 9）在整个 `Script.arc` —— 753 个 proto、约 13 万条指令 ——
-里**从未出现**，身份未知，也不影响反汇编。`op=10` 是 `SETTABLE`、`op=11` 是 `NEWTABLE`
-（上游是 9/10），可由 `g_fonts = {name=..., file=..., CharSet=...}` 的构造代码实证。
+里**从未出现**，身份未知，也不影响反汇编。
+`op=10` 是 `SETTABLE`、`op=11` 是 `NEWTABLE`（官方是 9/10），可由 `g_fonts = {name=..., file=..., CharSet=...}` 的构造代码实证。
 
 工具：`tool/luac53.py`（解析）+ `tool/luadis53.py`（反汇编，753 个 proto 零问题）。
 用法：
@@ -666,7 +673,7 @@ include "LegacyGame_utf8"    include "menu_config"    include "ui_button"
 include "ui_language"        include "ui_scrollbar"
 ```
 
-**`LegacyGame.lua`（147 KB）不在清单里 —— 它是死代码。** 且这不是 Res 303 的改动：
+**`LegacyGame.lua`（147 KB）不在清单里 —— 它是死代码。**
 A Sky Full of Stars 原版的 `LegacyGame.inc` **同样 include `LegacyGame_utf8`**。
 那份 CP932 的大文件是引擎/发行方遗留，UTF-8 才是引擎的标准路径。
 
@@ -712,9 +719,7 @@ A Sky Full of Stars 原版的 `LegacyGame.inc` **同样 include `LegacyGame_utf8
 
 ### 本项目的修正
 
-Res 303 补丁在 `Rio.arc` 里放了 `NameTable.txt`（73 行），**内容与脚本的 73 个
-`%LC` 名字一一对应、零偏差**，中文也是简体 —— 表本身是对的，**只是前缀写成了
-`%LR`**，与脚本的 `%LC` 对不上，引擎查不到，名字框就一直显示英文。
+第三方补丁在 `Rio.arc` 里放了 `NameTable.txt`（73 行），**内容与脚本的 73 个 `%LC` 名字一一对应、零偏差**，中文也是简体 —— 表本身是对的，**只是前缀写成了 `%LR`**，与脚本的 `%LC` 对不上，引擎查不到，名字框就一直显示英文。
 
 修正：`script/fix_nametable_prefix.py`（把行首与制表符后的 `%LR` 改成 `%LC`，
 备份 + 回读校验 + 幂等）。
@@ -726,14 +731,14 @@ Res 303 补丁在 `Rio.arc` 里放了 `NameTable.txt`（73 行），**内容与�
 
 | | A Sky Full of Stars | CROSS†CHANNEL |
 |---|---|---|
-| 语言目录 | `zh-CN/` | 无（Res 303 借 `Script.arc` 提供 Lua） |
+| 语言目录 | `zh-CN/` | 无（第三方补丁借 `Script.arc` 提供 Lua） |
 | 目录内容 | `AdvHDLang.dll`、`Fonts.arc`、`Rio.arc`、`Script.arc`、`SysGraphic.arc` | — |
 | 中文剧本载体 | `zh-CN/Rio.arc`：298 个 `.lng` + `NameTable.txt` | `Rio.arc` 内的 `.lng` + `NameTable.txt` |
 
 **ASF 的中文包里没有 ws2** —— 剧本仍用英文 ws2，中文全部经 `.lng`（正文/选项）
 与 `NameTable.txt`（人名）注入。这对本项目是可直接复用的范式。
 
-`ui_language.lua` 是语言开关，官方简中版与 Res 303 的**实现完全相同**：
+`ui_language.lua` 是语言开关，官方简中版与第三方补丁的**实现完全相同**：
 
 ```lua
 function getLangPatchFlag()  PatchFlag = true;  return PatchFlag  end
@@ -813,8 +818,7 @@ function setInitLang()       g_altLanguage = true                 end
 
 - [x] lng 文件的文本替换机制 —— 只覆盖 `0x14` 正文与 `0f` 选项，按**池槽位序**定位；
       见 [localization.md](localization.md)「lng 位置对应」
-- [x] 字体文件的加载机制 —— `CLegacyFontInfo:create` 以 `file`/`name`/`CharSet` 从
-      `Fonts.arc` 取 PTF；`CharSet = GB2312_CHARSET` 是简体显示的关键（Res 303 已设）
+- [x] 字体文件的加载机制 —— `CLegacyFontInfo:create` 以 `file`/`name`/`CharSet` 从 `Fonts.arc` 取 PTF；`CharSet = GB2312_CHARSET` 是简体显示的关键（第三方补丁已设）
 - [x] 脚本内窄字节文本的编码 —— CP932（见「文本编码路径」）
 - [x] 角色名替换机制 —— `NameTable.txt`（见「名字替换表」）
 - [x] **名字框显示简体中文** —— `NameTable.txt` 前缀改为 `%LC` 后实机验证通过（见「名字替换表」）
@@ -824,7 +828,6 @@ function setInitLang()       g_altLanguage = true                 end
 1. **优先实测**：资源注册、显示效果一类问题，A/B 测试 > 静态逆向（快，且是确定性结论）
 2. **但也别放弃逆向**：有明文样本时静态分析能给出实测难以枚举的结论（见上文）
 3. **先找同引擎的官方样本**：「实测优先」之前先问这个机制在同引擎的其他游戏里长什么样
-4. **复用而不要盲信**：Res 303 的方案可作参考，但其产物未经 Steam 版验证（见
-   [lessons-learned.md](lessons-learned.md) 「不能盲信第三方产物，也不能盲信外部复审」）
+4. **复用而不要盲信**：第三方补丁的方案可作参考，但其产物未经 Steam 版验证（见 [lessons-learned.md](lessons-learned.md)「不能盲信第三方产物，也不能盲信外部复审」）
 5. **工具选择**：静态分析 IDA Pro / Ghidra；动态调试 x64dbg / WinDbg；
    文件分析 010 Editor / HxD；最终验证 —— 修改游戏文件 + 运行游戏

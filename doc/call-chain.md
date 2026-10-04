@@ -28,7 +28,7 @@
 | `_en` | Steam 原版脚本 | 363 个 |
 
 **本补丁不新增脚本名**（见下「就地插入接线」）：沿用 Steam 原有的 363 个脚本名，
-内容就地改写。历史上 Res303 引入的 `CNR###_en.ws2` 还原脚本系列已全部退出。
+内容就地改写。
 
 ### 分支标识
 
@@ -44,7 +44,7 @@
 |------|------|------|
 | 未改动 | 351 | 与 Steam 原档逐字节相同 |
 | 就地插入 | 12 | 见下表；出口保持 Steam 原档不变 |
-| 还原脚本 | 0 | `CNR###` 系列已全部退出 |
+| 还原脚本 | 0 | — |
 
 ---
 
@@ -53,7 +53,7 @@
 ### 问题
 
 Steam 删除 H 场景时，会把该场景压成**删节版**留在宿主脚本里（实测宿主是**按序跑完整场**的，
-H 段被压成零头）。Res303 把完整的还原脚本追加在宿主末尾，于是宿主先播完整场删节版、还原脚本
+H 段被压成零头）。第三方补丁把完整的还原脚本追加在宿主末尾，于是宿主先播完整场删节版、还原脚本
 再完整播一遍 —— **顺序倒置 + 局部重复**（详见 [call-chain.md](call-chain.md)「就地插入接线」）。
 
 ### 统一形状
@@ -75,7 +75,7 @@ lo_eff = lo + 首端重合长度
 ```
 
 - **接缝**与**交接点**由「源 WSC ↔ 宿主 lng ↔ CCS」三方对位定出
-  （与 Res303 `docs/report.json` 的 `source_range` **11/11 逐值一致**）。
+  （与第三方补丁报告的 `source_range` **11/11 逐值一致**）。
 - **对位只能用显示文本**。语音名 / 立绘名 / 背景名三个结构锚点**实测全部不可用**：
   Steam 侧语音按角色全局重编、立绘被重编（原版 `TCMM0002C` ↔ Steam `TCMM1001C`）、
   背景与 CG 会被替换重排。
@@ -205,7 +205,7 @@ python script/final_verification.py      # 全量验收
 | 语音 | 原名（原版语音名，Steam 侧未重编） | `Voice.arc` |
 | BGM / SE | 原名 | 游戏安装目录（不在本项目分发的归档里）|
 
-**扩覆盖范围要补资源**：把还原段从 Res303 的那一段扩到交接点之后，新覆盖的句子会引用补丁里还没有的资源。已实测补入 **186 条语音**（`script/import_missing_voices.py`，源：原版游戏的老式归档 `Voice.arc`）。`.soundlevel` 不需要——无包络的 OGG 照样播，本项目已有实机验证过的先例（`YOU035A5000` 等 8 条）。
+**扩覆盖范围要补资源**：把还原段从第三方补丁覆盖的那一段扩到交接点之后，新覆盖的句子会引用补丁里还没有的资源。已实测补入 **186 条语音**（`script/import_missing_voices.py`，源：原版游戏的老式归档 `Voice.arc`）。`.soundlevel` 不需要——无包络的 OGG 照样播，本项目已有实机验证过的先例（`YOU035A5000` 等 8 条）。
 
 ## 分支处理
 
@@ -243,14 +243,14 @@ python script/final_verification.py      # 全量验收
 |---|---|
 | `backup/Rio.arc` | Steam 原档脚本（出口、开场件的比对基准） |
 | `resource/corpus/wsc/` | 324 个已解密的原版 WSC（原生 WS2 不落副本，直读 `backup/Rio.arc`） |
-| `resource/carried_lng/`、`resource/carried_soundlevel.json` | 从上游内化的表外 lng 与 `.soundlevel` 侧车 |
-| `resource/reused_archives/` | 完全复用的上游归档（字体、Lua 界面） |
+| `resource/carried_lng/`、`resource/carried_soundlevel.json` | 从第三方补丁内化的表外 lng 与 `.soundlevel` 侧车 |
+| `resource/reused_archives/` | 完全复用的第三方补丁归档（字体、Lua 界面） |
 
-项目外输入（汉化组逐行译文、原版游戏的老式归档、上游补丁构建）由 `script/internalize/` 一次性
+项目外输入（汉化组逐行译文、原版游戏的老式归档、第三方补丁构建）由 `script/internalize/` 一次性
 内化到 `resource/`，此后构建不再依赖它们；`script/gen/` 下的表生成脚本仍会读同级目录。
 
 ## 参考资料
 
-- Res 303 补丁的调用链组织方式
+- 第三方补丁的调用链组织方式
 - A Sky Full of Stars 项目的穿插式调用链经验
 - [call-chain.md](call-chain.md)「就地插入接线」 / [call-chain.md](call-chain.md)「就地插入接线」 —— 接缝错位与就地插入的技术要点
