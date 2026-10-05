@@ -1,6 +1,6 @@
 {
   "Rio.arc": {
-    "checksum": "90f77f548c2da6db2754da7d0c801916346428aa71ce7ff19d6e38992f1199c0",
+    "checksum": "ddb2f30d238297d32165d82d63e85c5853bb3e0e349f1de9bf4ffe1d89a4fa65",
     "members": [
       {
         "name": "AN_001.ws2",
@@ -137894,6 +137894,131 @@
       {
         "name": "ui_scrollbar.lua",
         "type": "added"
+      }
+    ]
+  },
+  "SysGraphic.arc": {
+    "checksum": "0d3404b8835dd5befecab64968feaffce05a3ae4c4acda4f29e4d0862106583c",
+    "members": [
+      {
+        "name": "SYS_AUTO.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_CGBack.png",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_GalleryBGM.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_GalleryBase.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_GalleryBrowser.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_GalleryCg.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_GalleryReplay.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_MSW_N.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_SKIP.pna",
+        "type": "keep"
+      },
+      {
+        "name": "SYS_Select.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Arrow.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_BackLog.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_ClickWait.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_ClickWait_N.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Dialog.pna",
+        "type": "modified"
+      },
+      {
+        "name": "Sys_Msw.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Preview.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Smoke.png",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Snow.png",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_Title.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_config_Arrow.pna",
+        "type": "keep"
+      },
+      {
+        "name": "Sys_emoji.png",
+        "type": "keep"
+      },
+      {
+        "name": "sys_config_P1.pna",
+        "type": "modified"
+      },
+      {
+        "name": "sys_config_P2.pna",
+        "type": "modified"
+      },
+      {
+        "name": "sys_config_P3.pna",
+        "type": "modified"
+      },
+      {
+        "name": "sys_config_P4.pna",
+        "type": "keep"
+      },
+      {
+        "name": "sys_config_P4TH.pna",
+        "type": "keep"
+      },
+      {
+        "name": "sys_config_P6.pna",
+        "type": "keep"
+      },
+      {
+        "name": "sys_config_P7.pna",
+        "type": "keep"
+      },
+      {
+        "name": "sys_config_base.pna",
+        "type": "keep"
       }
     ]
   }
