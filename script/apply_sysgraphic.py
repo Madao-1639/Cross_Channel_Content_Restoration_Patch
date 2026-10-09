@@ -3,7 +3,7 @@
 背景：Steam 版系统界面的文案烙在 `SysGraphic.arc` 的 PNA 图层里（设置页、标题菜单等），
 引擎按「PNA 记录下标」取图层显示（见 doc/engine-mechanics.md「PNA 二进制布局」）。
 汉化素材按**图层**提供，换掉对应图层的数据块即完成 UI 汉化 —— 归档成员集合与顺序、
-pna 记录数、图层相位/坐标一律不动。
+pna 记录数、图层坐标/layer_id/u0 一律不动。
 
 约定（资源目录布局）：
     resource/SysGraphic/<pna 名>/L<图层下标>.png
@@ -84,7 +84,7 @@ def apply_pna(sub_name, data, layer_files):
                              % (sub_name, f.name, idx, p.count))
         layer = p.layers[idx]
         if layer.data is None:
-            raise SystemExit('[ERR] %s: %s 指向空图层（无数据块）。空图层是相位/结构哨兵，'
+            raise SystemExit('[ERR] %s: %s 指向空图层（无数据块）。空图层是动画组边界/结构哨兵，'
                              '不是可显示帧，不能填图' % (sub_name, f.name))
         png = f.read_bytes()
         try:
@@ -124,8 +124,8 @@ def apply_pna(sub_name, data, layer_files):
             raise SystemExit('[ERR] %s: 重建后图层 %d 记录表 w/h(%dx%d) != IHDR(%dx%d)'
                              % (sub_name, k, b.width, b.height,
                                 *pna.png_dimensions(b.data)))
-        if (a.x, a.y, a.u0, a.phase, a.opacity) != (b.x, b.y, b.u0, b.phase, b.opacity):
-            raise SystemExit('[ERR] %s: 重建后图层 %d 的坐标/相位字段变了' % (sub_name, k))
+        if (a.x, a.y, a.u0, a.layer_id, a.opacity) != (b.x, b.y, b.u0, b.layer_id, b.opacity):
+            raise SystemExit('[ERR] %s: 重建后图层 %d 的坐标/layer_id/u0 字段变了' % (sub_name, k))
     return new_bytes, changed
 
 

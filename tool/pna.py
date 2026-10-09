@@ -1,48 +1,41 @@
-"""PNA（AdvHD 分层图像）读写器。
+"""PNA（AdvHD 分层图像，PNAP 容器）读写器。
 
-PNA 是 AdvHD 引擎的分层图像格式，文件后缀 `.pna`。原先只读（Steam 原档一律原样保留）；
-2026-10 起支持**重序列化**（`serialize`）：SysGraphic.arc 的 UI 汉化按「同名图层换图」
-实施 —— 每个非空数据块本就是一张完整 PNG，换图只需改该图层的数据块与记录表的
-宽高/大小字段（见 doc/localization.md「SysGraphic.arc」）。剧情资源（立绘/蒙版）仍不写。
+PNA 是 AdvHD 引擎的分层图像格式，文件后缀 `.pna`。支持**重序列化**（`serialize`）：
+SysGraphic.arc 的 UI 汉化按「同名图层换图」实施 —— 每个非空数据块本就是一张完整 PNG，
+换图只需改该图层的数据块与记录表的 w/h/大小字段（见 doc/pna-resources.md「PNA 图层替换」）。
+剧情资源（立绘/蒙版）仍不写。
 
 ⚠️ 写回的**唯一硬不变量**：记录表的 w/h 与 `data` 内嵌 PNG 的 IHDR 一致（原档即如此，
 换图后必须维持）。`scanned=True`（记录表未覆盖全文件）的 PNA **不支持**重序列化：
 数据区尾部的未解释字节机制未查明，重排数据区可能破坏它 —— 报 `PnaError`，不猜。
 
-文件布局（全部小端序，逆向结论，见 doc/engine-mechanics.md「PNA 二进制布局」）：
+文件布局（全部小端序，逆向结论，见 doc/engine-mechanics.md「PNA 二进制布局」；
+经本项目全部 550+ 文件 / 3962 条记录验证：box_w/h 与 PNG IHDR 逐条一致、
+不透明度标记逐条一致、数据区恰好覆盖到文件尾）：
 
     +0x00  char[4]  "PNAP"
-    +0x04  u32      表大小字段 = 12 + 44 * layer_count（仅校验用，非偏移）
+    +0x04  u32      表大小字段 = 44 * layer_count + 12（仅校验用，不是文件偏移）
     +0x08  u32      画布宽
     +0x0c  u32      画布高
     +0x10  u32      图层记录数 layer_count
-    +0x14  u32      未知（0 或 1）
-    +0x18  s32      未知（-1 / 1 / layer_count-1）
-    +0x1c  u32      未知
-    +0x20  u32      未知
-    +0x24  记录区   layer_count 条记录，步长 40 字节，
-                    最后一条只有 24 字节（无尾随 16 字节）
+    +0x14  记录区   layer_count 条记录，每条 40 字节（10 × i32），均匀排列
+    之后   数据区   起点 = 0x14 + 40 * layer_count，按记录顺序紧邻排列
 
 记录字段（相对记录起点）：
 
-    +0x00  u32      图层宽
-    +0x04  u32      图层高
-    +0x08  u32      恒 0
-    +0x0c  u32      通常是 0
-    +0x10  f32      恒 1.875（空图层为 0.0）
-    +0x14  u32      数据块字节数（0 表示该图层无数据）
-    +0x18  u32      u0：动画相位标记。0 = 基础帧；1/2 = 子图层组边界哨兵
-    +0x1c  u32      相位计数器（同组内递减）
-    +0x20  s32      图层左上角 x
-    +0x24  s32      图层左上角 y
+    +0x00  i32      u0：0 = 真实图层；1/2 = 动画帧组边界哨兵（该条无数据块，layer_id = -1）
+    +0x04  i32      layer_id：脚本引用的位置量 = layer_count-1-index（哨兵记录为 -1）
+    +0x08  s32      图层左上角 x（画布坐标）
+    +0x0c  s32      图层左上角 y
+    +0x10  i32      box_w（== 内嵌 PNG 的宽，写回硬不变量）
+    +0x14  i32      box_h（== 内嵌 PNG 的高）
+    +0x18  i32      保留（观测样本恒 0）
+    +0x1c  double   不透明度标记（真实图层 1.0、空图层 0.0；个别半透明图层为 0~1 之间的其他值）
+    +0x24  i32      数据块字节数（0 表示该图层无数据）
 
-⚠️ **最后一条记录只有 24 字节**：+0x18 起的 u0/phase/x/y 四个字段**都不存在**
-（「步长 40、最后一条 24」指的就是少了这尾随 16 字节）。旧实现对最后一条也读
-u0/phase，实际读到的是数据区里 PNG 的头 8 字节 —— 只读不写时无害，重序列化时
-就会把假字段写回（2026-10 往返回归抓出，现按「最后一条无这四个字段」处理）。
-
-数据块自 0x24 + 40*layer_count - 16 起顺序排列，**每个非空数据块都是一张完整的
-PNG**（含签名与 IEND），因此「PNA → PNG」是切片而非重绘，可逐字节保真。
+⚠️ 引擎按**记录下标**取图层（`39` 显示指令的帧号就是下标，0-based）；脚本引用的
+layer_id 是**纯位置量**（= layer_count-1-index），不要拿记录里存的 layer_id 字段
+当查询键（个别文件不符，命中率非 100%）。
 
 注意：`SYS_GalleryBrowser.pna` 与 `Sys_Msw.pna` 的记录表算出的数据长度小于文件长度，
 即文件尾部还有记录表未覆盖的数据块。这两个文件改用签名扫描（`png_spans`）取全。
@@ -53,9 +46,8 @@ from pathlib import Path
 MAGIC = b'PNAP'
 PNG_SIG = b'\x89PNG\r\n\x1a\n'
 
-HEADER_SIZE = 0x24
+HEADER_SIZE = 0x14
 ENTRY_SIZE = 40
-LAST_ENTRY_SIZE = 24
 
 
 class PnaError(ValueError):
@@ -63,42 +55,41 @@ class PnaError(ValueError):
 
 
 class Layer(object):
-    """一个图层。`data` 为 None 表示该图层无数据块（空图层）。
+    """一个图层。`data` 为 None 表示该图层无数据块（空图层 / 哨兵记录）。
 
-    `zero` / `unk` 是记录 +0x08 / +0x0c 的原始字段（恒 0 / 通常是 0）—— serialize
-    逐字段重建记录表，必须带着它们才能逐字节保真。"""
+    `reserved` 是记录 +0x18 的原始字段（观测样本恒 0）—— serialize
+    逐字段重建记录表，必须带着它才能逐字节保真。"""
 
-    __slots__ = ('index', 'width', 'height', 'zero', 'unk', 'u0', 'phase', 'x', 'y',
-                 'opacity', 'offset', 'size', 'data')
+    __slots__ = ('index', 'u0', 'layer_id', 'x', 'y', 'width', 'height',
+                 'reserved', 'opacity', 'offset', 'size', 'data')
 
-    def __init__(self, index, width, height, zero, unk, u0, phase, x, y, opacity,
-                 offset, size, data):
+    def __init__(self, index, u0, layer_id, x, y, width, height,
+                 reserved, opacity, offset, size, data):
         self.index = index
-        self.width = width
-        self.height = height
-        self.zero = zero
-        self.unk = unk
         self.u0 = u0
-        self.phase = phase
+        self.layer_id = layer_id
         self.x = x
         self.y = y
+        self.width = width
+        self.height = height
+        self.reserved = reserved
         self.opacity = opacity
         self.offset = offset
         self.size = size
         self.data = data
 
     def __repr__(self):
-        return '<Layer %d %dx%d @(%s,%s) size=%d%s>' % (
-            self.index, self.width, self.height, self.x, self.y, self.size,
-            '' if self.data else ' empty')
+        return '<Layer %d layer_id=%s %dx%d @(%s,%s) size=%d%s>' % (
+            self.index, self.layer_id, self.width, self.height, self.x, self.y,
+            self.size, '' if self.data else ' empty')
 
 
 class Pna(object):
     __slots__ = ('path', 'width', 'height', 'count', 'layers', 'data_start', 'scanned',
-                 'holes', 'table_size_field', 'header_tail')
+                 'holes', 'table_size_field')
 
-    def __init__(self, path, width, height, count, layers, data_start, scanned, holes=(),
-                 table_size_field=None, header_tail=b''):
+    def __init__(self, path, width, height, count, layers, data_start, scanned,
+                 holes=(), table_size_field=None):
         self.path = path
         self.width = width            # 画布宽
         self.height = height          # 画布高
@@ -107,9 +98,8 @@ class Pna(object):
         self.data_start = data_start
         self.scanned = scanned        # True = 记录表未覆盖全文件，图层由签名扫描得出
         self.holes = holes            # 数据区中不含 PNG 的字节区间 [(start, size), ...]
-        # 头部的原始字段（serialize 逐字节重建头部用；scanned 件不给）
-        self.table_size_field = table_size_field   # +0x04 的原始 u32（仅校验用，非偏移）
-        self.header_tail = header_tail             # +0x14..0x24 的 4 个未知 u32 原文
+        # +0x04 的原始 u32（仅校验用，非偏移；scanned 件不给）
+        self.table_size_field = table_size_field
 
     @property
     def png_layers(self):
@@ -168,7 +158,7 @@ def _scanned_layers(blob, data_start, path):
             holes.append((end, off - end))
         end = off + size
         w, h = struct.unpack_from('>II', blob, off + 16)
-        layers.append(Layer(k, w, h, None, None, None, None, None, None, None,
+        layers.append(Layer(k, None, None, None, None, w, h, None, None,
                             off, size, blob[off:off + size]))
     if end < len(blob):
         holes.append((end, len(blob) - end))
@@ -184,7 +174,7 @@ def parse(blob, path='<bytes>'):
     if blob[:4] != MAGIC:
         raise PnaError('%s: 不是 PNA 文件（magic=%r）' % (path, blob[:4]))
     table_size_field, width, height, count = struct.unpack_from('<IIII', blob, 4)
-    data_start = HEADER_SIZE + ENTRY_SIZE * (count - 1) + LAST_ENTRY_SIZE if count > 0 else HEADER_SIZE
+    data_start = HEADER_SIZE + ENTRY_SIZE * count
     if count <= 0 or data_start > len(blob):
         raise PnaError('%s: 记录表越界（layer_count=%d）' % (path, count))
 
@@ -192,16 +182,9 @@ def parse(blob, path='<bytes>'):
     off = data_start
     for k in range(count):
         base = HEADER_SIZE + ENTRY_SIZE * k
-        w, h, zero, unk, opacity, size = struct.unpack_from('<IIIIfI', blob, base)
-        # ⚠️ 最后一条记录只有 24 字节：**没有 u0/phase，也没有 x/y**（「无尾随 16 字节」
-        #   指的就是这 16 字节）。旧实现对最后一条也读 base+0x18 的 u0/phase —— 实际读到的
-        #   是数据区里 PNG 的头 8 字节；只读不写时无害，重序列化时就会把它当字段写回去
-        #   （2026-10 往返回归抓出）。u0/phase/x/y 对最后一条一律记 None。
-        if k < count - 1:
-            u0, phase = struct.unpack_from('<ii', blob, base + 0x18)
-            x, y = struct.unpack_from('<ii', blob, base + 0x20)
-        else:
-            u0 = phase = x = y = None
+        u0, layer_id, x, y, w, h, reserved = struct.unpack_from('<7i', blob, base)
+        opacity, = struct.unpack_from('<d', blob, base + 0x1c)
+        size, = struct.unpack_from('<i', blob, base + 0x24)
         data = None
         if size:
             if off + size > len(blob):
@@ -211,7 +194,7 @@ def parse(blob, path='<bytes>'):
             if data[:8] != PNG_SIG:
                 raise PnaError('%s: 图层 %d 的数据块不是 PNG' % (path, k))
             off += size
-        layers.append(Layer(k, w, h, zero, unk, u0, phase, x, y, opacity,
+        layers.append(Layer(k, u0, layer_id, x, y, w, h, reserved, opacity,
                             off - size if size else None, size, data))
 
     if off != len(blob):
@@ -220,12 +203,12 @@ def parse(blob, path='<bytes>'):
         return Pna(path, width, height, count, layers, data_start, True, holes)
 
     return Pna(path, width, height, count, layers, data_start, False,
-               table_size_field=table_size_field, header_tail=blob[0x14:0x24])
+               table_size_field=table_size_field)
 
 
 def serialize(p):
-    """把 `parse` 出的 Pna 重序列化为字节。头部与记录表逐字段重建（含原始未知字段），
-    数据区按记录顺序拼接非空图层的 PNG —— 对未改动的图层逐字节保真（已全量回归）。
+    """把 `parse` 出的 Pna 重序列化为字节。头部与记录表逐字段重建、数据区按记录顺序
+    拼接非空图层的 PNG —— 对未改动的图层逐字节保真（已全量回归）。
 
     替换图层时由调用方改 `Layer` 的 `data` / `size` / `width` / `height`；
     **记录表的 w/h 必须与 data 内嵌 PNG 的 IHDR 一致**（写回的唯一硬不变量，见模块 docstring）。
@@ -235,12 +218,10 @@ def serialize(p):
     out = bytearray()
     out += MAGIC
     out += struct.pack('<IIII', p.table_size_field, p.width, p.height, p.count)
-    out += p.header_tail
-    for k, l in enumerate(p.layers):
-        out += struct.pack('<IIIIfI', l.width, l.height, l.zero, l.unk, l.opacity, l.size)
-        if k < p.count - 1:
-            out += struct.pack('<ii', l.u0, l.phase)
-            out += struct.pack('<ii', l.x, l.y)
+    for l in p.layers:
+        out += struct.pack('<7i', l.u0, l.layer_id, l.x, l.y, l.width, l.height, l.reserved)
+        out += struct.pack('<d', l.opacity)
+        out += struct.pack('<i', l.size)
     for l in p.layers:
         if l.data is not None:
             out += l.data

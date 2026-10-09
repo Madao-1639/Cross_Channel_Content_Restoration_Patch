@@ -328,7 +328,7 @@ def check_sysgraphic():
       * `resource/SysGraphic/<pna>/L<下标>.png` 的每一张都必须逐字节等于 `asset/SysGraphic.arc`
         里对应 pna 的对应图层；
       * 对应 pna 必须已与 `backup/` 的原档不同（替换生效），画布与记录数不变；
-      * **未列入替换的图层逐字节原样**、坐标/相位字段不变（防顺手改动）；
+      * **未列入替换的图层逐字节原样**、坐标/layer_id/u0 字段不变（防顺手改动）；
       * 全部图层的「记录表 w/h == 内嵌 PNG IHDR」不变量成立（PNA 写回的唯一硬不变量）；
       * 资源目录一个替换子目录都没有时，asset 不得与 Steam 原档有差异（多出来的差异来源不明）。
     """
@@ -399,8 +399,8 @@ def check_sysgraphic():
             if la.data != lb.data:
                 fail('%s.pna L%d 不在替换清单里，图层内容却被改动' % (sub.name, k))
                 bad_field += 1
-            elif (la.x, la.y, la.u0, la.phase, la.opacity, la.width, la.height) != \
-                    (lb.x, lb.y, lb.u0, lb.phase, lb.opacity, lb.width, lb.height):
+            elif (la.x, la.y, la.u0, la.layer_id, la.opacity, la.width, la.height) != \
+                    (lb.x, lb.y, lb.u0, lb.layer_id, lb.opacity, lb.width, lb.height):
                 fail('%s.pna L%d 不在替换清单里，记录字段却被改动' % (sub.name, k))
                 bad_field += 1
             else:
