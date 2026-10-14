@@ -4,7 +4,7 @@
 
 本补丁仅供已购买正版游戏的用户使用，不包含任何游戏本体文件。
 
-> **当前版本：v0.4.1** — 内容还原与汉化已落地，等待全量实机验证。
+> **当前版本：v0.4.2** — 内容还原与汉化已落地，等待全量实机验证。
 
 ![Banner](https://shared.steamstatic.com/store_item_assets/steam/apps/812560/library_hero.jpg?t=1573643366)
 
@@ -162,7 +162,7 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 
 遇到问题请提交 [Issue](../../issues)，附上：
 
-- 补丁版本与安装方式
+- 补丁版本
 - 出现问题的具体场景（角色线 + 大致进度；最好附上存档文件，位置在 `C:\Users\你的用户名\Saved Games\MoeNovel\CROSS†CHANNEL Steam Edition`）
 - 游戏弹出的错误日志（如有）
 - 问题的具体表现
