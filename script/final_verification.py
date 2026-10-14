@@ -308,6 +308,97 @@ def check_resource_pairing(rio, graphic, chip2, chip1, voice):
         ok('12 个就地插入宿主引用的图像/立绘/蒙版/语音全部可解析')
 
 
+def check_ws2_trailer(rio):
+    """**ws2 末尾 8 字节**（明文尾表）= `(0x14 条数, 0f 条目数)`。
+
+    引擎 `sub_4CCFE0` 加载 ws2 后取 `data[size-8]`/`data[size-4]` 交给 `sub_4B60A0`
+    分配「脚本已读位图」，容量 = `(n14+n0f+7)/8` 字节；而标记已读（`0x4B6330`）按**消息下标**
+    写位且**不检查容量** ⇒ 表值小于实际条数就写越界堆（实机 `0xc0000374`）。
+    2026-10-14 事故：流水线从未更新过这 8 字节（产物 363/363 与原档逐字节相同）⇒
+    97 个脚本表值过期、其中 80 个容量不足 ⇒ 还原场景（含 12 个宿主）概率性闪退。
+    Steam 原档在同样位置 **363/363 正确** —— 这就是本项的对照基准。
+    """
+    n = 0
+    bad = []
+    for name in sorted(k for k in rio if k.upper().endswith('.WS2')):
+        data = rio[name]
+        n += 1
+        want = ws2.trailer_counts(ws2.decode(data))
+        got = ws2.read_trailer(data)
+        if got != want:
+            bad.append('%s: 末尾 8 字节 %s != 实际 (0x14 条数, 0f 条目数) %s'
+                       % (name, got, want))
+    if n == 0:
+        fail('ws2 尾表：一个脚本都没核到')
+    elif bad:
+        for m in bad[:6]:
+            fail(m)
+        if len(bad) > 6:
+            fail('ws2 尾表：另有 %d 个脚本不合（共 %d/%d）' % (len(bad) - 6, len(bad), n))
+    else:
+        ok('ws2 末尾 8 字节 = (0x14 条数, 0f 条目数)：%d/%d 逐脚本相符' % (n, n))
+
+
+
+def check_seam_sprite_clear(rio):
+    """**接缝闸**：还原到脚本末尾的脚本，原版在末句之后清的立绘必须已经补上。
+
+    机制（2026-10-14 实机）：原版在末句后 `49 <位号> b=0` 清立绘再切背景，而本补丁尾段按口径
+    取自 Steam 原档（Steam 删节版那里本来没立绘 ⇒ 它不需要清）⇒ 还原段把立绘留在屏上。
+    判据用**同一个助手** `ws2.seam_clear()`：对产物跑一遍，必须是 no-op（否则就是还没补）。
+    """
+    import re as _re
+    from tool import wsc as _wsc
+    from tool.wsc2ws2 import hide_slots, portrait_slots  # noqa: F401  (portrait_slots 供 hide_slots 用)
+    WSC = Path('resource/corpus/wsc')
+
+    def _n(s):
+        if isinstance(s, bytes):
+            s = s.decode('cp932', 'replace')
+        s = _re.sub('(' + chr(92) + 'd|%[A-Za-z])+', '', s)
+        for ch in (chr(10), chr(0x3000), ' '):
+            s = s.replace(ch, '')
+        return s[:18]
+
+    n = miss = 0
+    for name in sorted(k for k in rio if k.upper().endswith('.WS2')):
+        stem = name[:-4].upper()
+        stem = stem[:-3] if stem.endswith('_EN') else stem
+        f = WSC / (stem + '.WSC')
+        if not f.exists():
+            continue
+        stream = ws2.decode(rio[name])
+        ins = [x for x in ws2disasm.disassemble(stream) if x.opcode == 0x14]
+        src = _wsc.disassemble(f.read_bytes())
+        sdl = [x for x in src if x.opcode in (0x41, 0x42)]
+        if not ins or not sdl or _n(ins[-1].fields.get('text', '')) != _n(sdl[-1].fields.get('text', '')):
+            continue                     # 只对「还原到脚本末尾」的脚本判
+        n += 1
+        need = {s for (o, s) in hide_slots(src).items() if o > sdl[-1].offset}
+        if not need:
+            continue
+        # 判据：末句之后、**第一处切背景（33）之前**，这些槽位必须已被 `37` 清掉
+        after, cleared, seen33 = False, set(), False
+        for x in ws2disasm.disassemble(stream):
+            if x.opcode == 0x14:
+                after, cleared, seen33 = True, set(), False
+            elif not after or seen33:
+                continue
+            elif x.opcode == 0x33:
+                seen33 = True
+            elif x.opcode == 0x37:
+                nm = (x.fields.get('name') or '').lower()
+                cleared = set(need) if nm == '*' else cleared | {nm}
+        lack = sorted(s for s in need if s not in cleared)
+        if lack:
+            miss += 1
+            fail('%s: 原版末句后清的立绘（%s）在切背景前未补 `37`' % (name, ','.join(lack)))
+    if n == 0:
+        fail('接缝闸：一个「还原到末尾」的脚本都没核到')
+    elif not miss:
+        ok('接缝立绘清除：%d/%d 个还原到末尾的脚本都已按原版补清' % (n, n))
+
+
 def _same_file(a, b, chunk=1 << 22):
     """分块比对两个文件是否逐字节相同（避免把 340 MB 整个读进内存）。"""
     if a.stat().st_size != b.stat().st_size:
@@ -691,6 +782,8 @@ def main():
     check_insert_counts(rio)
     check_row_once(rio)
     check_voice_channels(rio)
+    check_ws2_trailer(rio)
+    check_seam_sprite_clear(rio)
     check_voice_format_and_sidecar()
     check_sysgraphic()
     check_idempotency()

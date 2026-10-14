@@ -360,7 +360,8 @@ def main():
                 tail[rel + _off:rel + _off + 4] = ws2.encode(
                     struct.pack('<I', base + (_v - tail_off)))
                 fixed += 1
-        new_host = bytes(prefix) + seg_enc + bytes(tail)
+        # 尾表：插入段让 `0x14` 条数变了，末尾 8 字节必须按**最终流**重算（明文，见 tool/ws2.py fix_trailer）
+        new_host = ws2.fix_trailer(bytes(prefix) + seg_enc + bytes(tail))
 
         # ---- 校验 ----
         ni = ws2disasm.disassemble(ws2.decode(new_host))

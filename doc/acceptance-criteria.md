@@ -201,7 +201,16 @@
    - [ ] `python script/audit_choices.py` —— 池位连续性、条数等式、选项槽位形态
    - [ ] `python script/audit/audit_lng_semantics.py` —— 语义复审 triage
 
-5. **打包**
+5. **ws2 尾表 + 立绘清除（`final_verification.py` 的三道闸）**
+   - [x] **尾表**：`raw[-8:] == struct.pack('<II', 0x14 条数, 0f 条目数)`（363/363）
+   - [x] **接缝立绘清除**：还原到脚本末尾的 9 个脚本，原版末句后清的立绘必须在切背景前有 `37`（9/9）
+   - [ ] **转换区间内的 `49 b=0` → `37`**（待补独立闸：对「整脚本都被还原」的脚本，核
+         `hide_slots(源)` 的每一项都能在产物里找到对应 `37`；目前只由转换器本身保证）
+   - [x] 实机项：`CCB0013` 末句 → 第一次切背景前立绘已消失；中段那处（原版 `#458`）消失/重现均与原版一致
+   - 机制见 [engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」、
+     [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.8
+
+6. **打包**
    - [ ] `python script/generate_payload.py` —— 回读校验全 `[OK]`
 
 ## 实机测试清单
@@ -215,6 +224,10 @@
 - [ ] 剧情文本显示为简体中文，无乱码
 - [ ] **系统界面图片文案**：设置页等已汉化图层显示为简体中文、无越界错位
       （`SysGraphic.arc` 图层替换的实机确认）
+- [x] **消息数变多的还原场景不再闪退**：定点样本 `CCB0013_EN`（`15 → 235` 句）—— 实机已确认正常
+      （其余 `n_final > n_steam` 的脚本抽样同测；修复见 [engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」）
+- [ ] **`MessageFlag.dat` 里该脚本的位图容量 ≥ 所需位数**：定点样本 `CCB0013_EN` 的
+      `A ≥ 38`（尾表修复后应为 30 字节位图；修复前实测为 2 字节 ⇒ 写位越界，只是不一定立刻致命）
 - [ ] Steam 成就、保存/读取、菜单与系统功能不受影响
 
 ## 发布标准

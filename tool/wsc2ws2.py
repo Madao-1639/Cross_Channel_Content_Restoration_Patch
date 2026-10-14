@@ -206,7 +206,38 @@ def portrait_slots(instrs):
             out[i.offset] = PORTRAIT_SLOT_SECOND if second else PORTRAIT_SLOT_MAIN
     return out
 
-# WSC 0x03/0x49/0x47 等引擎状态原语 —— WS2 由图层块/引擎默认承担，跳过
+def hide_slots(instrs):
+    """`49 <位号> b=0`（隐藏立绘）偏移 -> 该清哪个 `stNN`。
+
+    口径：按**原版顺序**跟踪「每个位号当前绑的是哪个槽」——由「立绘 `48` + 紧随的 `49 b=1`」
+    给出（与 `portrait_slots()` 同源），隐藏时清的就是这个槽 ⇒ 显示与隐藏**同源**，
+    不可能清错层；位号从未绑过立绘（背景/其它位）不返回（保持跳过，背景由 `33`/`46` 承担）。
+
+    ⚠️ 必须用**整个脚本**的指令表（`opts.slot_context`）算，不能只看当前切片/单行：
+    A 路（text_map 逐行转换）每行都是一次新的转换，行内查不到前面几行绑的槽。
+    """
+    slots = portrait_slots(instrs)
+    cur, out = {}, {}
+    for k, i in enumerate(instrs):
+        if i.opcode == 0x48 and PORTRAIT_RE.match(i.fields.get('name', '')):
+            s = slots.get(i.offset)
+            if not s:
+                continue
+            for j in instrs[k + 1:k + 7]:
+                if j.opcode == 0x49 and j.fields.get('b') == 1:
+                    cur[j.fields.get('a')] = s
+                    break
+        elif i.opcode == 0x49 and i.fields.get('b') == 0:
+            s = cur.get(i.fields.get('a'))
+            if s:
+                out[i.offset] = s
+    return out
+
+
+# WSC 0x03/0x47 等引擎状态原语 —— 逐条有名承担者时才可跳（见 doc/wsc_to_ws2_conversion.md §3.8）
+# ⚠️ `0x49` **不能整类跳**：`b=1`（显示）与 `34`+`39`/`portrait_slots()` 冗余，但 `b=0`（隐藏）WS2 侧无等价物
+#   —— 实机证伪 2026-10-14（CCB0013 最后一句后应清立绘再切背景，立绘却挂到下一脚本）。
+#   正确做法：`49 <立绘位号> b=0` → 发射 `37 <对应 stNN>`（尚未实现，待位号→stNN 对齐后改）
 SKIPPED_OPS = None  # 由 default 分支统一处理并计数
 
 
@@ -216,7 +247,10 @@ class ConvertOptions:
     def __init__(self, **kw):
         self.voice_channel = kw.get('voice_channel', 'charCN')
         self.transfer_suffix = kw.get('transfer_suffix', '_EN')
-        self.exit_ff_a = kw.get('exit_ff_a', 8)          # 场景出口 ff.a（实测 8 可玩）
+        # ⚠️ **此处写的 `a` 是死值**：引擎真正读的是**末尾 8 字节明文尾表**（`[u32 0x14 条数][u32 0f 条目数]`），
+        # 写盘最后一步一律被 `ws2.fix_trailer()` 覆盖（见 doc/file-formats.md「末尾 8 字节」）。
+        # 保留该选项仅为兼容历史调用，**不要依赖它的值**。
+        self.exit_ff_a = kw.get('exit_ff_a', 8)
         self.bgm_slot = kw.get('bgm_slot', 'bgm01')
         self.se_slot = kw.get('se_slot', 'se01')
         self.bg_slot = kw.get('bg_slot', 'bg01')
@@ -278,6 +312,9 @@ class _Emitter:
         # `report['dialogues']` 只数切片内的对白，须加上切片前已发的对白数才是绝对行。
         self.dialogue_row_base = dialogue_row_base
         self.out = bytearray()
+        # 位号(`49 a`) -> 当前绑定的 stNN：由「立绘块 + 紧随的 `49 b=1`」推得（与 `portrait_slots()` 同源），
+        # `49 b=0` 时清同一个槽 —— 显示与隐藏同源，不可能清错层（见下 0x49 分支）
+        self.slot_of_bit = {}
         self.fixups = []        # (out_off, wsc_target_offset | 'EXIT')
         self.labels = {}        # wsc_offset -> out_off
         self.jump_targets = {i.fields['target_offset'] for i in instrs
@@ -304,7 +341,8 @@ class _Emitter:
         self.pending_voice = None
         self.pending_fade = None
         self.suppress_next_wait = False
-        self.portrait_slots = portrait_slots(opts.slot_context or instrs)   # 见模块顶部说明
+        self.portrait_slots = portrait_slots(opts.slot_context or instrs)
+        self.hide_slot_by_off = hide_slots(opts.slot_context or instrs)   # 见模块顶部说明
         self.exit_label_off = None
         self.has_choice = False
         self.pool_index = opts.pool_start  # 字符串池序号：`14` 的 id 与 `0f` 的 strid 共用
@@ -444,7 +482,7 @@ class _Emitter:
         self.expire_fade()
         self.count('image_block')
 
-    def emit_portrait_block(self, name, offset, x_raw, x_override=None):
+    def emit_portrait_block(self, name, offset, x_raw, x_override=None, bit=None):
         """0x48-04 -> 立绘块（34 + 39 + LAYER_ORDER + 46 重置 + 46 位置）。
 
         句柄选择见模块顶部说明；**位置**由原版 `xabspos` 经 `steam_x()` 量化而来 ——
@@ -465,6 +503,9 @@ class _Emitter:
         # 「句柄选择的实质是「别撞上宿主正在用的那一个」」。
         slot = self.opts.family_slots.get(fname[:4].upper()) \
             or self.portrait_slots.get(offset, PORTRAIT_SLOT_MAIN)
+        if bit is not None:
+            # 记下「这个位号现在绑的是哪个槽」；后面的 `49 <位号> b=0` 要清的就是它
+            self.slot_of_bit[bit] = slot
         s = slot.encode('ascii') + b'\x00'
         # `39` 的帧号形态必须匹配目标 PNA 的记录数（见 PORTRAIT_ATTRS_BY_LAYERS）。
         layers = self.opts.pna_layers.get(fname.upper())
@@ -671,9 +712,27 @@ class _Emitter:
                         x_ov = position_override(
                             self.stem,
                             self.dialogue_row_base + self.report['dialogues'] + 1, char)
-                    self.emit_portrait_block(name, ins.offset, x_raw, x_ov)
+                    bit = None
+                    for _j in instrs[i + 1:i + 7]:      # 紧跟本立绘的「显示位」
+                        if _j.opcode == 0x49 and _j.fields.get('b') == 1:
+                            bit = _j.fields.get('a')
+                            break
+                    self.emit_portrait_block(name, ins.offset, x_raw, x_ov, bit=bit)
                 else:
                     self.emit_image_block(name, self.take_fade())
+            elif op == 0x49:
+                # 位号开关：`b=1`（显示）已由立绘块的 `34`+`39` 承担，不发射；
+                # ⚠️ **`b=0`（隐藏）不能跳** —— WS2 侧清槽只能靠 `37`，不补就会一直挂着
+                # （2026-10-14 实机：CCB0013 应清立绘再切背景，立绘却挂到下一脚本）。
+                # 位号从未绑定过立绘（背景/其它位）→ 保持跳过（背景由 `33`/`46` 承担）。
+                bit, show = ins.fields.get('a'), ins.fields.get('b')
+                slot = None if show else (self.hide_slot_by_off.get(ins.offset)
+                                          or self.slot_of_bit.get(bit))
+                if slot:
+                    self.raw(b'\x37' + slot.encode('ascii') + b'\x00')
+                    self.count('clear_sprite')
+                else:
+                    self.count(None, op)
             elif op == 0x64:
                 # `64` 既不是句柄也不是位置（见模块顶部说明），不参与发射，只计数
                 self.count(None, op)

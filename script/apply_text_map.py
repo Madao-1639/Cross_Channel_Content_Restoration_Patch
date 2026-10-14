@@ -24,7 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, lng as lngmod, textplan as TP, writer, ws2, ws2disasm  # noqa: E402
+from tool import (arcbuild, lng as lngmod, textplan as TP, writer, ws2,  # noqa: E402
+                 wsc, wsc2ws2, ws2disasm)
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -114,7 +115,18 @@ def main():
                 '  最常见成因：**在已建成的 asset 上跑** —— 表里的插入格会被再算一遍。\n'
                 '  本步必须从串接前基线跑（`asset/Rio.arc.before_inline_splice`；或直接跑 build_patch.py）。'
                 % (stem, len(newL), sc['n_final']))
-        newdata[wk] = ws2.encode(new2)
+        # 末尾 8 字节 = 引擎分配「已读位图」用的 (0x14 条数, 0f 条目数)，**明文**，
+        # 必须在 encode 之后按最终流改写：插删格后不改，引擎就按旧消息数分配位图、写位越界（实机 0xc0000374）
+        # 接缝补清：还原到最后一句后，原版在该处清了立绘，而我们的尾段取自 Steam 原档（它不需要清）
+        _wf = Path('resource/corpus/wsc') / ((stem[:-3] if stem.upper().endswith('_EN') else stem) + '.WSC')
+        if _wf.exists():                      # 分支脚本（CCD1001A…）没有同名语料 ⇒ 跳过本步
+            _src = wsc.disassemble(_wf.read_bytes())
+            _sl = [x for x in _src if x.opcode in (0x41, 0x42)]
+            if _sl and _last_dlg_matches(new2, _sl[-1]):
+                _need = {s for (o, s) in wsc2ws2.hide_slots(_src).items() if o > _sl[-1].offset}
+                if _need:
+                    new2 = ws2.seam_clear(new2, _need)
+        newdata[wk] = ws2.fix_trailer(ws2.encode(new2), counts=(n14, n0f))
         newdata[lk] = lngmod.encode_lng(newL)
         nins += sum(len(v) for v in inserts.values())
         ndrop += len(drops)
@@ -155,6 +167,21 @@ def main():
     return 0
 
 
+def _last_dlg_matches(new2, src_last):
+    """产物最后一条 `14` 的文本 == 源脚本最后一句（归一化）⇒ 还原段走到了脚本末尾。"""
+    import re as _re
+
+    def _n(s):
+        if isinstance(s, bytes):
+            s = s.decode('cp932', 'replace')
+        s = _re.sub(r'(\d|%[A-Za-z])+', '', s)
+        for ch in (chr(10), chr(0x3000), ' '):
+            s = s.replace(ch, '')
+        return s[:18]
+
+    ins = [x for x in ws2disasm.disassemble(new2) if x.opcode == 0x14]
+    return bool(ins) and _n(ins[-1].fields.get('text', '')) == _n(src_last.fields.get('text', ''))
+
+
 if __name__ == '__main__':
     sys.exit(main())
-

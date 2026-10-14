@@ -725,13 +725,15 @@ def _op_67(data, pos, op_offset):
                    'v2': round(_f32(p, 8), 4), 'v3': round(_f32(p, 12), 4), 'raw': p.hex()}
 
 def _op_ff(data, pos, op_offset):
-    # ff <u32 a> <u32 b>   (END of script; a: 0=menu/title, 4/0xc4=title return,
-    #                       8=scene-jump load; b: 128 when script has choices)
+    # ff <8 bytes>   END of script.
+    # ⚠️ 这 8 字节**不是操作数**，而是**明文尾表** `[u32 0x14 条数][u32 0f 条目数]`
+    # （不参与 rot6；见 doc/file-formats.md「末尾 8 字节」）。这里读到的是整个文件解码后的
+    # 旋转值，**没有语义**，不要解释、更不要硬编码。
     if pos + 8 > len(data):
         raise UnknownInstruction(op_offset, 0xff, 'truncated')
     a = _u32(data, pos)
     b = _u32(data, pos + 4)
-    return 9, data[pos:pos + 8], {'a': a, 'b': b}
+    return 9, data[pos:pos + 8], {'a': a, 'b': b, '_tail_table': True}
 
 def _op_c9(data, pos, op_offset):
     # c9 <layer NUL> <voice-char NUL> <6 bytes>  (voice/layer mapping)

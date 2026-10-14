@@ -65,8 +65,8 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 扩覆盖范围新增的语音由 `script/import_missing_voices.py` 从原版 `Voice.arc` 补入。
 ⚠️ 补入时**一律重采样到 48000 Hz**（`resample_ogg()`，ffmpeg `-ar 48000 -c:a libvorbis`）——
 原版有一批 44100 录音，而 Steam 语料 99.86% 是 48000；偏离语料形态会走宿主几乎不走的解码路径
-（一次概率性崩溃即由此，见 [engine-mechanics.md](engine-mechanics.md)「语音采样率」与
-[lessons-learned.md](lessons-learned.md) 「概率性崩溃（堆损坏，未根治）」）。仅 `--bootstrap` 从零重建会触发本步；
+（早先的一次闪退曾归因于此，后经实机单变量对照**已否定**，真因是脚本尾表未随消息数更新（引擎按旧数分配已读位图、写位越界）—— 见
+[engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」；重采样本身保持现状）。仅 `--bootstrap` 从零重建会触发本步；
 常规复跑因「只增不改」为 no-op。
 
 ## 3. 文本汉化：lng 位置对应
