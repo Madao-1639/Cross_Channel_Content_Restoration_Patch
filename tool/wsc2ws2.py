@@ -247,7 +247,10 @@ class ConvertOptions:
     def __init__(self, **kw):
         self.voice_channel = kw.get('voice_channel', 'charCN')
         self.transfer_suffix = kw.get('transfer_suffix', '_EN')
-        self.exit_ff_a = kw.get('exit_ff_a', 8)          # 场景出口 ff.a（实测 8 可玩）
+        # ⚠️ **此处写的 `a` 是死值**：引擎真正读的是**末尾 8 字节明文尾表**（`[u32 0x14 条数][u32 0f 条目数]`），
+        # 写盘最后一步一律被 `ws2.fix_trailer()` 覆盖（见 doc/file-formats.md「末尾 8 字节」）。
+        # 保留该选项仅为兼容历史调用，**不要依赖它的值**。
+        self.exit_ff_a = kw.get('exit_ff_a', 8)
         self.bgm_slot = kw.get('bgm_slot', 'bgm01')
         self.se_slot = kw.get('se_slot', 'se01')
         self.bg_slot = kw.get('bg_slot', 'bg01')
