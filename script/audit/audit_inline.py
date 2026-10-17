@@ -27,7 +27,7 @@ SCENES, TAIL_HOSTS = _SL['scenes'], _SL['tail_hosts']
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-CCS_DIR = ROOT / '..' / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
+CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 _S = re.compile(r'\\d|%K%P|%K|%P|%N')
 _Q = '“”「」『』\'"'
 

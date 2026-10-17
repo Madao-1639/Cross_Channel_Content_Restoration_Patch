@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tool import arcbuild, ws2, ws2disasm, wsc                      # noqa: E402
-from tool.wsc2ws2 import VOICE_TAIL, SE_TAIL, ConvertOptions, convert  # noqa: E402
+from tool.wsc2ws2 import hide_slots as HS, convert_range, VOICE_TAIL, SE_TAIL, ConvertOptions, convert  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -201,6 +201,14 @@ def main():
         pna_layers = load_pna_layers()
         opts = ConvertOptions(pna_layers=pna_layers)
         conv_bad = []
+        # 立绘隐藏映射（49 b=0 -> 37）逐项计数：clear_sprite 已映射 /
+        # hide_nonportrait 位号从不与立绘配对（合法跳过）/ hide_unmapped 映射失效（必须 0）
+        hide_stat = {'clear_sprite': 0, 'hide_nonportrait': 0, 'hide_nobind': 0}
+        src_hides = 0          # 源语料里 49 b=0 的总数（不变量用）
+        slice_bad = []         # 切片模式是否丢掉「绑定在切片外」的隐藏
+        n_slice = slice_expect = slice_skip = 0
+        n_clear_exp = n_clear_got = 0
+        clear_bad = []
         blk_bad = []                 # 立绘块形态违规
         pos46 = collections.Counter()  # 发射出的站位 x 分布
         n_choice_ok = n_choice = 0
@@ -212,12 +220,41 @@ def main():
             raw = open(p, 'rb').read()
             winstr = wsc.disassemble(raw)
             try:
-                out, _ = convert(raw, stem, opts)
+                out, _rep = convert(raw, stem, opts)
+                for _k in hide_stat:            # 计数在 report['emitted'] 下（嵌套）
+                    hide_stat[_k] += _rep.get('emitted', {}).get(_k, 0)
+                src_hides += sum(1 for i in winstr
+                                 if i.opcode == 0x49 and i.fields.get('b') == 0)
+                # 切片模式回归：把该脚本中段切一段转换（slot_context=整脚本），
+                # 期望「已清」数 == 整脚本映射里落在该段内的隐藏数 —— 绑定在段外时
+                # 若丢上下文就会少发 37（这正是本项目实测踩过的坑）
+                _hs = HS(winstr)
+                if len(winstr) > 40:
+                    _a, _b = winstr[10].offset, winstr[len(winstr) - 5].offset
+                    _exp = sum(1 for o in _hs if _a <= o < _b)
+                    try:
+                        _o2, _r2 = convert_range(raw, stem, ConvertOptions(slice_mode=True, slot_context=winstr, pool_start=0), _a, _b)
+                        _got = _r2.get('emitted', {}).get('clear_sprite', 0)
+                    except Exception:
+                        slice_skip += 1        # 区间切在选项表等结构上 ⇒ 跳过，不计入判据
+                        continue
+                    n_slice += 1
+                    slice_expect += _exp
+                    if _got != _exp:
+                        slice_bad.append('%s: 期望 %d 实发 %d' % (stem, _exp, _got))
                 oins = ws2disasm.disassemble(out)
             except Exception as e:
                 conv_bad.append('%s: %s' % (stem, str(e)[:60]))
                 continue
             n_files += 1
+            # 产物级判据：整脚本转换后，输出里的 37 条数必须 >= 整脚本映射的「应清」数
+            # （转换器内部是多遍发射，report 的计数会重复计，不能当精确不变量）
+            _exp_all = len(HS(winstr))
+            _got_all = sum(1 for i in oins if i.opcode == 0x37)
+            n_clear_exp += _exp_all
+            n_clear_got += _got_all
+            if _got_all < _exp_all:
+                clear_bad.append('%s: 应清 %d 实发 %d' % (stem, _exp_all, _got_all))
             if sum(i.size for i in oins) != len(out):
                 conv_bad.append('%s: coverage' % stem)
             # 对话文本逐字节一致（**按文件顺序**收集，0x41/0x42 交错出现）
@@ -282,6 +319,17 @@ def main():
               '%d 文件, 对话 id+文本一致 %d, 选项表 %d/%d%s'
               % (n_files, n_id_ok, n_choice_ok, n_choice,
                  '' if not conv_bad else ' | ' + '; '.join(conv_bad[:3])))
+        _seen = sum(hide_stat.values())
+        check('立绘隐藏已按原版清（产物 37 数 >= 应清数）',
+              n_clear_exp > 0 and not clear_bad,
+              '应清 %d 处 / 产物 37 共 %d 条%s（源隐藏 %d 处，其余为位号非立绘或此刻无绑定，'
+              'report 计数为多遍发射、仅作诊断）'
+              % (n_clear_exp, n_clear_got,
+                 '' if not clear_bad else '：' + '; '.join(clear_bad[:3]), src_hides))
+        check('切片模式不丢跨段绑定（slot_context）', n_slice > 0 and not slice_bad,
+              '%d 个切片，期望共清 %d 处（另跳过 %d 个非对齐区间）%s'
+              % (n_slice, slice_expect, slice_skip,
+                 '' if not slice_bad else '：' + '; '.join(slice_bad[:3])))
         check('立绘块 = 34+39+LAYER_ORDER+46(重置)+46(位置)', not blk_bad,
               '%d 个块, x 分布 %s%s'
               % (sum(pos46.values()), dict(sorted(pos46.items())),

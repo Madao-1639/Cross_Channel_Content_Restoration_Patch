@@ -74,12 +74,9 @@ CC 的 `AdvHD.exe` 的 `.text` 是**加壳**的（熵 8.00，开头即随机字�
 
 ### 与既有结论的交叉验证（一致）
 
-- **opcode → handler 编号**与 [file-formats.md](file-formats.md)「引擎函数名对照表」**零偏差**
-  （`01 04 05 07 09 0b 0f 14 15 16 1e 28 2e 33 34 37 39 3f 45 46 48 58 65 66 ff` 全部落在预期 handler）。
-- **音频定长尾段**（[wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.6）：
-  `1e` = **17B**、`28` = **22B**、`2e` = **0 操作数**（是前缀字节，22B 归其后紧跟的 `28`）——全部命中。
-- **操作数形态**：`46`=串+i16+u8+f32×4（即 `<u8×3><f32×4>`）、`39`=串+2B+计数×i16、
-  `33`/`34`=串+串+2B、`3f`=计数×串、`37`=单串、`14`=u32+串+串+u8。
+- **opcode → handler 编号**与 [file-formats.md](file-formats.md)「引擎函数名对照表」**零偏差**（`01 04 05 07 09 0b 0f 14 15 16 1e 28 2e 33 34 37 39 3f 45 46 48 58 65 66 ff` 全部落在预期 handler）。
+- **音频定长尾段**（[wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.6）：`1e` = **17B**、`28` = **22B**、`2e` = **0 操作数**（是前缀字节，22B 归其后紧跟的 `28`）——全部命中。
+- **操作数形态**：`46`=串+i16+u8+f32×4（即 `<u8×3><f32×4>`）、`39`=串+2B+计数×i16、`33`/`34`=串+串+2B、`3f`=计数×串、`37`=单串、`14`=u32+串+串+u8。
 
 ### ws2disasm 与引擎表比对（全语料 363 文件 / 292,724 条，0 失败）
 
@@ -115,9 +112,7 @@ CC 的 `AdvHD.exe` 的 `.text` 是**加壳**的（熵 8.00，开头即随机字�
 | `0x48` 立绘 | `sub_40BF0D` | `slot u8@0` · `x u16@1` · `y u16@3` · `?@5` · `flags u8@9` · `u8@0xA` · `文件名@0xB` |
 | `0x49` 位号开关 | `sub_40C818` | `slot u8@0` · `flag u8@1`（`flag!=0` 置位），写 per-slot 标志 |
 
-- **`x`/`y` 是字面值**：`flags@9` 的 bit0/bit1 未置位时（**全语料 4381 条立绘的 `flags` 全为 0**）
-  直接写进槽结构；**handler 里没有 `x==0` 分支**。原版立绘 PNG 高度恒 = 600 = 画布高，
-  故 **`x` 是精灵左边缘**（`x == 0` = 贴屏幕左缘，**不是**「未指定/哨兵」）。
+- **`x`/`y` 是字面值**：`flags@9` 的 bit0/bit1 未置位时（**全语料 4381 条立绘的 `flags` 全为 0**）直接写进槽结构；**handler 里没有 `x==0` 分支**。原版立绘 PNG 高度恒 = 600 = 画布高，故 **`x` 是精灵左边缘**（`x == 0` = 贴屏幕左缘，**不是**「未指定/哨兵」）。
 - **「时机」= 流序**：`0x41/0x42`（文本）只动 `4FB0xx`、`0x48`（立绘）只动 `5F88xx`，
   **两者互不交叉、按流序各自即时生效**。⇒ **一条立绘属于它之后最近的那句台词**（两引擎同此规则）。
 
@@ -288,8 +283,7 @@ Steam 的立绘 PNA **不是**单层图，但**也不是**多张叠加的复合�
 
 本项目的实现与守卫：
 
-* `tool/wsc2ws2.py` 的 `PORTRAIT_ATTRS_BY_LAYERS` 按**记录数**选形态，记录数由
-  `ConvertOptions.pna_layers` 传入（`script/splice_restoration.py` 从运行时 `Graphic.arc` 现读）；
+* `tool/wsc2ws2.py` 的 `PORTRAIT_ATTRS_BY_LAYERS` 按**记录数**选形态，记录数由 `ConvertOptions.pna_layers` 传入（`script/splice_restoration.py` 从运行时 `Graphic.arc` 现读）；
 * 记录数未知时按 4 条形态发射**并逐条告警**（不静默）；
 * `script/audit/verify_ws2_conventions.py` 第 9 项回归守卫：产物里每条 `39` 的帧号都校验 `< 记录数`。
 
@@ -520,7 +514,7 @@ if ( !v13 )                       // v13 = 比较结果
 
 `a != 0` 全语料只有 2 处（都不在被重排的脚本里）：`EVRET.ws2 @0x0` 的 `a` → `09 LayerConfig`、`mainmenu.ws2 @0x2b1` 的 `a` → `0b SetFlag(id=127)`。
 
-> **回归含义**：重排/插入/删除脚本字节后，`01` 的 **`a`（非 0 时）与 `b`** 都必须按新布局重算（`tool/writer.py`、`script/splice_restoration.py`），不变式由 `script/final_verification.py`全库核对（**计数 0 即失败**）。错因与示例见[lessons-learned.md](lessons-learned.md)「重排脚本必须重算「文件内绝对偏移」」。
+> **回归含义**：重排/插入/删除脚本字节后，`01` 的 **`a`（非 0 时）与 `b`** 都必须按新布局重算（`tool/writer.py`、`script/splice_restoration.py`），不变式由 `script/final_verification.py`全库核对（**计数 0 即失败**）；判定回原档对账：应得值 − 原档值 == 脚本字节增长量（未改动的脚本原本就对，重排后才失效）。
 
 ### 两种排布（Steam 原生 363 个脚本中共 6 处）
 
@@ -546,6 +540,20 @@ if ( !v13 )                       // v13 = 比较结果
 
 ## 选项表与两种跳转（0x0f ShowChoice）
 
+### 选项头（`0x0e`）
+
+每个 `0f` **之前**都有一条 6 字节的选项头（`tool/ws2disasm._op_0e`）：
+
+```
+0e 0b 00 <count:u8> 00 01
+```
+
+`byte1` 恒 `0x0b`；`count` 与随后 `0f` 的条目数一致。`0e` 的另一种形态是**时序块**
+（`byte1 == 0x00`，14 字节操作数），两者靠 `byte1` 区分。实测：Steam 原档 51 个含选项表的脚本
+（129 个条目）里，每个 `0f` 前都有这样一条头。
+本项目新增的那张 `0f`（`CCB2017_EN`，见 [call-chain.md](call-chain.md)「选项分支」）
+也照此形态发出。
+
 ### 条目形态
 
 ```
@@ -568,11 +576,26 @@ if ( !v13 )                       // v13 = 比较结果
 
 ### 还原注意
 
-- `06` 的 `<u32>` 与 `01 85` 的 `b` 一样是**文件内绝对偏移** —— 移动/重排该脚本字节必须重算；
-  `07` 的目标是脚本名字符串，不随本文件布局变化。
-- 新增 `0f` 会**增加该脚本的槽位数**（每条选项占一个 `lng` 槽位），
-  破坏「`lng 条数 == 14 条数 + Σ(0f 条目数)`」的严格等式 —— 必须同步补上对应文本，
-  详见 [file-formats.md](file-formats.md) 与 [localization.md](localization.md)。
+- `06` 的 `<u32>` 与 `01 85` 的 `b` 一样是**文件内绝对偏移** —— 移动/重排该脚本字节必须重算；`07` 的目标是脚本名字符串，不随本文件布局变化。
+- 新增 `0f` 会**增加该脚本的槽位数**（每条选项占一个 `lng` 槽位），破坏「`lng 条数 == 14 条数 + Σ(0f 条目数)`」的严格等式 —— 必须同步补上对应文本，详见 [file-formats.md](file-formats.md) 与 [localization.md](localization.md)。
+
+### 选项提示句与分支入口清框格（`%K` / `14 "%P"`）★
+
+选项前紧邻的那条 `14` 是**提示句**（旁白/内面），尾标记恒为 **`%K`（不带 `%P`）**：文本框留在屏上、选项按钮浮在上面（原生 56 处选项里 45 处如此；`CCA0004_EN` 是「提示句 `%K` → 直接 `0e`」的最近例子）；**`%K` 本身不清框** —— 留框只为在选项悬浮时仍能读到那句提示，玩家选完选项后它不会自动消失。
+
+⇒ 清框由**分支的落点自己**承担：落点的**主导惯例**是先执行一张纯标记 `14 "%P"` 清框格。判据（全 Steam 语料，逐**条目**计）：
+
+| 落点类型 | 实测 |
+|---|---|
+| `07 <脚本名>`（跨文件落点） | 95 条中 **89** 条的目标脚本**首格**就是 `14 "%P"`（80/85 个目标脚本；其余 5 个以场景开场件开头的脚本不先清框） |
+| `06 <偏移>`（文件内落点） | 32 条中 **25** 条直接落在 `14 "%P"`；余下落在 `SetFlag` / `Condition` 之后（`CC_22A` 是设完状态立刻 `%P`；`CCC0028` / `CCC0030` / `CC_22AA` 这类 hub / 章节选择脚本把清框交给 `NextFile` 的目标脚本） |
+
+纯标记格的两条形态不变量（两版语料实测 1,378 张，详见 [file-formats.md](file-formats.md)「对话文本标记」）：
+
+- 正文**只有标记串本身**（`%P` / `%N`），不带正文；
+- **不带前导 `15`** —— 「`14` 前后成对的设名/清框」惯例在这里不适用；它沿用当前名字框（`%P` 不显示正文）。
+
+本项目的 `CCB2017_EN` 选项分支（全项目唯一新增的 `0f`）据此在**两条分支的入口各插一张 `14 "%P"`**：少了它，提示句「该提议点什么好呢。」会与下一句台词**连在同一个文本框里**（形状见 [call-chain.md](call-chain.md)「选项分支」）。
 
 ## 与 A Sky Full of Stars 的差异汇总
 
@@ -738,6 +761,24 @@ function getLangPatchFlag()  PatchFlag = true;  return PatchFlag  end
 function setInitLang()       g_altLanguage = true                 end
 ```
 
+## 文字渲染路径：字体加载 + backlog 硬编码膨胀边 ★
+
+### 字体装载（`sub_4591E0` + `CLegacyFontInfo:create`）
+
+脚本侧 `LegacyGame_utf8.lua` 定义 `g_fonts`/`g_fonts2`/`g_fonts3` 三组 `{name, file, CharSet}`，`file` 指向 `Fonts.arc` 内成员（`FOT-MatissePro-M/B.PTF` 槽名固定）。`CLegacyFontInfo:create` 用捆绑的 native 层做三件事：
+
+1. 按槽名从 `Fonts.arc` 读出 PTF blob；
+2. **`sub_4591E0` 解压**：头 4 字节 = 解压后大小（LE u32）、随后 LZSS 字节流（flag 字节**bit0 先出**、bit=1→1 字节 literal、bit=0→2 字节 token `src=(b1>>4)+16*b0` / `len=(b1&0xF)+2`，12-bit 环形窗 0x1000、窗体写指针**从 1 起**（`0x4593CD: mov esi,1`）、**环形窗内存的是 XOR 后的字节**）；解压完整输出再**全量 XOR 0x2C** 得到字体文件本体；
+3. `AddFontMemResourceEx` 注册到**进程字体表**；后续 `add('system','Txt01'/'Name01', family, ...)` 用 `CreateFontIndirectW` + `lfCharSet=GB2312_CHARSET` 按族名匹配。**族名匹配只面向进程内已注册字体**，与系统字体表无关 — 字体完全自包含。
+
+本补丁用**纯字面量 LZSS**（`tool/ptf.py`：flag=0xFF、每 8 字节前 1 flag、无 match token）从思源黑体 TrueType 打包；族名（`Source Han Sans SC Medium/Bold`）与 Lua 侧请求一字不差。细节与打包代码见 [localization.md](localization.md)「PTF 封装格式 / 引擎加载链」。
+
+### backlog 图层的二次膨胀边（硬编码 `sub_4986A0` @ `0x498918`/`0x4989DE`）
+
+创建 backlog 的 `LogText01` 图层时，`sub_4986A0` **无条件**执行 `mov dword ptr [esi+4],1`（info+4 = 1，硬编码、不走参数）——据此渲染管线把文字字形外侧先绘一层 **1px 膨胀边缘**，再把原字形叠上，形成**二次绘制**。
+
+该机制只影响字体管线，**不**变更内容；原版明朝体（M 位，细横笔画）在「1px 边缘叠加 + 原色叠合」下会与背景色「融」在一起产生肉眼可见的重影。本补丁改字体（同为思源黑体）后，字形粗笔画使膨胀边缘与原字形对齐，不再产生可见差异 —— 本补丁正是采用这一条不动引擎补丁的根治路线。
+
 ## 文本编码路径
 
 `AdvHD.exe` 内建 **BIG5 / GB2312 / SHIFTJIS / UTF-8** 四种代码页，并提供 Lua 侧转换绑定：
@@ -745,8 +786,8 @@ function setInitLang()       g_altLanguage = true                 end
 - `MyConv__lua_utf8tosjis` / `MyConv__lua_sjistoutf8` / `MyConv__lua_utf8substring`
 - `lua_utf8split`
 
-**Lua 字符串层是 UTF-8**：`LegacyGame_utf8.lua` 里的字体名 `FOT-マティス Pro M`
-就是 UTF-8 编码（且直接传给引擎 API，未做转换）。
+**Lua 字符串层是 UTF-8**：`LegacyGame_utf8.lua` 里的字体族名
+（如 `Source Han Sans SC Medium` / `Source Han Sans SC Bold`）就是 UTF-8 编码，直接传给引擎 API 未做转换；字体常量在字节码中的编码格式见 [localization.md](localization.md)「构建流程」。
 
 **但脚本内窄字节文本按 CP932 解码**。对 A Sky Full of Stars 的引擎（明文，可反汇编）
 统计 `MultiByteToWideChar` 的调用点参数：
@@ -793,8 +834,7 @@ function setInitLang()       g_altLanguage = true                 end
 
 「实测优先」不等于「不逆向」。本项目的两个关键结论都是静态分析拿到的：
 
-1. **文本编码路径** —— 统计 `MultiByteToWideChar` 调用点的代码页参数，
-   得出「脚本内窄字节 = CP932」。这比逐个试编码快得多，且是确定性的。
+1. **文本编码路径** —— 统计 `MultiByteToWideChar` 调用点的代码页参数，得出「脚本内窄字节 = CP932」。这比逐个试编码快得多，且是确定性的。
 2. **名字表机制** —— 从 ASF 官方简中包对照出「表键必须等于脚本标记」的规则。
 
 **前提是找到一份未加密的同引擎 exe**。CC 自己的 `.text` 加密，但 A Sky Full of Stars
@@ -815,15 +855,10 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
  u8  位图[A-8]  （每消息 1 bit）
 ```
 
-- 记录总长 = `len(名)*2 + 6 + A`；文件就是记录的串接，**无文件头、无结尾标记**（读取循环
-  以「偏移 < 文件长度」为界）。
-- 布局由脱壳件的 loader（`0x4B5A50`）与 writer（`0x4B5990`）**双向核对**，并在**另外两作**的
-  `MessageFlag.dat` 上整条解析验证（A Sky Full of Stars 21 条 / 1703 B、
-  If My Heart Had Wings 5 条 / 528 B：逐条走完、零残字节）。
-- loader 把记录插进一个 **`std::wstring` 键的缓存**（`0x4B5FC0` 查询、`0x4B60A0` 未命中则
-  `operator new(0x2c)` 造节点：+0x18 位图 vector、+0x24 计数、+0x28 位图首 dword）。
-- writer 只写**位图非空**的记录（位图 0 字节的记录不落盘）。**进程崩溃时不会写回**：
-  实测崩后该文件要么消失、要么留着上一次正常退出的内容。
+- 记录总长 = `len(名)*2 + 6 + A`；文件就是记录的串接，**无文件头、无结尾标记**（读取循环以「偏移 < 文件长度」为界）。
+- 布局由脱壳件的 loader（`0x4B5A50`）与 writer（`0x4B5990`）**双向核对**，并在**另外两作**的 `MessageFlag.dat` 上整条解析验证（A Sky Full of Stars 21 条 / 1703 B、If My Heart Had Wings 5 条 / 528 B：逐条走完、零残字节）。
+- loader 把记录插进一个 **`std::wstring` 键的缓存**（`0x4B5FC0` 查询、`0x4B60A0` 未命中则 `operator new(0x2c)` 造节点：+0x18 位图 vector、+0x24 计数、+0x28 位图首 dword）。
+- writer 只写**位图非空**的记录（位图 0 字节的记录不落盘）。**进程崩溃时不会写回**：实测崩后该文件要么消失、要么留着上一次正常退出的内容。
 
 ### 写位：`0x4B6330`（标记已读；`0x4B63E0` 是只读版）
 
@@ -841,17 +876,10 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
 
 ### 位图容量从哪来：ws2 文件末尾的 8 字节 ★
 
-- 容量 = `(arg2 + arg3 + 7) / 8`（`0x4B60A0`），而 `arg2/arg3` 来自**脚本文件本身**：
-  消息对象构造 `0x4CCFE0` 加载 `.ws2`（`sub_4BA6E0`）后取 `data[size-8]`、`data[size-4]`
-  两个 u32 传进去（`0x4CD298` / `0x4CD2B8`：`*(this+4) = *(u32*)(data + size - 8)`）。
-- ⇒ **文件末尾 8 字节 = `(0x14 条数, 0f 条目数)`**；这 8 字节**是明文**（不参与 rot2 混淆）。
-  验证：Steam 原档 **363/363** 逐脚本与该脚本的「`0x14` 条数、`0f` 条目数」相等。
-  ⚠️ 本项目 `ws2.decode/encode` 会把尾部一并旋转（明文 `0x0F` → 解得 `0xC3`），
-  所以**写盘时必须在 encode 之后把末尾 8 字节按明文改写**。
-- **写盘侧**：`tool/ws2.py` 的 `fix_trailer()` 在 `encode()` 之后重写这 8 字节（`script/apply_text_map.py` /
-  `script/splice_restoration.py` 已接线），由 `script/final_verification.py` 的尾表闸逐脚本核（363/363）。
-- 记录**从文件读入**时容量 = 文件里的 `A-8`；引擎随后会按上面的公式重建/改写它 ⇒
-  手工预置宽记录不持久（实测：预置 30 字节，下一轮正常退出被写回 2 字节）。
+- 容量 = `(arg2 + arg3 + 7) / 8`（`0x4B60A0`），而 `arg2/arg3` 来自**脚本文件本身**：消息对象构造 `0x4CCFE0` 加载 `.ws2`（`sub_4BA6E0`）后取 `data[size-8]`、`data[size-4]` 两个 u32 传进去（`0x4CD298` / `0x4CD2B8`：`*(this+4) = *(u32*)(data + size - 8)`）。
+- ⇒ **文件末尾 8 字节 = `(0x14 条数, 0f 条目数)`**；这 8 字节**是明文**（不参与 rot2 混淆）。验证：Steam 原档 **363/363** 逐脚本与该脚本的「`0x14` 条数、`0f` 条目数」相等。⚠️ 本项目 `ws2.decode/encode` 会把尾部一并旋转（明文 `0x0F` → 解得 `0xC3`），所以**写盘时必须在 encode 之后把末尾 8 字节按明文改写**。
+- **写盘侧**：`tool/ws2.py` 的 `fix_trailer()` 在 `encode()` 之后重写这 8 字节（`script/apply_text_map.py` / `script/splice_restoration.py` 已接线），由 `script/final_verification.py` 的尾表闸逐脚本核（363/363）。
+- 记录**从文件读入**时容量 = 文件里的 `A-8`；引擎随后会按上面的公式重建/改写它 ⇒ 手工预置宽记录不持久（实测：预置 30 字节，下一轮正常退出被写回 2 字节）。
 
 ### 指纹：`B > 8×(A-8)` 且位图全 0
 
@@ -876,14 +904,12 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
 
 **已确认**：
 
-- [x] lng 文件的文本替换机制 —— 只覆盖 `0x14` 正文与 `0f` 选项，按**池槽位序**定位；
-      见 [localization.md](localization.md)「lng 位置对应」
-- [x] 字体文件的加载机制 —— `CLegacyFontInfo:create` 以 `file`/`name`/`CharSet` 从 `Fonts.arc` 取 PTF；`CharSet = GB2312_CHARSET` 是简体显示的关键（第三方补丁已设）
+- [x] lng 文件的文本替换机制 —— 只覆盖 `0x14` 正文与 `0f` 选项，按**池槽位序**定位；见 [localization.md](localization.md)「lng 位置对应」
+- [x] 字体文件的加载机制 —— `CLegacyFontInfo:create` 以 `file`/`name`/`CharSet` 从 `Fonts.arc` 取 PTF，解压（头 4 字节大小 + LZSS，flag bit0 先出、环形窗 0x1000、窗体写指针从 1 起、窗内存密文）后全量 XOR 0x2C，交 `AddFontMemResourceEx` 注册到进程字体表；后续 `add('system','Txt01'/'Name01', family, size, ...)` 经 GDI `CreateFontIndirectW` 以 `lfCharSet=GB2312_CHARSET` 按**进程内注册的族名**匹配（与系统字体无关）。PTF 封装细节与本补丁打包器的纯字面量 LZSS 方案及族名接线见 [localization.md](localization.md)「PTF 封装格式 / 引擎加载链」
 - [x] 脚本内窄字节文本的编码 —— CP932（见「文本编码路径」）
 - [x] 角色名替换机制 —— `NameTable.txt`（见「名字替换表」）
 - [x] **名字框显示简体中文** —— `NameTable.txt` 前缀改为 `%LC` 后实机验证通过（见「名字替换表」）
-- [x] **`MessageFlag.dat` 记录布局与 `0x4B6330` 的越界写** —— 脱壳 exe 反汇编 + 三作文件
-      整条交叉验证 + 实机单变量对照（见「MessageFlag.dat」）
+- [x] **`MessageFlag.dat` 记录布局与 `0x4B6330` 的越界写** —— 脱壳 exe 反汇编 + 三作文件整条交叉验证 + 实机单变量对照（见「MessageFlag.dat」）
 
 ## 经验总结
 
@@ -891,5 +917,4 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
 2. **但也别放弃逆向**：有明文样本时静态分析能给出实测难以枚举的结论（见上文）
 3. **先找同引擎的官方样本**：「实测优先」之前先问这个机制在同引擎的其他游戏里长什么样
 4. **复用而不要盲信**：第三方补丁的方案可作参考，但其产物未经 Steam 版验证（见 [lessons-learned.md](lessons-learned.md)「不能盲信第三方产物，也不能盲信外部复审」）
-5. **工具选择**：静态分析 IDA Pro / Ghidra；动态调试 x64dbg / WinDbg；
-   文件分析 010 Editor / HxD；最终验证 —— 修改游戏文件 + 运行游戏
+5. **工具选择**：静态分析 IDA Pro / Ghidra；动态调试 x64dbg / WinDbg；文件分析 010 Editor / HxD；最终验证 —— 修改游戏文件 + 运行游戏

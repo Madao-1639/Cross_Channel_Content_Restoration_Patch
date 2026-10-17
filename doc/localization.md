@@ -17,10 +17,7 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 2. **运行时替换**：引擎播放脚本时，把**按出现顺序数到的第 N 条文本型指令**的文本替换为 lng 的第 N 条（见下文"位置对应"）
 3. **存储位置**：lng 文件与 ws2 脚本同在 Rio.arc 中
 4. **覆盖完整性（已核对）**：`asset/Rio.arc` 的 363 个 `.ws2` 配 **328 个 `.lng`**，每个 `.lng` 都有对应 ws2；35 个无 lng 的 ws2 **全部是无文本的系统/动画脚本**（`AN_*`、`*_ANIME_ERASE`、`EVRET`、`LAYER_ORDER`、`mainmenu`/`title`/`start` 等，实测 `0x14` 计数均为 0）；每个含文本的 ws2 都有配套 lng
-5. **就地插入后宿主 lng 必须整体重建：插入段的对话插进宿主中间，`keep` 之后的全部位置都变了，lng（位置对应）随之整体重建。**
-   **现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**（原 `script/build_host_lng.py` 已废弃 —— 它只写 `.LNG`、输出必被覆写）。
-   验收条件：lng 条数 == 该脚本的 `14` 条数。
-   注意这 12 个宿主都**没有 `0f` 选项表**，所以「池位置」就等于「`14` 出现序」；若有选项表，lng 条数还要加上选项条目数（见上文「位置对应」）。
+5. **就地插入后宿主 lng 必须整体重建：插入段的对话插进宿主中间，`keep` 之后的全部位置都变了，lng（位置对应）随之整体重建。** **现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**（原 `script/build_host_lng.py` 已废弃 —— 它只写 `.LNG`、输出必被覆写）。 验收条件：lng 条数 == 该脚本的 `14` 条数。 注意这 12 个宿主都**没有 `0f` 选项表**，所以「池位置」就等于「`14` 出现序」；若有选项表，lng 条数还要加上选项条目数（见上文「位置对应」）。
 
 #### LNG 文件格式（`tool/lng.py`）
 
@@ -39,26 +36,19 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 #### 匹配机制：位置对应（对还原管线至关重要）
 
 - lng 中**没有 id 字段**。引擎按播放顺序把第 N 条文本替换为第 N 条目。
-- **严格等式：`lng 条数 == `14` 条数 + Σ(0f 的 count)`**。
-  `14` 与 `0f` 的每个条目**各占一个槽位**（一张 `0f` 表的 `count` 个选项条目各占一槽，`strid` 即槽位序），不是整张表占一槽；占位行（`%N`/`%P`）同样消耗条目。
-  **全量核对已通过** —— `script/final_verification.py` 的 `check_lng_pairing()` 对 328 个配对逐一验证条款等式，无一例外。
-- **lng 与 ws2 的池位可能整体错开**：内化的早期 lng 按**汉化组 CCS 的行序**抄写，而 CCS 会把一句英文拆成两行中文。
-  现由 `script/apply_text_map.py` 按 `resource/text_map.json` **一次产出**结构 + lng：同一行的拆分记为 `span`（同一格取该行中文的字符片段，**不新增槽位**）。
-  早期的 `script/realign_lng_to_ws2.py`（DP 对齐、会插 `15`+`14`）已废弃，详见 [localization.md](localization.md)「lng 池位错位」。
-- **说话人名（`0x15 %LC<Name>`）不经 lng 替换** —— 条目数核对证明 lng 只覆盖 `0x14` 与选项文本。
-  人名走**另一条通路**：引擎拿 `%LC<英文名>` 去查 `Rio.arc` 里的 `NameTable.txt`（UTF-16LE）。
-  详见下文「角色名称映射」。
-- **对还原管线的影响**：位置对应意味着 ws2 的对话流一旦增删，既有 lng 全部错位。
-  就地插入后宿主的位置全部改变，配套 lng 必须**整体重建**（见下文实施步骤 5）。
+- **索引就是指令自带的池序号**：`14` 的 `id` 与 `0f` 条目的 `strid`（同一个计数器，按**文件顺序**编号）—— 「播放序」只是**线性脚本**下的等价说法。因此**分支**不会打乱 lng：两条支线各占自己那几格， 引擎按 id/strid 取值（Steam 原生的 11 个文件内 `06` 选项、以及本项目的 `CCB2017` 选项分支都靠这条）。 反向表述也成立：**增删 `14`/`0f` 条目会让其后所有格整体错位**。
+- **严格等式：`lng 条数 == `14` 条数 + Σ(0f 的 count)`**。 `14` 与 `0f` 的每个条目**各占一个槽位**（一张 `0f` 表的 `count` 个选项条目各占一槽，`strid` 即槽位序），不是整张表占一槽；占位行（`%N`/`%P`）同样消耗条目。 **全量核对已通过** —— `script/final_verification.py` 的 `check_lng_pairing()` 对 328 个配对逐一验证条款等式，无一例外。 （总槽位 **42,857** = Steam 侧 41,946 + 插入 1,095 − 删格 185 + 拆格 1；其中 `CCB2017` 选项分支 的 23 格（提示句 1 + 选项 2 + 清框格 2 + 孤岛 18）**不是 `insert`**，而是直接在该脚本里多出的槽位，见 [call-chain.md](call-chain.md)「选项分支」。）
+- **lng 与 ws2 的池位可能整体错开**：内化的早期 lng 按**汉化组 CCS 的行序**抄写，而 CCS 会把一句英文拆成两行中文。 现由 `script/apply_text_map.py` 按 `resource/text_map.json` **一次产出**结构 + lng：同一行的拆分记为 `span`（同一格取该行中文的字符片段，**不新增槽位**）。 早期的 `script/realign_lng_to_ws2.py`（DP 对齐、会插 `15`+`14`）已废弃，详见 [localization.md](localization.md)「lng 池位错位」。
+- **说话人名（`0x15 %LC<Name>`）不经 lng 替换** —— 条目数核对证明 lng 只覆盖 `0x14` 与选项文本。 人名走**另一条通路**：引擎拿 `%LC<英文名>` 去查 `Rio.arc` 里的 `NameTable.txt`（UTF-16LE）。 详见下文「角色名称映射」。
+- **对还原管线的影响**：位置对应意味着 ws2 的对话流一旦增删，既有 lng 全部错位。 就地插入后宿主的位置全部改变，配套 lng 必须**整体重建**（见下文实施步骤 5）。
 
 #### 汉化实施步骤
 
 1. ✅ **格式逆向与编码确认**：UTF-16LE 后整体 XOR 0x2C（`tool/lng.py`）
 2. ✅ **工具开发**：`parse_lng` / `encode_lng` / `parse_ccs` / `strip_speaker_wrap`
 3. ✅ **池位对齐**：328 个配对全部满足 `lng 条数 == 14 条数 + Σ(0f 的 count)`；内化数据遗留的漏行 / 错位现由 `script/apply_text_map.py` 按表一次产出修正（`fix_lng_alignment.py` / `realign_lng_to_ws2.py` 已废弃）
-4. ✅ **宿主 lng 重建**：就地插入后宿主 lng 整体重建 —— 位置对应 ⇒ 其后条目全部错位。
-   现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出（原 `script/build_host_lng.py` 已废弃），规则见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.1
-5. ✅ **语义复审**：全量语义复审已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,834 格）
+4. ✅ **宿主 lng 重建**：就地插入后宿主 lng 整体重建 —— 位置对应 ⇒ 其后条目全部错位。 现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出（原 `script/build_host_lng.py` 已废弃），规则见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §3.1
+5. ✅ **语义复审**：全量语义复审已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,857 格）
 
 ### 翻译来源
 
@@ -67,11 +57,7 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 1. **主线剧情**：复用开源的「CROSS†CHANNEL 中文化项目」（MewX 等）的官方译文
    - 质量较高，人工翻译
    - 对照文本为汉化组逐行译文（293 个同名 `.CCS` + `TXT/` 下的纯中文 `.TXT`）：
-     - **格式**：293 个 `.CCS` 文件（`CCA0001.CCS`、`CCC0000.CCS` 等，与原版 WSC 脚本同名对应；`TXT/` 子目录另有 293 个同名 `.TXT` 为纯中文译文，**GBK** 编码，内容与 `.CCS` 的 `>1●` 中文行一致）`.CCS` 为 UTF-16LE + CRLF 纯文本，日中逐行对照：
-       ```
-       >0○0001○最古の記憶は。          ← 0 行：日文原文
-       >1●0001●最久远的记忆，          ← 1 行：中文译文
-       ```
+     - **格式**：293 个 `.CCS` 文件（`CCA0001.CCS`、`CCC0000.CCS` 等，与原版 WSC 脚本同名对应；`TXT/` 子目录另有 293 个同名 `.TXT` 为纯中文译文，**GBK** 编码，内容与 `.CCS` 的 `>1●` 中文行一致）`.CCS` 为 UTF-16LE + CRLF 纯文本，日中逐行对照： ``` >0○0001○最古の記憶は。          ← 0 行：日文原文 >1●0001●最久远的记忆，          ← 1 行：中文译文 ```
      - **编号关系（已全语料验证）**：CCS/TXT 的 `NNNN` = **原版 WSC 对话 id + 1**。41,629 句中 41,628 句逐字匹配、顺序完全一致（唯一差异是 CCA0002 一行 staff-roll 的空白），详见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) 「字节覆盖不构成正确性证明」。
      - **用途**：lng 文本校对信源；转换器产物的配套 lng 可按 `CCS 序号 = 对话 id + 1` 直接从 CCS 的 `>1●` 行逐句生成
 2. **Steam 版新增内容**：7 条角色线与后日谈的译文为机翻底稿，已随全量语义复审逐行修订
@@ -79,8 +65,24 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 ### 翻译策略
 
 1. **数据内化**：外部汉化产出（已内化）作为译文底稿；lng 由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出，328 个配对池位对齐已全量校验通过
-2. **全量语义复审**：已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,834 格）
-3. **增量更新**：可根据用户反馈逐步改进翻译
+2. **全量语义复审**：已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,857 格）
+3. **引用体例：英文 `\d…\d` ⇒ 中文全角 `“…”`**（不保留 `\d`）—— 英文侧 `\d…\d` 包住的片段就是**被引号括住的台词**（旁白不带）；`op:ccs` 的官方中文已自带全角引号，**自译格（`op:text` / `opt`）必须自己落实这条**（只删 `\d` 不补引号 ⇒ 屏幕上就是一句没引号的台词）。全表现状：zh 里含 `\d` 的条目 **0** 条；引号配对不完整的格另见 [lessons-learned.md](lessons-learned.md)「跨格拆开的引号不配对」（未定处置）。
+4. **增量更新**：可根据用户反馈逐步改进翻译
+
+### 上游笔误勘误（`resource/corpus/ccs/` 副本，长期语料）
+
+上游译组（MewX 中文化项目）CCS 语料的笔误字，统一替换为简体/惯用写法：
+揺→摇、抜→拔、拋→抛、強→强、恥→耻、時→时、訳→译、謝→谢、離→离、額→额、髄→髓、黒→黑、**牳→姆**（CCB2101 拟声 13 处）。
+日文人名专用字（榊/梶/嶋/萩等）/拟声词/拟音语（呣/唦/唵/嘠/欸/屄/屌）等不作笔误，保留原样。
+
+落法（**长期维护**，不**就地** pipeline hook、也**不** inline 拆段）：
+
+1. **语料副本自包含**：把上游 MewX 项目的 **293 个 `.CCS`** 复制进 `resource/corpus/ccs/` —— pipeline 的 `CCS_DIR` **指向 resource 副本**，不再读外部 cross-channel 项目目录；
+2. **勘误写进副本**：**只**对每行 **`>1` 中文列**（日文列 `>0` 不动）做这 13 字替换，**替换后的文本**是长期维护的实际语料内容；**以上游 CCS 文件**作为源，仅作语义参考；
+3. **text_map 的 schema 不变**：items 全部为 `op:ccs` / `op:insert` 等引用结构（**不**拆段 inline，**不**新增字段），引用行 `row` 直接落在 **resource 副本**里读取**替换后**的中文；
+4. **流水线重跑同效**，最终产物与模拟重跑 0 缺字（13 项笔误字**归零**）。
+
+维护入口：`resource/corpus/ccs/`（勘误即改写副本）；MewX 的原始 `cross-channel_chinese-localization_project` 保留在上层目录仅供**追溯**，pipeline **不**读它。
 
 ### 质量状态：全量语义复审已收口
 
@@ -99,9 +101,8 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 
 **要求**：
 
-- 低相似度分数只是**复审优先级的信号，不等于错译**；反过来，等句数与高相似度也**不能**批准映射。
-  语义对位必须回到可靠锚点：`CCS 序号 ↔ 对话 id` 的位置对应，以及 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) 的**全区间偏移扫描 + 全量比对**方法。
-- 池位对齐（条数与连续性）已全量通过；全量语义复审已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,834 格）。
+- 低相似度分数只是**复审优先级的信号，不等于错译**；反过来，等句数与高相似度也**不能**批准映射。 语义对位必须回到可靠锚点：`CCS 序号 ↔ 对话 id` 的位置对应，以及 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) 的**全区间偏移扫描 + 全量比对**方法。
+- 池位对齐（条数与连续性）已全量通过；全量语义复审已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,857 格）。
 
 ### 匹配逻辑总览
 
@@ -109,11 +110,9 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 
 #### 基准与不变量
 
-- **位置对应**：引擎按播放序替换 —— lng 第 N 条 ↔ 脚本里第 N 个**占位**（`14` 与 `0f` 的**每个条目**都占位）。
-  严格等式：`lng 条数 == 14 条数 + Σ(0f 条目数)`。
+- **位置对应**：引擎按播放序替换 —— lng 第 N 条 ↔ 脚本里第 N 个**占位**（`14` 与 `0f` 的**每个条目**都占位）。 严格等式：`lng 条数 == 14 条数 + Σ(0f 条目数)`。
 - **不改跳转、不加 Steam 没有的演出**；**删格只在下列「方针」判据成立时发生**。
-- **原版数据是权威信源**：源 WSC（日文正文）+ 民汉 CCS（官方中文）。
-  ⚠️ **`CCS 行号 == 源 WSC 的对话序 + 1`**（全库 41,629 条 100% 吻合），**不是 `id + 1`** —— `id` 在部分脚本里有跳号（`CCB2007` 走 0..110 却只有 109 条对话）。
+- **原版数据是权威信源**：源 WSC（日文正文）+ 民汉 CCS（官方中文）。 ⚠️ **`CCS 行号 == 源 WSC 的对话序 + 1`**（全库 41,629 条 100% 吻合），**不是 `id + 1`** —— `id` 在部分脚本里有跳号（`CCB2007` 走 0..110 却只有 109 条对话）。
 
 #### 五条判据，由强到弱
 
@@ -166,11 +165,9 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
    - 原版有、Steam 删了 → **还原**；
    - Steam 新增、原版没有 → **只要与所匹配的原版上下文很好地吻合，就采用**（保留 + 就地翻译）。判法：
 
-     - **符合语境 ⇒ 采用**：读下来连贯、不矛盾、不重复、能接上原版前后文。
-       **成段的「加演」——在原版场景里展开的演出扩展，只要读得通，就采用**；**场景节奏与原版不同（更长、多几拍）不构成删除理由**。
+     - **符合语境 ⇒ 采用**：读下来连贯、不矛盾、不重复、能接上原版前后文。 **成段的「加演」——在原版场景里展开的演出扩展，只要读得通，就采用**；**场景节奏与原版不同（更长、多几拍）不构成删除理由**。
      - **「插话」⇒ 删**：把内容塞进一个**原本连贯的语义单元**（排比、问答对、同一句话的延续）**中间**，使该单元断裂 —— 即便单看读得通，也**破坏了语义连贯性**，不算符合语境。
-     - **仍然一律删除的两类**（即使读得通）：① **对"略过/删减部分"的交代**（Steam 给自己删掉的内容打的圆场）；② **对 H 内容的改写**。
-       ⚠️ 排除项②**只限于"改写"**（把既有内容替换掉）；**在原版之上"加写"新演出不算改写** —— 加写按上面的判据走（读得通即采用，**H 加戏也一样**）。
+     - **仍然一律删除的两类**（即使读得通）：① **对"略过/删减部分"的交代**（Steam 给自己删掉的内容打的圆场）；② **对 H 内容的改写**。 ⚠️ 排除项②**只限于"改写"**（把既有内容替换掉）；**在原版之上"加写"新演出不算改写** —— 加写按上面的判据走（读得通即采用，**H 加戏也一样**）。
      - **定序与定内容一律以原版为准，包括定序依据**：Steam 那一段的**英文序列**可能与**原版行序列整体错开**（"挪位"），**英文不得作为定序或对位的依据**。
    - 两边都有 → **用原版的文本**；
    - **不因"看起来多余"而删格** —— 删格只在上面那两类排除（交代／H **改写**）或「插话」成立时发生。
@@ -213,6 +210,8 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 > **正解只有两分**：原文出自原版但 Steam 保留了这句 ⇒ **用 Steam 那句的**；Steam 把原版这句删了 ⇒ **新增原版录音**。
 > 不存在"借同长录音"这条路。
 
+**已知原生错例（非补丁引入）**：`CCA0019_EN` / `CCB1009_EN`（姊妹对）里「大叔们」那格播的是**上一段「古生代」那句**的声音 —— Steam 把前一句的英文录进了后者的槽位，而后者自己的英文全库不存在。处置为换挂原版日配 `YKI030A0019.OGG`（`voice_plan.json` 登记补挂、`text_map_vc.json` 的 `del2e` 删借用录音）。
+
 **切分行的语音归哪一片**：
 
 - **一行切成「台词 + 译注/注释」** ⇒ 语音只属于**台词那一片**（`※…`、`（译注…）` 不是被念的，**不挂**）；
@@ -221,37 +220,68 @@ LNG（Language）文件是 AdvHD 引擎的文本替换机制，用于实现多�
 
 > 因此判据是「**这一片是不是这句话的起点**」，**不是**「该行有配音 ⇒ 每一片都要有」——后者会把译注片和后续片都挂上，反而造成音文不符。
 
+### 位置表文本的复核：两把机械标尺
+
+1. **锚点逐字符对账**：对齐正确时 `lng[k] 去标记后 == 其锚点 CCS 行的中文`，可判定、不需语义判断。搜索偏移必须 **d=0 优先**、再按 |d| 递增（否则 `……` 这类重复串会先命中假偏移）。
+2. **保序覆盖对账**：把 lng 每行回查源 CCS 中文列，贪心保序分配行号，量化**未使用的 CCS 行（内容丢失）／重复使用（玩家可见重复）／次序回跳（乱序）**。
+
+⚠️ **向 Steam 英文对齐是错误方向**（英文是 MoeNovel 的改写，不是权威信源）；目标序列只能是 **CCS 中文列**。
+⚠️ **分支字母脚本必须先剔除**（`CCD1001A_EN` 的源覆盖 A/B/C/D 四个分支，逐行对账会产出几千条假「丢失」）。
+⚠️ **无源（机翻）脚本是最大盲区**：「是否忠实英文」对机翻几乎恒真，须换判据（**术语/人名一致性可机械核验**）。
+
 ## 字体处理
 
-### 问题描述
+### 最终方案：思源黑体（Source Han Sans SC）整体替换
 
-Steam 原版字体不含汉字字形，需要替换为支持中文的字体。
+Steam 原版 Fonts.arc 只有 FOT-Matisse Pro M/B 两个槽位（纯日文明朝体，不含简体汉字字形）。本补丁用思源黑体（Adobe Source Han Sans SC，TrueType 2.005R）整体替换：
+- **M 位**（`FOT-MatissePro-M.PTF`） = **思源黑体 Medium**——对话框正文（Txt01）、backlog（LogText01）、整页视读层与存/读档/选项等界面共用这个族名源；
+- **B 位**（`FOT-MatissePro-B.PTF`） = **思源黑体 Bold**——对话框人名框（Name01）的族名（输入框 inputLine 与正文同参 Medium）。
 
-### 字体文件（已核对）
+源字形来自 `resource/fonts/sourcehan_subset/{SourceHanSansSC-Medium,Bold}.ttf`（fontTools 子集化结果，各 ~4.1 MB），码点清单持久化在 `resource/fonts/sourcehan_subset/codepoints.txt`（**9759 项**，由 `script/gen_font_codepoints.py` 生成）。码点来源（**全部声明性**，不读 asset/ 成品，与流水线双端解耦）：
 
-**Steam 原版 Fonts.arc**：
-- `FOT-MatissePro-B.PTF`（粗体）：7.6 MB（7.28 MiB）
-- `FOT-MatissePro-M.PTF`（中等）：7.0 MB（6.71 MiB）
+1. **`resource/text_map*.json`** 的 `zh` / `names` 字段
+2. **上游 CCS `*.CCS`（MewX 中文化项目）只取 `>1` 中文列**（text_map 的 `op:ccs`/`row` 指向 CCS 行的**源文本**，pipeline 写盘时**实际读到的内容**）
+3. **`resource/carried_lng/*.lng`**（35 个接手 lng，`build_patch.py carry_carried_lng()` 显式带入 Rio.arc）
+4. **`resource/speaker_map.json`**（`build_nametable.py` 的唯一来源：名字框实际渲染文本 + voice/PNA 路径名）
+5. **`resource/other_texts/Script_lua_strings.txt`**（Script.arc 全部 14 个 Lua 常量，系统 UI 文本）
+6. **结构性兜底**：GB2312 全表 6763 汉字 + ASCII / CJK 标点 / 全角 / 假名（U+3040..30FF）/ 通用标点/符号_blocks（U+2000..28FF）—— 不依赖文本采样的完备性。
 
-**内化的 Fonts.arc**（`resource/reused_archives/`）：
-- `FOT-MatissePro-B.PTF`（粗体）：18.5 MB（17.60 MiB）
-- `FOT-MatissePro-M.PTF`（中等）：18.5 MB（17.60 MiB）
+**不扫**的（明确排除）：CCS 的 `>0` 日文列（**不进渲染层**）、Rio .ws2 内 CP932 字面量（**文件名/路径/label 池**，不是显示文本）。
 
-**文件大小增加**：约 2.4–2.6 倍，即扩展了字符集以覆盖汉字。
+全量源 TTF **不入库**（~40 MB），放到 `resource/fonts/sourcehan_full/`（缺失时**幂等跳过**——流水线里 `build_fonts_arc.py` 只用**已有子集** `sourcehan_subset/`，无全量源也可运行）；可用环境变量 `SOURCEHAN_FULL_DIR` 指向其他目录。
 
-### PTF 格式（已部分识别）
+**用 TrueType 而不是 CFF OTF**：引擎文本层走 GDI `CreateFontIndirectW`，`lfCharSet=GB2312_CHARSET`（134）过滤器在 CFF OpenType（`OTTO`）下无法匹配；思源黑体官方简体发行主形为 CFF OTF，因此选用 Adobe 同时发布（同 2.005R 版本号）的 TrueType 版本作为源。
+### 引擎加载链（简体显示的关键）
 
-PTF **不是纯自定义黑盒**：对文件主体做逐字节 XOR 0x2C 后，偏移 5 处出现 OpenType/CFF 的 **`OTTO`** 签名，其后 `numTables=15`、`searchRange=0x80` 与 OpenType 头部字段吻合，表目录区域可见 `BASE`/`CFF `/`GPOS`/`GSUB`/`VORG`/`cmap`/`head` 等标准表标签。
-即 **PTF ≈ 5 字节自定义前缀 + XOR 0x2C 混淆的 OpenType 字体**；封装细节（前缀语义、表目录未完全对齐）未逆向完毕。
+`LegacyGame_utf8.lua` 常量表定义三组字体配置（族名等值为 UTF-8 Lua 字符串）：
 
-**处理方式**：
-- 直接复用内化的字体文件（`resource/reused_archives/Fonts.arc`），无需自制
-- 如需自制中文字体，可按上述封装思路打包 OpenType 后实测
+| 变量 | 语义 | 本补丁值 |
+|---|---|---|
+| `g_fonts.name` | 对话框正文（Txt01）与 backlog（LogText01）/整页 add 调用**共用**（同一寄存器源，反汇编确认） | `Source Han Sans SC Medium` |
+| `g_fonts2.name` | 菜单族名选择器 `getFontName()` 的返回值：仅当语言补丁标志与第二语言标志同时开启时返回此值，否则返回 `g_fonts.name` | `Source Han Sans SC Medium` |
+| `g_fonts3.name` | 对话框人名框（Name01） add 调用的族名 | `Source Han Sans SC Bold` |
 
-### 实施步骤
+`g_fonts.file` / `g_fonts3.file` 分别指向 `Fonts.arc` 的 `FOT-MatissePro-M.PTF` / `FOT-MatissePro-B.PTF`；`g_fonts2.file = None`（菜单选择器直接用族名匹配，不需要再加载一次）。
 
-1. **字体文件替换**：用内化的 Fonts.arc（`resource/reused_archives/`）替换 Steam 原版
-2. **显示测试**：测试中文字符显示效果
+加载路径：引擎启动 → `CLegacyFontInfo:create` 按 `file` 名从 `Fonts.arc` 取 PTF → 按上节机制解压 → `AddFontMemResourceEx` 注册到进程字体表 → 后续 `add('system','Txt01'/'Name01', family, size, ...)` 以 `lfCharSet=GB2312_CHARSET` 经 GDI 匹配该族名 → 渲染。**族名匹配发生在进程内注册的字体表上，与系统字体表无关：玩家无须额外安装任何字体。**
+
+### 构建流程（脚本）
+
+1. **`script/gen_font_codepoints.py`**（码点清单）：仅当上述**声明性来源**更新时**重跑**；输出 `resource/fonts/sourcehan_subset/codepoints.txt`；
+2. **`script/subset_sourcehan.py`**（子集化）：读 codepoints.txt 运行 fontTools 裁剪思源黑体**全量源 TTF**（~40 MB，**不入库**），产出 Medium/Bold 两份子集；目录缺失时**幂等跳过**；
+3. **`script/build_fonts_arc.py`**（归档）：按**纯字面量 LZSS**（通过 `tool/ptf.py` 统一语义）**从子集直接打包**，产 `asset/Fonts.arc`；**双端回读 + `arcbuild.verify()` 两道闸**。流水线在 `script/build_patch.py` 里以 **gen_font_codepoints → subset_sourcehan → build_fonts_arc** 顺序编排；Script.arc 的族名 patch 已固化在 `resource/reused_archives/Script.arc` 内化副本里（`asset/Script.arc` 以 7c25034f… 定稿），pipeline 阶段只做**复制**不重写。
+
+字体机制与 backlog 渲染的关系：backlog 层创建函数（`sub_4986A0`）对自家图层**硬编码**开启二次膨胀边绘制（`mov dword ptr [esi+4],1`，位于 `0x498918`/`0x4989DE`）——文字轮廓先被向外膨胀 1px 形成边缘层，再叠加原字形。原版明朝体横向笔画极细，在该 1px 边缘叠加下产生肉眼可见重影；思源黑体笔画粗度足以使膨胀边缘与原字体对齐，不再产生可见差异。
+
+### PTF 封装格式（完整机制）
+
+PTF 是引擎 `sub_4591E0` 加载的 LZSS+XOR 复合封装，载入字体后通过 `AddFontMemResourceEx` 注册到进程字体表：
+- 存档头 4 字节 = 解压后大小（LE u32）；
+- 后接 LZSS 字节流：flag 字节按 **bit0 先出** 消费 8 位；bit=1 → 1 字节 literal；bit=0 → 2 字节 token（距离源 = `(b1>>4) + 16*b0`，12-bit 环形窗 0x1000；长度 = `(b1 & 0xF) + 2`）；
+- **环形窗存的是 XOR 后的字节**，写指针从 1 起（对应 `0x4593CD: mov esi,1`）；
+- 解压输出逐字节与 `0x2C` 异或得到标准 OpenType/TrueType 文件。
+
+本仓库打包器（`tool/ptf.py`）只生成 **纯字面量 LZSS**（flag=0xFF、每 8 字节前 1 flag），不做 match token：格式任意合法、与解压端语义严格一致、膨胀率固定 ~12.5%。字体文件熵高，LZSS 压缩对它无实际收益（原版 M 位 15.6 MiB 明文打出 17.6 MiB 的 PTF，同样膨胀），原版打包器也只是通用压缩包装器，因此本项目数据与机制**不依赖原版 match-token 语义的存在性**。
 
 ## 系统界面汉化
 
@@ -327,14 +357,11 @@ Steam 版 `Graphic.arc` 里有几张**整屏图**内嵌日文/英文文本（标
 
 * **待替换图**：`resource/graphic_overrides/`，文件名 = 归档内目标成员名（**大小写敏感**）；
 * **清单**：同目录 `manifest.json`（key = 归档名，value = 成员名列表；路径不重复登记，替换图就是同目录的同名文件）；
-* **工序**：`script/apply_graphic_overrides.py`（就地同名替换、不增删成员、幂等、回读校验），已接进 `script/build_patch.py`（写盘开头，素材快照之后）。
-  因 `Graphic.arc` 不再与 Steam 原档逐字节相同，`script/final_verification.py` 已把它移出 `OPTIONAL`。
-  安装器与 `generate_payload.py` 本就包含 `Graphic.arc`，无需改动。
+* **工序**：`script/apply_graphic_overrides.py`（就地同名替换、不增删成员、幂等、回读校验），已接进 `script/build_patch.py`（写盘开头，素材快照之后）。 因 `Graphic.arc` 不再与 Steam 原档逐字节相同，`script/final_verification.py` 已把它移出 `OPTIONAL`。 安装器与 `generate_payload.py` 本就包含 `Graphic.arc`，无需改动。
 
 ### 已知取舍
 
-* **外围**：Steam 版卡片外围是**白色留白**；本项目的图按口径把原版的右下阴影边改成了**透明**，卡片外围没有边框。
-  若要更贴近 Steam 版观感，可改为「以 Steam 版为底 + 内容替换」。
+* **外围**：Steam 版卡片外围是**白色留白**；本项目的图按口径把原版的右下阴影边改成了**透明**，卡片外围没有边框。 若要更贴近 Steam 版观感，可改为「以 Steam 版为底 + 内容替换」。
 * **边缘残留**：flood fill 只清近纯黑（max<90）的连通区，阴影与内容之间的 1–2px 抗锯齿灰边会保留。
 * **清晰度**：`SGCC0003` 源图只有 396×493，放大 1.395 倍会变软；所用路径是「原版先 ×1.6、再缩回」，比直接从原版放大更锐利（边缘强度 stddev 65.55 vs 58.13）。
 
@@ -375,10 +402,8 @@ Steam 侧**自己的**语音名（`MIK_0686.OGG` 等）满足 `通道 = char + �
 
 - 脚本里 `15 %LC<英文名> 00 00` 的 `%LC` 是**引擎命令标记**；引擎拿 `%LC<英文名>` 去查 `Rio.arc` 里的 `NameTable.txt`，命中就替换成表右列。
 - **表键必须与脚本标记一致** —— ASF 官方简中即如此（脚本 `%LF` ↔ 表 `%LF`）。
-- 内化数据的表 73 行**键是对的**（与脚本 73 个 `%LC` 名字一一对应、零偏差），**但前缀写成了 `%LR`**，与脚本的 `%LC` 对不上，引擎查不到 ⇒ 名字框一直显示英文。
-  前缀已由 `%LC` 前缀写入时天然修正。
-- ⚠️ **「键对」不等于「值对」**：该表的中文列与汉化组 CCS、与台词正文有多处矛盾（35 处与另两份表不一致），其中含两个角色撞名（`Matron` 与 `Lunch Lady` 都写成「食堂阿姨」）与两处与台词自相矛盾（`Mimimi` 写成「美美美」而台词是「咪咪咪」；`Akira` 写成「明」而台词是「阿基拉」）。
-  **35 处已逐条判定，11 处改动**（依据见 `resource/speaker_map.json` 的 note）。
+- 内化数据的表 73 行**键是对的**（与脚本 73 个 `%LC` 名字一一对应、零偏差），**但前缀写成了 `%LR`**，与脚本的 `%LC` 对不上，引擎查不到 ⇒ 名字框一直显示英文。 前缀已由 `%LC` 前缀写入时天然修正。
+- ⚠️ **「键对」不等于「值对」**：该表的中文列与汉化组 CCS、与台词正文有多处矛盾（35 处与另两份表不一致），其中含两个角色撞名（`Matron` 与 `Lunch Lady` 都写成「食堂阿姨」）与两处与台词自相矛盾（`Mimimi` 写成「美美美」而台词是「咪咪咪」；`Akira` 写成「明」而台词是「阿基拉」）。 **35 处已逐条判定，11 处改动**（依据见 `resource/speaker_map.json` 的 note）。
 
 **为什么不能让 `%LC` 直接写中文**：引擎对**脚本内窄字节**按 **CP932** 解码（见 [engine-mechanics.md](engine-mechanics.md)「文本编码路径」），简体专用字（见/雾/贵/樱/游/纱/师/长/丰/咪…）不在 CP932 里，写不进去。
 所以文本汉化必须走宽字符通路：正文/选项走 `.lng`，人名走 `NameTable.txt`。
@@ -430,7 +455,7 @@ Steam 侧**自己的**语音名（`MIK_0686.OGG` 等）满足 `通道 = char + �
 
 ### 中优先级（建议）
 
-- ✅ 全量语义复审：已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,834 格）
+- ✅ 全量语义复审：已收口，正文与译文的唯一准据是 `resource/text_map.json`（最终 42,857 格）
 - ⏳ 菜单文本润色
 
 ### 低优先级（建议）

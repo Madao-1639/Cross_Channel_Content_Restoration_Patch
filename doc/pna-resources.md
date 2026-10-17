@@ -33,20 +33,10 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 
 **H 场景补丁命名**：
 - 前缀：`EVCC`（必须使用此前缀，引擎存在白名单机制）
-- 编号规则：**一律使用 `EVCC9000` 起的编号段，并按「脚本引用顺序」分配**
-  （`script/build_cg_map.py` → `resource/cg_map.json`）：按剧情顺序扫描 11 个还原宿主的
-  **源 WSC 切片区间**、同一区间内按指令偏移递增，**首次被引用的「基号」**拿 `9000`，
-  其后依次 `9001`、`9002`……**同一张 CG 的差分共用一个编号**（`EVCC9018`/`EVCC9018A`），
-  只用变体字母区分。这样"编号小的 CG 一定先被引用"，编号可读、可用脚本复核；
-  实测 43 个引用文件 → **22 个基号**，其中 36 个有本补丁的 `EVCC9XXX` 副本（其余 7 个
-  用 Steam 侧同名文件，见下）。
+- 编号规则：**一律使用 `EVCC9000` 起的编号段，并按「脚本引用顺序」分配**（`script/build_cg_map.py` → `resource/cg_map.json`）：按剧情顺序扫描 11 个还原宿主的
+  **源 WSC 切片区间**、同一区间内按指令偏移递增，**首次被引用的「基号」**拿 `9000`，其后依次 `9001`、`9002`……**同一张 CG 的差分共用一个编号**（`EVCC9018`/`EVCC9018A`），只用变体字母区分。这样"编号小的 CG 一定先被引用"，编号可读、可用脚本复核；实测 43 个引用文件 → **22 个基号**，其中 36 个有本补丁的 `EVCC9XXX` 副本（其余 7 个用 Steam 侧同名文件，见下）。
 - 变体后缀：保留原版后缀（A/B/C/D/E），重编号时只改数字段
-- **对照表**：`resource/cg_map.json` —— **这是 CG 对应关系的唯一权威来源**，
-  由 `script/build_cg_map.py` 生成；`tool/rename_map.py`（产出就地插入用的改名表）
-  与 `script/renumber_evcc9xxx.py`（核对引用可解析）都**读这张表**，不再各自硬编码。
-  表项形如：`{"EVCC0017B.PNG": {"patch": "EVCC9006B.PNG", "steam_same_name": false,
-  "refs": [{"host": "CCC3027", "script_id": 227, "opcode": "0x46", "offset": "0x3436"}]}}`
-  —— 一张 CG 被多处引用，故 `refs` 是**列表**。
+- **对照表**：`resource/cg_map.json` —— **这是 CG 对应关系的唯一权威来源**，由 `script/build_cg_map.py` 生成；`tool/rename_map.py`（产出就地插入用的改名表）与 `script/renumber_evcc9xxx.py`（核对引用可解析）都**读这张表**，不再各自硬编码。表项形如：`{"EVCC0017B.PNG": {"patch": "EVCC9006B.PNG", "steam_same_name": false, "refs": [{"host": "CCC3027", "script_id": 227, "opcode": "0x46", "offset": "0x3436"}]}}` —— 一张 CG 被多处引用，故 `refs` 是**列表**。
 
 **「同名冲突」的判定必须比像素，不能比 sha**：
 第三方补丁出货的图是把原版 **LANCZOS 放大到 1280×960** 并重编码过的，所以同一张画的
@@ -66,7 +56,7 @@ sha256 必然不同。早期据此把 `EVCC0017`/`EVCC0027`/`EVCC0049`/`EVCC0058
 **命名白名单机制**：
 - Steam 引擎对 Chip2.arc 中的事件 CG 实施前缀白名单，只加载 `EVCC` 开头的文件
 - 使用其他前缀（如 `CN_EVCC`）的文件会被引擎静默忽略（不报错，但不加载）
-- 详见 [lessons-learned.md](lessons-learned.md) 「Chip2 事件 CG 的前缀白名单」
+- 还原 CG 因此一律落在 `EVCC9XXX` 段（见 [restoration-targets.md](restoration-targets.md)「事件 CG」）
 
 **背景资源**（Chip1.arc 中）：
 - `BGCC{编号}{变体}.png` - 背景图片
@@ -160,18 +150,14 @@ same_file = sha256(orig_data) == sha256(steam_data)
 
 本项目：
 
-- **37 个 CG 一律 `EVCC9XXX.PNG` 放进 `Chip2.arc`** —— 含 36 个 H 场景 CG + 1 个并入的
-  原版系统图 `SGCC0020`（原版 `CCB2101.WSC` 以 `0x48`/`0x46` 引用它，按事件 CG 处理，
-  现为 `EVCC9004.PNG`），19 个编号 `EVCC9000`–`EVCC9018`（差分共用编号）。
+- **37 个 CG 一律 `EVCC9XXX.PNG` 放进 `Chip2.arc`** —— 含 36 个 H 场景 CG + 1 个并入的原版系统图 `SGCC0020`（原版 `CCB2101.WSC` 以 `0x48`/`0x46` 引用它，按事件 CG 处理，现为 `EVCC9004.PNG`），19 个编号 `EVCC9000`–`EVCC9018`（差分共用编号）。
 - **立绘/背景本补丁无新增**：`Graphic.arc` 与 `Chip1.arc` 保持 Steam 原样。
 
 ### 实施结果（asset/ 输出）
 
 - `asset/Chip2.arc`：236 个成员（199 + 37 个 EVCC9XXX.PNG）
-- `asset/Graphic.arc`：**不生成** —— 与 Steam 原档逐字节相同（715 个成员），
-  安装器保留玩家原文件（与 `Chip1.arc` 同样处理）
-- Steam 原文件备份在 `backup/`：`Graphic.arc` 715 成员、`Chip1.arc` 140 成员、
-  `Chip2.arc` 199 成员
+- `asset/Graphic.arc`：**不生成** —— 与 Steam 原档逐字节相同（715 个成员），安装器保留玩家原文件（与 `Chip1.arc` 同样处理）
+- Steam 原文件备份在 `backup/`：`Graphic.arc` 715 成员、`Chip1.arc` 140 成员、`Chip2.arc` 199 成员
 
 ## 核心机制：图层 ID 是纯位置量
 
@@ -263,8 +249,7 @@ handler 反编译为准（见 [engine-mechanics.md](engine-mechanics.md)「WS2 �
 ```
 
 - **位置只在 `46`**；`34` 的槽名不含坐标，只回答"哪一层"。
-- 立绘默认 `y = -40`；站位量化在 `{0, ±275, ±400}` 几档（见
-  [engine-mechanics.md](engine-mechanics.md)「立绘站位词表」）。
+- 立绘默认 `y = -40`；站位量化在 `{0, ±275, ±400}` 几档（见 [engine-mechanics.md](engine-mechanics.md)「立绘站位词表」）。
 - 帧号用**记录下标**：默认 `c=4 [3,0,1,2]`（大图 + 3 面补丁）；`c=1 [3]` = 只用大图（静图）。
 - 背景块只发一条 `46`（位置恒 `[0,0,0,0]`）；立绘块发两条（先重置、后定位）。
 - 事件 CG 可走 `ev` 槽或 `st` 槽（原生先例 `33 st10 EVCC0063.PNG`）。
@@ -297,8 +282,7 @@ PNA 的图层按**动画帧分组**，通过每条记录首字段的 `u0` 标记
 [engine-mechanics.md](engine-mechanics.md)「立绘 PNA 的真实层结构」）：
 
 - `34 <槽> <单层PNA> 01 01` + `39 <槽> 02 01 01 [0]`
-- **`33 <槽> <file>.PNG> 01 01`** —— 原生 180 处用 `33` 把整张 PNG 压进 `st` 槽
-  （含 `st10 EVCC0063.PNG`：**事件 CG 走立绘槽**）。`33` 全语料**只载 PNG、0 处载 PNA**。
+- **`33 <槽> <file>.PNG> 01 01`** —— 原生 180 处用 `33` 把整张 PNG 压进 `st` 槽（含 `st10 EVCC0063.PNG`：**事件 CG 走立绘槽**）。`33` 全语料**只载 PNG、0 处载 PNA**。
 
 ### 与 LAYER_ORDER 的关系
 
@@ -318,8 +302,7 @@ resource/SysGraphic/<pna 名>/L<记录下标>.png
 ```
 
 * 子目录名 = 归档内的 pna 成员（大小写不敏感匹配，成员名字节原样保留）；
-* 文件名 = 图层**记录下标**（`39` 显示指令的帧号就是它）；目录里出现任何不合约定的
-  条目，`apply_sysgraphic` 直接报错，不静默忽略。
+* 文件名 = 图层**记录下标**（`39` 显示指令的帧号就是它）；目录里出现任何不合约定的条目，`apply_sysgraphic` 直接报错，不静默忽略。
 
 ### 写回规则（`tool/pna.py` 的 `serialize`）
 
@@ -333,14 +316,9 @@ resource/SysGraphic/<pna 名>/L<记录下标>.png
 
 ### 限制与验证
 
-* **签名扫描件不支持写回**：`SYS_GalleryBrowser.pna` 与 `Sys_Msw.pna` 的记录表未覆盖全文件
-  （数据区尾部有机制未查明的字节，`Pna.scanned=True`）—— 重排数据区可能破坏它，
-  `serialize` 对它们报 `PnaError`，`apply_sysgraphic` 直接拒跑（不猜）；
-* **往返回归**：`serialize(parse(blob)) == blob` 已对归档内全部 24 个规整 pna 逐字节验证
-  （2 个扫描件验证「正确拒绝」）；
-* **消费方**：`script/apply_sysgraphic.py`（流水线写盘的最后一步，预演/落盘两用、幂等）；
-  `final_verification.check_sysgraphic()` 是产物级对账（替换图 == 产物图层、未替换图层
-  与 Steam 原档逐字节相同、不变量全库成立）。
+* **签名扫描件不支持写回**：`SYS_GalleryBrowser.pna` 与 `Sys_Msw.pna` 的记录表未覆盖全文件（数据区尾部有机制未查明的字节，`Pna.scanned=True`）—— 重排数据区可能破坏它，`serialize` 对它们报 `PnaError`，`apply_sysgraphic` 直接拒跑（不猜）；
+* **往返回归**：`serialize(parse(blob)) == blob` 已对归档内全部 24 个规整 pna 逐字节验证（2 个扫描件验证「正确拒绝」）；
+* **消费方**：`script/apply_sysgraphic.py`（流水线写盘的最后一步，预演/落盘两用、幂等）；`final_verification.check_sysgraphic()` 是产物级对账（替换图 == 产物图层、未替换图层与 Steam 原档逐字节相同、不变量全库成立）。
 
 方案与决策背景见 [localization.md](localization.md)「SysGraphic.arc」。
 

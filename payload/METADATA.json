@@ -1,6 +1,6 @@
 {
   "Rio.arc": {
-    "checksum": "66feb5dd46b76af7860f88ff22226a1db35f9af3762f840d8591a01c7fd012f7",
+    "checksum": "34eaceb3ba112a07464ad397904e94ba765219a04230392751386ac4c1ee7e03",
     "members": [
       {
         "name": "AN_001.ws2",
@@ -464,7 +464,7 @@
       },
       {
         "name": "CCB2017_en.ws2",
-        "type": "keep"
+        "type": "modified"
       },
       {
         "name": "CCB2019_en.ws2",
@@ -6591,7 +6591,7 @@
     ]
   },
   "Voice.arc": {
-    "checksum": "f0aab2516bdb047f734b110e011af0e809c2c46b8f650495bbc6106736258b06",
+    "checksum": "c2549a2eb7f1f3b28f5f746a12d0f52cd4cb55c6df4b3c3b50c214e81f173c21",
     "members": [
       {
         "name": "ANA_0001.ogg",
@@ -136650,7 +136650,15 @@
         "type": "added"
       },
       {
+        "name": "FYU010B2017.OGG",
+        "type": "added"
+      },
+      {
         "name": "FYU011B2001.OGG",
+        "type": "added"
+      },
+      {
+        "name": "FYU011B2017.OGG",
         "type": "added"
       },
       {
@@ -136662,7 +136670,15 @@
         "type": "added"
       },
       {
+        "name": "FYU012B2017.OGG",
+        "type": "added"
+      },
+      {
         "name": "FYU012C3004.OGG",
+        "type": "added"
+      },
+      {
+        "name": "FYU013B2017.OGG",
         "type": "added"
       },
       {
@@ -136674,7 +136690,15 @@
         "type": "added"
       },
       {
+        "name": "FYU014B2017.OGG",
+        "type": "added"
+      },
+      {
         "name": "FYU014C3004.OGG",
+        "type": "added"
+      },
+      {
+        "name": "FYU015B2017.OGG",
         "type": "added"
       },
       {
@@ -137824,20 +137848,20 @@
     ]
   },
   "Fonts.arc": {
-    "checksum": "067032e34b1d214070df385c8303638700a927ca52732f82bcf4d0c4bc6673d7",
+    "checksum": "09c6a4044d589cf5ea12373e5639bf5e16787b1d855adab99e21eb00bda7bfb3",
     "members": [
       {
-        "name": "FOT-MatissePro-B.PTF",
+        "name": "FOT-MatissePro-M.PTF",
         "type": "modified"
       },
       {
-        "name": "FOT-MatissePro-M.PTF",
+        "name": "FOT-MatissePro-B.PTF",
         "type": "modified"
       }
     ]
   },
   "Script.arc": {
-    "checksum": "55755de88d311fac3d6bcdd02252a4ee2f9d0b5065a9986a9cbedb3bc116331b",
+    "checksum": "7c25034ff30197e9c42384e0fd2190275148cf676f11b431c653cbdc23126824",
     "members": [
       {
         "name": "ArcFileName.lua",

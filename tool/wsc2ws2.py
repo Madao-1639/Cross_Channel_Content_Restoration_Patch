@@ -234,10 +234,29 @@ def hide_slots(instrs):
     return out
 
 
+def portrait_bits(instrs):
+    """曾与立绘 `48` 配对过的「显示位号」集合（`49 b=1`）。
+
+    判据与 `portrait_slots()` 一致：立绘 `48` 之后 6 条内若有 `49 b=1`，该位号即「立绘位号」。
+    用途：`49 b=0` 遇到**从未**作为立绘位出现过的位号（背景/其它）属**合法跳过**（计数 `hide_nonportrait`）；
+    位号在集合里却查不到当前绑定槽位，则归为 `hide_nobind`（原版此刻也没立绘在屏，同样无需清）。
+    两个计数由 `script/audit/verify_ws2_conventions.py` 的立绘隐藏闸监视。
+    """
+    out = set()
+    for k, i in enumerate(instrs):
+        if i.opcode == 0x48 and PORTRAIT_RE.match(i.fields.get('name', '')):
+            for j in instrs[k + 1:k + 7]:
+                if j.opcode == 0x49 and j.fields.get('b') == 1:
+                    out.add(j.fields.get('a'))
+                    break
+    return out
+
 # WSC 0x03/0x47 等引擎状态原语 —— 逐条有名承担者时才可跳（见 doc/wsc_to_ws2_conversion.md §3.8）
 # ⚠️ `0x49` **不能整类跳**：`b=1`（显示）与 `34`+`39`/`portrait_slots()` 冗余，但 `b=0`（隐藏）WS2 侧无等价物
 #   —— 实机证伪 2026-10-14（CCB0013 最后一句后应清立绘再切背景，立绘却挂到下一脚本）。
-#   正确做法：`49 <立绘位号> b=0` → 发射 `37 <对应 stNN>`（尚未实现，待位号→stNN 对齐后改）
+#   实现：`49 <立绘位号> b=0` → 发射 `37 <对应 stNN>`；位号→槽位由 `hide_slots()` 按**原版顺序**
+#   跟踪（与 `portrait_slots()` 同源，见该函数），位号非立绘或此刻无绑定则合法跳过并计数
+#   （`hide_nonportrait` / `hide_nobind`；闸见 `script/audit/verify_ws2_conventions.py`）。
 SKIPPED_OPS = None  # 由 default 分支统一处理并计数
 
 
@@ -342,7 +361,8 @@ class _Emitter:
         self.pending_fade = None
         self.suppress_next_wait = False
         self.portrait_slots = portrait_slots(opts.slot_context or instrs)
-        self.hide_slot_by_off = hide_slots(opts.slot_context or instrs)   # 见模块顶部说明
+        self.hide_slot_by_off = hide_slots(opts.slot_context or instrs)
+        self.portrait_bits = portrait_bits(opts.slot_context or instrs)   # 见模块顶部说明
         self.exit_label_off = None
         self.has_choice = False
         self.pool_index = opts.pool_start  # 字符串池序号：`14` 的 id 与 `0f` 的 strid 共用
@@ -731,8 +751,10 @@ class _Emitter:
                 if slot:
                     self.raw(b'\x37' + slot.encode('ascii') + b'\x00')
                     self.count('clear_sprite')
+                elif bit is not None and bit not in self.portrait_bits:
+                    self.count('hide_nonportrait')   # 位号从不与立绘配对（背景/其它）⇒ 合法跳过
                 else:
-                    self.count(None, op)
+                    self.count('hide_nobind')        # 立绘位号此刻无绑定槽位（原版此时也没立绘在屏）⇒ 无需清
             elif op == 0x64:
                 # `64` 既不是句柄也不是位置（见模块顶部说明），不参与发射，只计数
                 self.count(None, op)
