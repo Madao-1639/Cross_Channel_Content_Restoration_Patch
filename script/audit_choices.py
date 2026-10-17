@@ -39,7 +39,7 @@ from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-CCS_DIR = ROOT / '..' / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
+CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 RIO = ROOT / 'asset' / 'Rio.arc'
 BACKUP = ROOT / 'asset' / 'Rio.arc.before_choice_fix'
 _S = re.compile(r'\\d|%K%P|%K|%P|%N')

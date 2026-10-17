@@ -239,6 +239,137 @@ def check_lng_pairing(rio):
               % (len(debt), debt[:8]))
 
 
+def check_ccb2017_branch(rio):
+    """`CCB2017_EN` 的选项分支（本项目**唯一**的「新增跳转」例外，见 doc/call-chain.md）。
+
+    形状：`k=30` 之后 = 提示句 `14`（旁白、尾 `%K`）+ `0e`(2 条目) + `0f`(2)
+    + 清框格 B `14 '%P'` + 孤岛(18 行) + `06` → 回 `k=80` + 清框格 A `14 '%P'`；
+    条目 A → 清框格 A、条目 B → 清框格 B（提示句尾 `%K` 只留框，选完必须清框 ——
+    原生每条分支的落点都是纯标记 `%P`）。
+    本闸是它**唯一的机械守卫**：提示句形态、两张清框格（形态/位置/无前导 `15`）、落点、
+    条目形态、孤岛行数与源行对位、尾表。
+    """
+    print('\n== CCB2017 branch ==')
+    import re as _re
+
+    from tool import lng as lngmod
+    from tool import writer as W
+
+    idx = {k.upper(): v for k, v in rio.items()}
+    name = 'CCB2017_EN.WS2'
+    data = idx.get(name)
+    if data is None:
+        fail('script missing: %s' % name)
+        return
+    plain = ws2.decode(data)
+    ins = ws2disasm.disassemble(plain)
+    if sum(i.size for i in ins) != len(plain):
+        fail('%s 指令解析不完整' % name)
+        return
+    starts = {i.offset: i for i in ins}
+    dlgs = [i for i in ins if i.opcode == 0x14]
+    chooses = [i for i in ins if i.opcode == 0x0f]
+    if len(chooses) != 1 or chooses[0].fields['count'] != 2:
+        fail('%s：应恰有 1 张 `0f` / 2 个条目，实测 %d 张' % (name, len(chooses)))
+        return
+    ch = chooses[0]
+    j = ins.index(ch)
+    if ins[j - 1].opcode != 0x0e or ins[j - 1].fields.get('form') != 'choice-hdr':
+        fail('%s：`0f` 之前不是选项头 `0e`' % name)
+        return
+    # 选项头的**前一条**必须是指示句 `14`（旁白、尾 `%K` 留框）—— 原生惯例（56 处选项里 42 处旁白、45 处尾 `%K`）
+    if ins[j - 2].opcode != 0x14:
+        fail('%s：`0e` 之前不是提示句 `14`（实测 %s）'
+             % (name, ws2disasm.opcode_name(ins[j - 2].opcode)))
+        return
+    ptxt = ins[j - 2].fields.get('text') or ''
+    if not ptxt.endswith('%K') or ptxt.endswith('%K%P'):
+        fail('%s：提示句尾标记应为 `%%K`（不带 `%%P`），实测 %r' % (name, ptxt[-8:]))
+        return
+    if ins[j - 3].opcode == 0x15 and (ins[j - 3].fields.get('prefix') or '') != '':
+        fail('%s：提示句应为旁白（其前一条 `15` 应空前缀），实测 %r'
+             % (name, ins[j - 3].fields.get('prefix')))
+        return
+    ents = ch.fields['entries']
+    if [e['label'] for e in ents] != [11, 12] or any(e['jump_op'] != 6 for e in ents):
+        fail('%s：条目 label/jump 形态异常 %s'
+             % (name, [(e['label'], e['jump_op']) for e in ents]))
+        return
+    miss = [e.get('target') for e in ents if e.get('target') not in starts]
+    if miss:
+        fail('%s：条目 jump 目标 %s 不落在指令首字节' % (name, miss))
+        return
+    # 两个落点：A/B 都是**清框格 `14 '%P'`**（提示句尾只 `%K` 留框 ⇒ 选完必须清框；
+    # 原生落点的主导惯例是先执行一张纯标记 `14 "%P"`：跨文件 89/95 条、文件内 25/32 条如此）。
+    # ⚠️ 文件顺序是「`k=0..30` → 提示句 → 清框格 B → 孤岛 18 行 → `06` → 清框格 A → `k=31..`」
+    #    ⇒ `dlgs[31]` 是提示句、`dlgs[32]` 是清框格 B、`dlgs[33..50]` 是孤岛、
+    #    `dlgs[51]` 是清框格 A、`dlgs[52]` 才是 `k=31`（与 `k=80` 同理）。
+    tgt_a, tgt_b = ents[0]['target'], ents[1]['target']
+    PROMPT, CLEAR_B, ISLAND0, N_ISL = 31, 32, 33, 18
+    CLEAR_A = ISLAND0 + N_ISL
+    K31 = CLEAR_A + 1
+    k31_off = dlgs[K31].offset
+    for _tag, _off in (('B', tgt_b), ('A', tgt_a)):
+        _x = starts.get(_off)
+        if _x is None or _x.opcode != 0x14 or (_x.fields.get('text') or '') != '%P':
+            fail('%s：条目 %s 的落点 %s 不是清框格 `14 \'%%P\'`' % (name, _tag, _off))
+            return
+        if ins[ins.index(_x) - 1].opcode == 0x15:
+            fail('%s：清框格 %s @%s 前不应有 `15`（原生纯标记格不带设名/清框）'
+                 % (name, _tag, _off))
+            return
+    nx_a = ins[ins.index(starts[tgt_a]) + 1]
+    if (not (len(dlgs) > K31)
+            or dlgs[PROMPT].offset != ins[j - 2].offset
+            or dlgs[CLEAR_B].offset != tgt_b
+            or dlgs[CLEAR_A].offset != tgt_a
+            or nx_a.opcode != 0x15 or nx_a.offset + nx_a.size != k31_off):
+        fail('%s：清框格/提示句的位置与槽位序不符（tgt_a=%s tgt_b=%s）'
+             % (name, tgt_a, tgt_b))
+        return
+    # 孤岛正文：清框格 B 与清框格 A **之间**连续 18 条 `14`，且其间无 `0f`
+    body = [i for i in ins if tgt_b < i.offset < tgt_a]
+    island_dlgs = [i for i in body if i.opcode == 0x14]
+    if len(island_dlgs) != 18 or any(i.opcode == 0x0f for i in body):
+        fail('%s：孤岛区间 %s..%s 含 %d 行对话（应 18）'
+             % (name, tgt_b, tgt_a, len(island_dlgs)))
+        return
+    # 独立 `06`：孤岛之后、清框格 A 之前，目标是 `k=80` 的设名 `15`
+    jmps = [i for i in body if i.opcode == 0x06]
+    if len(jmps) != 1 or ins[ins.index(starts[tgt_a]) - 1].opcode != 0x06:
+        fail('%s：孤岛区间应恰有 1 个独立 `06` 且紧靠清框格 A（实测 %d）' % (name, len(jmps)))
+        return
+    tgt_c = jmps[0].fields['target']
+    t15 = starts.get(tgt_c)
+    k80_off = dlgs[K31 + (80 - 31)].offset
+    if t15 is None or t15.opcode != 0x15 or k80_off != tgt_c + t15.size:
+        fail('%s：孤岛末条 `06` 应指向 `k=80` 的设名 `15`（实测落点 %s）' % (name, tgt_c))
+        return
+    # 孤岛 18 行 = 源 CCS 行 31..48（逐行同源，去控制符/空白后比前 18 字）
+    src = W.src_lines('CCB2017')
+
+    def _n(s):
+        if isinstance(s, bytes):
+            s = s.decode('cp932', 'replace')
+        s = _re.sub(r'(\d|%[A-Za-z])+', '', s or '')
+        for c in (chr(10), chr(0x3000), ' '):
+            s = s.replace(c, '')
+        return s[:18]
+
+    bad = [r for r, ins2 in zip(range(31, 49), island_dlgs)
+           if _n(src.get(r, '')) != _n(ins2.fields.get('text', ''))]
+    if bad:
+        fail('%s：孤岛行与源 CCS 不对位（行 %s）' % (name, bad[:6]))
+        return
+    lng_name = [k for k in rio if k.upper() == 'CCB2017_EN.LNG']
+    n_lng = len(lngmod.parse_lng(rio[lng_name[0]])) if lng_name else -1
+    if n_lng != 152:
+        fail('%s：lng %d 条 != 152（实际槽位）' % (name, n_lng))
+        return
+    ok('%s：提示句 1（旁白/尾 %%K）+ 选项分支 2 条目（A/B 各落一张清框格 `%%P`）'
+       '+ 孤岛 18 行 ↔ 源 CCS 31..48 + `06`→k=80 设名；lng 152 条' % name)
+
+
 def check_resource_classification(graphic, chip2):
     print('\n== Resource classification ==')
     bad_chip2 = [n for n in chip2 if not n.upper().startswith('EVCC') and not n.upper().startswith('CN_EVCC')]
@@ -774,6 +905,7 @@ def main():
 
     check_call_chain(rio)
     check_inline_splice(rio)
+    check_ccb2017_branch(rio)
     check_lng_pairing(rio)
     check_tails(rio)
     check_resource_classification(graphic, chip2)

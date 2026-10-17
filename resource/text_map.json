@@ -12377,8 +12377,8 @@
 },
 "CCB2017_EN": {
 "ccs": "CCB2017",
-"n_steam": 129,
-"n_final": 129,
+"n_steam": 152,
+"n_final": 152,
 "items": [
 {
 "k": 0,
@@ -12406,341 +12406,397 @@
 {
 "k": 31,
 "op": "text",
-"zh": "那么，要换个游戏吗？%K%P",
-"src": "fix",
-"_en": "\\dOkay then, want to change the game?\\d%K%P"
+"zh": "该提议点什么好呢。%K",
+"src": "newtrans",
+"why": "CCB2017 选项分支的提示句（旁白/内面，尾 %K 留框）"
 },
 {
 "k": 32,
+"op": "opt",
+"zh": "扭扭乐",
+"src": "newtrans",
+"why": "CCB2017 选项分支：扭扭乐（Steam 原段）"
+},
+{
+"k": 33,
+"op": "opt",
+"zh": "一小时的Ｈ赌约",
+"src": "newtrans",
+"why": "CCB2017 选项分支：原版「一小时的Ｈ赌约」段"
+},
+{
+"k": 34,
+"op": "ctrl",
+"zh": "%P",
+"src": "newtrans",
+"why": "CCB2017 选项分支：分支入口清框格（提示句尾 %K 只留框；选完由本格 %P 清框，原生惯例）"
+},
+{
+"k": [
+35,
+52
+],
+"op": "ccs",
+"row0": 31,
+"src": "verdict",
+"why": "CCB2017 孤岛：源 CCS 行 31..48（原版 H 赌约 18 行）"
+},
+{
+"k": 53,
+"op": "ctrl",
+"zh": "%P",
+"src": "newtrans",
+"why": "CCB2017 选项分支：分支入口清框格（提示句尾 %K 只留框；选完由本格 %P 清框，原生惯例）"
+},
+{
+"k": 54,
+"op": "text",
+"zh": "“那么，要换个游戏吗？”%K%P",
+"src": "fix",
+"_en": "\\dOkay then, want to change the game?\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
+},
+{
+"k": 55,
 "op": "text",
 "zh": "“换什么？”%K%P",
 "src": "zhfill",
 "_en": "\\dTo what?\\d%K%P"
 },
 {
-"k": 33,
+"k": 56,
 "op": "text",
 "zh": "“嗯……”%K%P",
 "src": "newtrans",
 "_en": "\\dHmmm...\\d%K%P"
 },
 {
-"k": 34,
+"k": 57,
 "op": "text",
 "zh": "高速运算。%K%P",
 "src": "zhfill",
 "_en": "Accelerated calculation.%K%P"
 },
 {
-"k": 35,
+"k": 58,
 "op": "text",
 "zh": "*叮！*%K%P",
 "src": "newtrans",
 "_en": "*ka-ching!*%K%P"
 },
 {
-"k": 36,
+"k": 59,
 "op": "text",
 "zh": "“换成扭扭乐。”%K%P",
 "src": "zhfill",
 "_en": "\\dTo twister game.\\d%K%P"
 },
 {
-"k": 37,
+"k": 60,
 "op": "text",
 "zh": "……%K%P",
 "src": "fix",
 "_en": "...%K%P"
 },
 {
-"k": 38,
+"k": 61,
 "op": "text",
 "zh": "“右手……蓝色。”%K%P",
 "src": "zhfill",
 "_en": "\\dRight hand... Blue.\\d%K%P"
 },
 {
-"k": 39,
+"k": 62,
 "op": "text",
 "zh": "那台电池驱动的装置报出了颜色。%K%P",
 "src": "zhfill",
 "_en": "The battery-powered device called out the color.%K%P"
 },
 {
-"k": 40,
+"k": 63,
 "op": "text",
 "zh": "“收到！”%K%P",
 "src": "zhfill",
 "_en": "\\dGot it!\\d%K%P"
 },
 {
-"k": 41,
+"k": 64,
 "op": "text",
-"zh": "呀啊啊，别把鼻子凑到那种地方去！%K%P",
+"zh": "“呀啊啊，别把鼻子凑到那种地方去！”%K%P",
 "src": "fix",
-"_en": "\\dGyaaah, don't stick your nose up there!\\d%K%P"
+"_en": "\\dGyaaah, don't stick your nose up there!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 42,
+"k": 65,
 "op": "text",
 "zh": "“又不是我的错！” *嗅嗅*%K%P",
 "src": "zhfill",
 "_en": "\\dIt's not my fault!\\d *sniff sniff*%K%P"
 },
 {
-"k": 43,
+"k": 66,
 "op": "text",
-"zh": "别闻我！%K%P",
+"zh": "“别闻我！”%K%P",
 "src": "fix",
-"_en": "\\dDon't sniff me!\\d%K%P"
+"_en": "\\dDon't sniff me!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 44,
+"k": 67,
 "op": "text",
 "zh": "“左脚……红色。”%K%P",
 "src": "zhfill",
 "_en": "\\dLeft foot... Red.\\d%K%P"
 },
 {
-"k": 45,
+"k": 68,
 "op": "text",
 "zh": "“我、我够不到……”%K%P",
 "src": "zhfill",
 "_en": "\\dI-I can't...make it.\\d%K%P"
 },
 {
-"k": 46,
+"k": 69,
 "op": "text",
 "zh": "“左手……绿色。”%K%P",
 "src": "zhfill",
 "_en": "\\dLeft hand... Green.\\d%K%P"
 },
 {
-"k": 47,
+"k": 70,
 "op": "text",
 "zh": "“失礼了，从你的裙子里借过一下……”%K%P",
 "src": "newtrans",
 "_en": "\\dPardon me, coming through your skirt...\\d%K%P"
 },
 {
-"k": 48,
+"k": 71,
 "op": "text",
-"zh": "嘎啊啊！%K%P",
+"zh": "“嘎啊啊！”%K%P",
 "src": "fix",
-"_en": "\\dGaaagh!\\d%K%P"
+"_en": "\\dGaaagh!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 49,
+"k": 72,
 "op": "text",
-"zh": "你在干什么啊？！%K%P",
+"zh": "“你在干什么啊？！”%K%P",
 "src": "fix",
-"_en": "\\dWhat are you doing?!\\d%K%P"
+"_en": "\\dWhat are you doing?!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 50,
+"k": 73,
 "op": "text",
-"zh": "我在玩扭扭乐啊！%K%P",
+"zh": "“我在玩扭扭乐啊！”%K%P",
 "src": "fix",
-"_en": "\\dPlaying twister!\\d%K%P"
+"_en": "\\dPlaying twister!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 51,
+"k": 74,
 "op": "text",
 "zh": "“裙、裙子会掀起来的！”%K%P",
 "src": "zhfill",
 "_en": "\\dI-It'll flip up!\\d%K%P"
 },
 {
-"k": 52,
+"k": 75,
 "op": "text",
 "zh": "“右脚……红色。”%K%P",
 "src": "zhfill",
 "_en": "\\dRight foot... Red.\\d%K%P"
 },
 {
-"k": 53,
+"k": 76,
 "op": "text",
 "zh": "“呜……好痛！我撑不住了！”%K%P",
 "src": "newtrans",
 "_en": "\\dOhh... Owww! I won't make it!\\d%K%P"
 },
 {
-"k": 54,
+"k": 77,
 "op": "text",
 "zh": "“左脚……黄色。”%K%P",
 "src": "zhfill",
 "_en": "\\dLeft foot... Yellow.\\d%K%P"
 },
 {
-"k": 55,
+"k": 78,
 "op": "text",
 "zh": "“够到了。”%K%P",
 "src": "zhfill",
 "_en": "\\dReached it.\\d%K%P"
 },
 {
-"k": 56,
+"k": 79,
 "op": "text",
-"zh": "你怎么这么柔软啊？！%K%P",
+"zh": "“你怎么这么柔软啊？！”%K%P",
 "src": "fix",
-"_en": "\\dWhy are you so flexible?!\\d%K%P"
+"_en": "\\dWhy are you so flexible?!\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 57,
+"k": 80,
 "op": "text",
-"zh": "我的脑子可是很灵活的。%K%P",
+"zh": "“我的脑子可是很灵活的。”%K%P",
 "src": "fix",
-"_en": "\\dI have a flexible mind.\\d%K%P"
+"_en": "\\dI have a flexible mind.\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 58,
+"k": 81,
 "op": "text",
 "zh": "“我完全搞不懂。”%K%P",
 "src": "zhfill",
 "_en": "\\dI don't understand at all.\\d%K%P"
 },
 {
-"k": 59,
+"k": 82,
 "op": "text",
 "zh": "“左脚……绿色。”%K%P",
 "src": "zhfill",
 "_en": "\\dLeft foot... Green.\\d%K%P"
 },
 {
-"k": 60,
+"k": 83,
 "op": "text",
 "zh": "“唔……我要抽筋了！”%K%P",
 "src": "zhfill",
 "_en": "\\dUnnn... I'm getting a cramp!\\d%K%P"
 },
 {
-"k": 61,
+"k": 84,
 "op": "text",
 "zh": "“右脚……蓝色。”%K%P",
 "src": "zhfill",
 "_en": "\\dRight foot... Blue.\\d%K%P"
 },
 {
-"k": 62,
+"k": 85,
 "op": "text",
 "zh": "“失礼了！”%K%P",
 "src": "zhfill",
 "_en": "\\dExcuse me!\\d%K%P"
 },
 {
-"k": 63,
+"k": 86,
 "op": "text",
 "zh": "“呀！那是我的胯下！”%K%P",
 "src": "zhfill",
 "_en": "\\dGah! That's my crotch!\\d%K%P"
 },
 {
-"k": 64,
+"k": 87,
 "op": "text",
 "zh": "“右手……绿色。”%K%P",
 "src": "zhfill",
 "_en": "\\dRight hand... Green.\\d%K%P"
 },
 {
-"k": 65,
+"k": 88,
 "op": "text",
 "zh": "“不、不行！不行了！”%K%P",
 "src": "zhfill",
 "_en": "\\dI-I can't! I can't!\\d%K%P"
 },
 {
-"k": 66,
+"k": 89,
 "op": "text",
 "zh": "“我讨厌扭扭乐！”%K%P",
 "src": "zhfill",
 "_en": "\\dI hate Twister!\\d%K%P"
 },
 {
-"k": 67,
+"k": 90,
 "op": "text",
 "zh": "……%K%P",
 "src": "fix",
 "_en": "...%K%P"
 },
 {
-"k": 68,
+"k": 91,
 "op": "text",
 "zh": "10胜0负。%K%P",
 "src": "fix",
 "_en": "10 wins, 0 losses.%K%P"
 },
 {
-"k": 69,
+"k": 92,
 "op": "text",
 "zh": "是我赢了。%K%P",
 "src": "fix",
 "_en": "I won.%K%P"
 },
 {
-"k": 70,
+"k": 93,
 "op": "text",
 "zh": "“那么，该睡觉了吗？”%K%P",
 "src": "zhfill",
 "_en": "\\dWell then, shall we go to sleep?\\d%K%P"
 },
 {
-"k": 71,
+"k": 94,
 "op": "text",
 "zh": "“汪。”%K%P",
 "src": "newtrans",
 "_en": "\\dWoof.\\d%K%P"
 },
 {
-"k": 72,
+"k": 95,
 "op": "text",
 "zh": "“看你这么努力，我就不计较你学狗叫的事了。”%K%P",
 "src": "zhfill",
 "_en": "\\dYou tried so hard, I'll let the dog thing go.\\d%K%P"
 },
 {
-"k": 73,
+"k": 96,
 "op": "text",
 "zh": "唉……%K%P",
 "src": "fix",
 "_en": "*sigh*%K%P"
 },
 {
-"k": 74,
+"k": 97,
 "op": "text",
 "zh": "她重重地叹了口气。%K%P",
 "src": "fix",
 "_en": "She sighed heavily.%K%P"
 },
 {
-"k": 75,
+"k": 98,
 "op": "text",
-"zh": "累死我了……%K%P",
+"zh": "“累死我了……”%K%P",
 "src": "fix",
-"_en": "\\dI'm so tired...\\d%K%P"
+"_en": "\\dI'm so tired...\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 76,
+"k": 99,
 "op": "text",
 "zh": "“现在可是半夜。”%K%P",
 "src": "zhfill",
 "_en": "\\dIt is the middle of the night.\\d%K%P"
 },
 {
-"k": 77,
+"k": 100,
 "op": "text",
-"zh": "嗯，睡觉吧……%K%P",
+"zh": "“嗯，睡觉吧……”%K%P",
 "src": "fix",
-"_en": "\\dYeah, let's go to bed...\\d%K%P"
+"_en": "\\dYeah, let's go to bed...\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 78,
+"k": 101,
 "op": "text",
-"zh": "好。%K%P",
+"zh": "“好。”%K%P",
 "src": "fix",
-"_en": "\\dRight.\\d%K%P"
+"_en": "\\dRight.\\d%K%P",
+"why": "英文 \\d…\\d 引号标记 ⇒ 中文补全角引号（台词，与同段其余格一致）"
 },
 {
-"k": 79,
+"k": 102,
 "op": "text",
 "zh": "……%K%P",
 "src": "fix",
@@ -12748,8 +12804,8 @@
 },
 {
 "k": [
-80,
-128
+103,
+151
 ],
 "op": "ccs",
 "row0": 49,

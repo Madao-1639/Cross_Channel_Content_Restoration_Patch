@@ -137,7 +137,11 @@ def carry_carried_soundlevel():
 def bootstrap_from_backup():
     """以 `backup/`（Steam 原版）为基线起底，**显式带入**少数几项：
 
-      * `Fonts.arc` / `Script.arc` —— 完全复用（内化在 `resource/reused_archives/`；汉字字体、Lua 界面）；
+      * `Script.arc` —— 复用内化 Lua 界面（**族名 patch 已固化在内化副本**，无需再跑补丁）；
+      * `Fonts.arc` —— **不再复用**：全链在管线内自建：`gen_font_codepoints.py`（码点清单，
+        声明性来源＝text_map/上游 CCS/carried_lng/离线 dump，不依赖任何产物）→
+        `subset_sourcehan.py`（fontTools 子集化思源黑体）→
+        `build_fonts_arc.py`（纯字面量 LZSS PTF），
       * **35 个处理集之外的汉化 lng** —— 内化在 `resource/carried_lng/`；
       * **37 张还原 CG** —— 由 `build_restored_cgs.py` 从**原版** `Chip.arc` 放大（LANCZOS 1280×960）改名补入。
 
@@ -145,8 +149,11 @@ def bootstrap_from_backup():
     """
     for fname in ('Rio.arc', 'Graphic.arc', 'Chip2.arc', 'Voice.arc', 'SysGraphic.arc'):
         bootstrap_backup(fname)
-    bootstrap_copy('Fonts.arc', 2)                 # 完全复用（内化副本）
-    bootstrap_copy('Script.arc', 14)               # 完全复用（内化副本）
+    bootstrap_copy('Script.arc', 14)               # 复用内化 Lua 界面，随后打族名补丁
+    run('gen_font_codepoints.py')            # 码点清单（声明语料：text_map/上游 CCS/carried_lng/dump，不依赖任何产物）
+    run('subset_sourcehan.py')               # 字体子集化（思源黑体 TTF，**全量源缺失时幂等跳过**）
+    run('build_fonts_arc.py')                # 自制 Fonts.arc（思源黑体，不再依赖内化归档）
+    # Script.arc： **族名已固化在内化副本**，直接复制 asset 即定稿
     carry_carried_lng()
     carry_carried_soundlevel()
     # ⚠️ **语音必须在 `splice_restoration` 之前补全**：splice 的改名核对要求被引用的语音已在档，
@@ -161,8 +168,9 @@ def bootstrap_from_backup():
 def bootstrap_copy(fname, expect_count):
     """把一份**完全复用**的归档（`resource/reused_archives/`）铺进 `asset/`。
 
-    这两份（`Fonts.arc` 汉字字体、`Script.arc` Lua 系统界面）原样采用、不涉裁定。原先从外部上游
-    目录取 ⇒ 构建期依赖它；现读仓库内的内化副本 ⇒ **构建期不再需要任何上游知识**。
+    `Script.arc` 的 Lua 系统界面**原样采用**、不涉裁定；字体的族名 patch 已经
+    **固化在该内化副本**（与 `asset/Script.arc` 定稿一致），因此 **无需再跑** 
+流水线复次仅做「复制」，产物与定稿逐字节一致。
     ⚠️ 落盘走 `arcbuild.write_arc`（大归档上 `shutil.copy2` 会撞 `OSError 22`）。"""
     src_path = REUSED / fname
     target = ASSET / fname
@@ -279,6 +287,11 @@ STEPS = [
     #    ↑ 素材按轮快照（回滚点）；此刻 asset/ 还是上一轮的成品
     (PHASE_WRITE, 'apply_graphic_overrides.py', ('--write',), A),
     (PHASE_WRITE, 'splice_restoration.py', ('--write',), A),
+    (PHASE_WRITE, 'splice_ccb2017_branch.py', ('--write',), A),
+    #    ↑ **CCB2017 的选项分支**（本项目唯一的「新增跳转」例外，见 doc/call-chain.md
+    #      「选项分支」）：必须在 `apply_text_map` 之前——它会让该脚本的槽位 129 → 152
+    #      （+1 提示句 +2 选项 +2 分支入口清框格 `14 "%P"` +18 孤岛行），
+    #      表的 `n_steam`/`n_final` 与 lng 随之对齐。幂等：已插过即跳过。
     (PHASE_WRITE, 'remove_cnr_scripts.py', ('--write',), A),
     (PHASE_WRITE, 'build_original_stage.py', (), A),
     #    ↑ 插入行随行演出 → resource/original_stage.json；**必须在 apply_text_map 之前**（后者读它）

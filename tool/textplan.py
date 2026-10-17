@@ -46,8 +46,7 @@ STAGEMAP = json.loads(_STG.read_text(encoding='utf-8')) if _STG.exists() else {}
 # （时长指纹找候选 + **台词核对**定案；键 = 表的 `k` = `rebuild` 的 `si`）。
 VPF = ROOT / 'resource' / 'voice_plan.json'
 VP = json.loads(VPF.read_text(encoding='utf-8')) if VPF.exists() else {}
-CCS_DIR = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
-
+CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 
 # 尾部控制符 = `%K`/`%P`/`%N` 的任意组合。**仅作结构断言用**（见 `check_tails`）：
 # 它不决定该补什么尾巴，只断言"对话格必须有尾、选项格必须没有"。
@@ -97,6 +96,10 @@ def cur_voice(ins, drops):
                     out[si] = pend
                 pend, si = None, si + 1
     return out
+
+
+
+
 
 def expand_script(sc, en_of):
     """→ (texts{槽位: 文本}, inserts{at_k: [...]}, drops{槽位}, names{槽位: 名字框},

@@ -50,8 +50,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 TM = ROOT / 'resource' / 'text_map.json'
 RIO = ROOT / 'asset' / 'Rio.arc'
 WSC_DIR = ROOT / 'resource' / 'corpus' / 'wsc'
-CCS_DIR = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
-
+CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 
 def nrm(t):
     """去控制标记、说话人前缀、空白 —— 只留正文用于比对。"""

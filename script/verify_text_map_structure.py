@@ -29,8 +29,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 TM = ROOT / 'resource' / 'text_map.json'
-CCS_DIR = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
-
+CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 
 def norm_spk(v):
     return lngmod.strip_speaker_wrap(v or '')

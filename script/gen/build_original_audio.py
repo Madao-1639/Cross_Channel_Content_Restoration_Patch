@@ -22,8 +22,7 @@ from tool.wsc2ws2 import decrypt_wsc                     # noqa: E402
 
 WSC = ROOT / 'resource' / 'corpus' / 'wsc'
 OUT = ROOT / 'resource' / 'original_audio.json'
-CCS = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
-
+CCS = ROOT / 'resource' / 'corpus' / 'ccs'
 res = {}
 n = 0
 for p in sorted(WSC.glob('*.WSC')):

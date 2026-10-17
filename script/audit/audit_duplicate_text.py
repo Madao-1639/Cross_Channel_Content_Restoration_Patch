@@ -32,7 +32,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 TM = ROOT / 'resource' / 'text_map.json'
-CCS = ROOT.parent / 'cross-channel_chinese-localization_project' / 'Scripts' / '20150412'
+CCS = ROOT / 'resource' / 'corpus' / 'ccs'
 TAIL = re.compile(r'((?:%[A-Za-z])+)\s*$')
 
 
