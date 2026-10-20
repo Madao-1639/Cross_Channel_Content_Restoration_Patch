@@ -4,13 +4,15 @@
 产物的状态是**写盘阶段**的事（那时再判「哪段已落盘」），不该混进匹配结论里。
 本脚本回答的是：**每个脚本的槽位定好了没有、表内部有没有矛盾**。
 
-四条（全部为**定义性 / 机械性**判据，无阈值）：
+五条（全部为**定义性 / 机械性**判据，无阈值）：
 
   1. **格数自洽**：`n_final == n_steam + Σ(insert.n) − Σ(drop)`
   2. **覆盖无空档无重叠**：去掉删格与插入格后，剩下的必须恰好是 `0 .. n_steam-1` 各一次
   3. **行序单调**：按**播放序**取全部行号（`op=ccs` 取的行 ＋ 插入段的源行），必须**不递减**
      （回退会让内容在时间上倒流）。同一脚本内的**每一处**回退都报，不只报第一处。
   4. **复用可定位**：带 `span` 的条目，其 `[from,to)` 必须落在那行中文里且非空
+  5. **引用行有中文列**：`op=ccs`/`split`/`insert` 引用的每个 CCS 行，中文列都必须非空
+     （内化副本被截断时，产物会在该格显示**一行空白**，其余闸全照过）
 
 用法：
     python script/verify_text_map_structure.py
@@ -126,6 +128,24 @@ def main():
             a, b = it['span']
             if not (0 <= a < b <= len(full)):
                 bad.append((s, 'span %s 越界（该行 %d 字）' % (it['span'], len(full))))
+        # ⑤ **引用行必须有中文列**：内化副本被截断（`>1` 光秃行）时，`op=ccs` 取到空串、
+        #    产物只写出一条 `%K%P`（屏幕上**一行空白**），而格数/条数/覆盖/span 全照过
+        #    （实测 28 行，只有 3 行因带 span 才被发现）。修法与判据见
+        #    script/internalize/repair_corpus_truncated.py。
+        for it in m['items']:
+            rows = []
+            if it['op'] == 'ccs':
+                if isinstance(it['k'], list) and 'row0' in it:
+                    rows = [it['row0'] + j for j in range(it['k'][1] - it['k'][0] + 1)]
+                elif 'row' in it:
+                    rows = [it['row']]
+            elif it['op'] == 'split':
+                rows = [it['row']]
+            elif it['op'] == 'insert':
+                rows = list(range(it['src_rows'][0], it['src_rows'][1] + 1))
+            for r in rows:
+                if not tab.get(r):
+                    bad.append((s, '行 %d 在 %s.CCS 里没有中文列（内化副本被截断？）' % (r, m['ccs'])))
 
     tot = sum(m['n_final'] for m in tmap.values())
     ins = sum(x['n'] for m in tmap.values() for x in m['items'] if x['op'] == 'insert')
@@ -138,7 +158,7 @@ def main():
         for s, why in bad[:20]:
             print('   %-16s %s' % (s, why))
         return 1
-    print('✓ 四条全部通过：格数自洽 / 覆盖无空档无重叠 / 行序单调 / span 可定位')
+    print('✓ 五条全部通过：格数自洽 / 覆盖无空档无重叠 / 行序单调 / span 可定位 / 引用行有中文列')
     return 0
 
 
