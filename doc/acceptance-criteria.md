@@ -91,9 +91,10 @@
 
 每次修改后必须重新执行（脚本都是项目根的执行入口）：
 
-- [ ] `python script/build_patch.py --check` —— 三道闸：表自洽、表 ↔ 产物对账、全量验收
+- [ ] `python script/build_patch.py --check` —— 四道闸：表自洽、表 ↔ 产物对账、行号对位、全量验收
 - [ ] 流水线复跑 **0 处改动**（先复位 `asset/Rio.arc` 到流水线基线再跑 `build_patch.py`）
 - [ ] `python script/audit/audit_inline.py`（合并播放序与出口一致性）、`python script/audit_choices.py`（池位连续性、条数等式、选项槽位形态）
+- [ ] `python script/audit/audit_row_alignment.py` —— **行号对位闸**：`op=ccs` 区间块必须与 Steam 的台词流逐格对齐（名字框 vs 源行说话人成片不符即错位；已在流水线「写盘之后」，机理见 [localization.md](localization.md)「区间块的行号对齐」）
 - [ ] 改过 `tool/ws2disasm.py` / `tool/wsc2ws2.py` 时：`python script/audit/verify_ws2_conventions.py` 与 `python script/audit/convert_wsc.py --outdir tmp/converted_ws2_new`（`parse failures` / `count mismatch` / `roundtrip bad` 须全为 0）
 - [ ] `python script/generate_payload.py` —— 回读校验全 `[OK]`
 

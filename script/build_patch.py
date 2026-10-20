@@ -26,6 +26,7 @@
                              （同名 pna 图层替换，尺寸可不同；**写盘的最后一步**）
     ---- 写盘之后 ----
     verify_text_map           **表 ↔ 产物**对账（占位数 / 插入段 / lng 条数 / 删格 / 行消耗）
+    audit_row_alignment       行号对位闸（区间块 ↔ Steam 台词流逐格对齐）
     final_verification        全量验收
 
 ⚠️ **`METADATA.json` 只放归档条目**（`{归档名: {checksum, members}}`）、**不带任何 `_` 前缀元信息键**：
@@ -38,7 +39,7 @@ ffmpeg/libvorbis 版本）太多，一张"全输入"清单只会给出假保证�
 
     python script/build_patch.py                 # 跑全流程（**写盘前先跑表侧闸**；末步不幂等，复跑须先复位素材）
     python script/build_patch.py --bootstrap     # 从零：先按 backup/ 起底（见上「引导」）
-    python script/build_patch.py --check         # 只跑三道闸，不写任何东西
+    python script/build_patch.py --check         # 只跑四道闸，不写任何东西
 
 ⚠️ **`--bootstrap` 会按 `backup/`（Steam 原版）覆盖 `asset/` 的 5 份归档**，再显式带入
 Fonts/Script、35 个表外 lng、37 张原版 CG；之后必须再跑后续步骤才能得到产物。
@@ -305,14 +306,19 @@ STEPS = [
     (PHASE_WRITE, 'build_nametable.py', ('--write',), A),
     (PHASE_WRITE, 'apply_sysgraphic.py', ('--write',), A),
     #    ↑ **写盘的最后一步**（UI 汉化）：resource/SysGraphic/ 的图层换进 SysGraphic.arc。
-    #      不依赖脚本/lng 产物，排末尾；其后两道闸仍复核全量产物（含本步）
+    #      不依赖脚本/lng 产物，排末尾；其后三道闸仍复核全量产物（含本步）
     (PHASE_POST, 'verify_text_map.py', (), A),
     #    ↑ 表 ↔ 产物对账
+    (PHASE_POST, 'audit/audit_row_alignment.py', (), A),
+    #    ↑ **行号对位闸**：`op=ccs` 区间块只有「均匀偏移」一种表达，Steam 整行删/增过的地方
+    #      会从那里起整体错开一格（文本落后一行 + 语音误删/错位，计数类闸全查不出）。
+    #      判据、事故与处置规范见 doc/localization.md「区间块的行号对齐」
     (PHASE_POST, 'final_verification.py', (), A),
 ]
 
-# `--check`：只跑三道闸（表自身 → 表↔产物 → 全量），不写任何东西
-CHECK_STEPS = {'verify_text_map_structure.py', 'verify_text_map.py', 'final_verification.py'}
+# `--check`：只跑四道闸（表自身 → 表↔产物 → 行号对位 → 全量），不写任何东西
+CHECK_STEPS = {'verify_text_map_structure.py', 'verify_text_map.py',
+               'audit/audit_row_alignment.py', 'final_verification.py'}
 
 
 def run_steps(only=None, skip_not_bootstrap=False):
@@ -345,7 +351,7 @@ def main():
     atexit.register(release_lock)
 
     if args.check:
-        print('[仅验收] 三道闸，不写任何东西')
+        print('[仅验收] 四道闸，不写任何东西')
         run_steps(only=CHECK_STEPS, skip_not_bootstrap=True)
         print('\n[DONE] 仅验收')
         return 0

@@ -182,14 +182,14 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 `verify_text_map_structure` · `check_reset_state` · `apply_graphic_overrides` ·
 `splice_restoration` · `splice_ccb2017_branch` · `remove_cnr_scripts` · `build_original_stage` · `apply_text_map` ·
 `import_missing_voices` · `audit_choices` · `build_nametable` · `apply_sysgraphic` ·
-`verify_text_map` · `final_verification`；
+`verify_text_map` · `audit_row_alignment` · `final_verification`；
 **引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。
 
 **目录分组**（`script/` 根只放入口与流水线步骤）：
 
 - `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：`extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`
 - `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：`build_original_audio` · `build_voice_plan`
-- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_duplicate_text` · `verify_ws2_conventions` · `convert_wsc`
+- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `verify_ws2_conventions` · `convert_wsc`
 
 **库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/rename_map.py`（改名表）、
 `tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
@@ -228,7 +228,9 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 - **指令排布照抄 Steam**：相邻的 `15` **不折叠**（「后者覆盖前者」式的折叠会把原生清框压掉），`drop` **删整格**（`14` + 设名 `15` + 清框 `15`，带名字框守卫）。理由与守卫见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §8 第 11 条与 [file-formats.md](file-formats.md)「场景控制指令」。
 
 回归类：`script/audit/audit_inline.py`（就地插入）、`audit_lng_semantics.py`（lng 语义）、
-`verify_ws2_conventions.py`（转换器约定）；`audit_choices.py` 是**流水线步骤**（选项池位检查）。
+`verify_ws2_conventions.py`（转换器约定）、`audit_row_alignment.py`（**行号对位**：
+`op=ccs` 区间块 ↔ Steam 台词流逐格对齐，靠「名字框 vs 源行说话人」成片不符抓错位）；
+`audit_choices.py` 与 `audit_row_alignment.py` 中的**后者也已进流水线**（写盘之后）。
 
 转换器的规则、全量验证结果与实现陷阱见
 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md)。
