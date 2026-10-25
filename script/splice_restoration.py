@@ -3,6 +3,7 @@
 统一形状（见 doc/call-chain.md）
 -------------------------------
     新宿主 = [前段: Steam 原生，源 0..keep-1]
+           + [保留的解锁指令]（切除区内「旗标全库唯一」的组的 `0b` + 成就子调用，置于插入段前端；多数宿主没有）
            + [插入段: 源 lo_eff..hi 的切片转换（含场景末尾事件）]
            + [出口尾段: Steam 原档「末句对话之后」的字节，含原出口]
 
@@ -104,6 +105,58 @@ def load_rename_map():
 
 def src_instrs(stem):
     return wsc.disassemble((WSC_DIR / (stem + '.WSC')).read_bytes())
+
+
+# ---------------------------------------------------------------------------
+# 「保留 CG 解锁」原则：Steam 删节版里 CG 的解锁指令若随切除一起丢掉，对应画廊
+# 条目就永远无法解锁、成就链也断。全语料 658 处的组形状完全统一：
+#     [前奏: 16 清框 / 64 / 37 清立绘，可有可无] + [33 <槽> <CG.PNG>] + [0b <旗标> 01 ×1..2]
+#     + [04 CG_ACHIEVEMENT]
+# 两个旗标：第一枚落在 menu_gallery.lua 的 CG 表域（1120..1248），第二枚（1260..1509）
+# 引擎/成就侧自用。**切除区内的解锁组一律保留**（原档在该拍点写旗标，产物也在该拍点写
+# —— 旗标别处还有置位点也不能丢，否则解锁时机会推迟）；**搬运只取 `0b` +
+# `04 CG_ACHIEVEMENT`**：解锁与成就只依赖旗标写入与成就子调用，`33` 显示与前奏是被
+# 还原段替换掉的 Steam 演出，搬了就会在接缝闪 Steam 替代图。组内不含文件内绝对偏移。
+# ---------------------------------------------------------------------------
+
+def _unlock_groups(ins, lo, hi):
+    """指令流 `[lo,hi)` 字节区间内的解锁组。
+
+    返回 [(flags_start, end, flags, file)]（end 不含）：`flags_start` = 首枚 `0b` 处，
+    即**应搬运**的 `[0b ×N][04 CG_ACHIEVEMENT]` 起点；前奏与 `33` 显示只作形状识别，
+    不进搬运范围。"""
+    out = []
+    for k, x in enumerate(ins):
+        if not (lo <= x.offset < hi) or x.opcode != 0x04 \
+                or str(x.fields.get('name')) != 'CG_ACHIEVEMENT':
+            continue
+        j = k - 1
+        flags = []
+        while j >= 0 and ins[j].opcode == 0x0b and ins[j].offset >= lo:
+            flags.append(ins[j].fields['id'])
+            j -= 1
+        if j < 0 or ins[j].opcode != 0x33 or ins[j].offset < lo:
+            raise SystemExit('CG_ACHIEVEMENT @0x%x 之前不是 `33` 显示，组形状超出预期' % x.offset)
+        disp = ins[j]
+        out.append((ins[j + 1].offset, x.offset + x.size, list(reversed(flags)),
+                    str(disp.fields.get('file'))))
+    return out
+
+
+def _keep_groups(steam, host, lo, hi):
+    """切除区间 `[lo,hi)` 内需要保留的解锁指令（已编码，仅 `0b` 旗标 + 成就子调用）。
+
+    **切除区内的解锁组一律保留**：旗标在别处还有置位点也不能丢 —— 那样只是保住
+    「最终可解锁」，丢了**解锁时机**（实测：`EVCC0100` 由此从 `CCA0025C` 拍点推迟到
+    `CC4YOU` 才点亮，玩家中途查画廊仍是锁）。原档在该拍点写旗标，产物也在该拍点写。
+    `33` 显示与前奏**不在搬运范围**：显示是被还原段替换掉的 Steam 演出，由还原段负责；
+    解锁只依赖 `0b` 写旗标（机制上与显示无耦合），成就只依赖子调用。"""
+    plain = ws2.decode(steam[host.upper()])
+    kept = []
+    for start, end, flags, file in _unlock_groups(ws2disasm.disassemble(plain), lo, hi):
+        print('  %-20s 保留解锁指令 %s（旗标 %s）' % (host, file, flags))
+        kept.append(ws2.encode(plain[start:end]))
+    return b''.join(kept)
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +336,9 @@ def main():
         host, stem = sc['host'], sc['src']
         lo_eff = sc['lo'] + sc['head_overlap']
         host_raw = members[host.upper()]
+        if host_raw != steam[host.upper()]:
+            raise SystemExit('%s 当前 asset 与 Steam 原档不一致（应跑在基线上，'
+                             '见 check_reset_state）' % host)
         host_ins = ws2disasm.disassemble(ws2.decode(host_raw))
         dl = [i for i in host_ins if i.opcode == 0x14]
         if len(dl) < sc['keep']:
@@ -296,6 +352,12 @@ def main():
         else:
             ins_at = dl[-1].offset + dl[-1].size
         prefix = host_raw[:ins_at]
+
+        # ---- 解锁指令保留：被切除区间 [ins_at, 末句对话之后) 里「旗标全库唯一」的组前置 ----
+        s_ins = ws2disasm.disassemble(ws2.decode(steam[host.upper()]))
+        s_dl = [i for i in s_ins if i.opcode == 0x14]
+        tail_off = s_dl[-1].offset + s_dl[-1].size
+        groups_enc = _keep_groups(steam, host, ins_at, tail_off)
 
         # ---- 插入段 ----
         win = src_instrs(stem)
@@ -324,21 +386,20 @@ def main():
             raise SystemExit('%s 切片对话数 %d != 源区间 %d'
                              % (host, n_slice_dlg, sc['hi'] - lo_eff + 1))
         # 切片里的**文件内绝对偏移**（`06` 目标 / `01` 的 `a`/`b`）是**切片相对**的，
-        # 拼到宿主里必须整体加上前缀长度，否则会指到别处（实测多处目标落在指令中间）。
-        slice_plain, n_rebase = rebase_offsets(slice_plain, len(prefix))
+        # 拼到宿主里必须整体加上前缀长度（含前置的解锁组），否则会指到别处（实测多处目标落在指令中间）。
+        slice_plain, n_rebase = rebase_offsets(slice_plain, len(prefix) + len(groups_enc))
         if n_rebase:
             print('  %-20s 重定位切片内绝对偏移 %d 处（+%d）' % (host, n_rebase, len(prefix)))
 
         # ---- 出口尾段：Steam 原档「末句对话之后」 ----
-        s_ins = ws2disasm.disassemble(ws2.decode(steam[host.upper()]))
-        s_dl = [i for i in s_ins if i.opcode == 0x14]
-        tail_off = s_dl[-1].offset + s_dl[-1].size
         tail = bytearray(steam[host.upper()][tail_off:])
         # 尾段里的 `01`：外部偏移按新布局重算（`a`/`b` 都要；与 mode 无关）
         # ---- 接缝定位统一：首尾延续同一角色的立绘沿用接缝另一侧的坐标 ----
+        # 入口状态按「前段 + 前置解锁指令」算：搬运范围只有 `0b`/`04`，不影响立绘状态，
+        # 与按前段单独算等价；拼在一起算只是防未来搬运范围再变时漏更新。
         slice_plain, n_seam, n_conf = align_seam_positions(
             slice_plain,
-            _live_state(ws2disasm.disassemble(ws2.decode(prefix))),
+            _live_state(ws2disasm.disassemble(ws2.decode(prefix + groups_enc))),
             _first_bindings(ws2disasm.disassemble(ws2.decode(bytes(tail)))))
         if n_seam:
             print('  %-20s 接缝定位统一：改写 %d 个立绘块的位置%s'
@@ -361,7 +422,7 @@ def main():
                     struct.pack('<I', base + (_v - tail_off)))
                 fixed += 1
         # 尾表：插入段让 `0x14` 条数变了，末尾 8 字节必须按**最终流**重算（明文，见 tool/ws2.py fix_trailer）
-        new_host = ws2.fix_trailer(bytes(prefix) + seg_enc + bytes(tail))
+        new_host = ws2.fix_trailer(bytes(prefix) + groups_enc + seg_enc + bytes(tail))
 
         # ---- 校验 ----
         ni = ws2disasm.disassemble(ws2.decode(new_host))
@@ -405,7 +466,9 @@ def main():
             raise SystemExit('%s 对话数 %d <= from_dialogue %d' % (host, len(dl), k))
         j = ins.index(dl[k]) - 1
         cut = ins[j].offset if ins[j].opcode == 0x15 else dl[k].offset
-        new_host = bytearray(raw[cut:])
+        # ---- 解锁指令保留：截掉的头部 [0, cut) 里「旗标全库唯一」的组，`0b`+成就子调用置于产物前端 ----
+        groups_enc = _keep_groups(steam, host, 0, cut)
+        new_host = bytearray(groups_enc + raw[cut:])
         ni = ws2disasm.disassemble(ws2.decode(bytes(new_host)))
         n_dl = [i for i in ni if i.opcode == 0x14]
         for idx, i in enumerate(n_dl):

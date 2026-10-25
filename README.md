@@ -4,7 +4,7 @@
 
 本补丁仅供已购买正版游戏的用户使用，不包含任何游戏本体文件。
 
-> **当前版本：v0.5.1** — 内容还原与汉化已落地，等待全量实机验证。
+> **当前版本：v0.5.2** — 内容还原与汉化已落地，等待全量实机验证。
 
 ![Banner](https://shared.steamstatic.com/store_item_assets/steam/apps/812560/library_hero.jpg?t=1573643366)
 

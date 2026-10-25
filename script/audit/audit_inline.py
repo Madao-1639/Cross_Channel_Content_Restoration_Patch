@@ -41,6 +41,23 @@ def norm(t):
     return ''.join(c for c in t if c not in _Q and not c.isspace())
 
 
+def _flag_counts(arc):
+    out = {}
+    for name, raw in arc.items():
+        if not name.endswith('.WS2'):
+            continue
+        for i in ws2disasm.disassemble(ws2.decode(raw)):
+            if i.opcode == 0x0b:
+                out[i.fields['id']] = out.get(i.fields['id'], 0) + 1
+    return out
+
+
+def _flag_count_diffs(steam, members):
+    a, b = _flag_counts(steam), _flag_counts(members)
+    return {gid: (a[gid], b.get(gid, 0)) for gid in a if a[gid] != b.get(gid, 0)} \
+        or {gid: (a.get(gid, 0), b[gid]) for gid in b if a.get(gid, 0) != b[gid]}
+
+
 def main():
     members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'asset/Rio.arc')}
     steam = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'backup/Rio.arc')}
@@ -99,9 +116,25 @@ def main():
         exits = [i.fields.get('name') for i in ii if i.opcode == 0x07]
         good = len(dl) == len(L) and exits == s_exits
         ok_all &= good
-        print('%-20s %-9s %-9d %-9d %-9s %-9s %-9s %s'
+        print('%-20s %-9s %-9d %-9s %-9s %-9s %-9s %s'
               % (th['host'], '截头@%d' % th['from_src'], len(dl), len(L), '-', '-',
                  '单调', ('✅' if good else '⚠') + ' 出口=%s' % exits))
+
+    # ---- 「保留 CG 解锁」闸 ----
+    # CG 的画廊/成就置位就写在脚本里：`0b <旗标> 01`（紧跟 `33` 显示与 `04 CG_ACHIEVEMENT`）。
+    # splice 把切除区内的解锁组原位保留（搬到接缝）；这里全库复核不变量：
+    # **解锁域旗标（≥1120；实测域恰为 [1120..1248]∪[1260..1509]，普通游戏旗标止于 1108）
+    # 的置位点数与 Steam 原档逐 id 守恒** —— 只查"有没有"会漏掉位点数回退
+    # （曾实测：EVCC0100 因唯一性过滤丢了 CCA0025C/CCB1014C 两处位点，
+    # 解锁时机从 A 章推迟到 CC4YOU，玩家中途查画廊仍是锁）。
+    # <1120 的普通游戏旗标不守恒是正常的：还原内容本来就按原版的旗标用法增删它们。
+    diffs = {g: d for g, d in _flag_count_diffs(steam, members).items() if g >= 1120}
+    if diffs:
+        ok_all = False
+        for gid, (a, b) in sorted(diffs.items()):
+            print('**旗标位点数不守恒** %d：Steam 原档 %d 处 → 产物 %d 处' % (gid, a, b))
+    else:
+        print('旗标位点守恒：解锁域（≥1120）逐 id 位点数与 Steam 原档一致 ✅')
     print()
     print('总结：%s%s' % ('全部通过' if ok_all else '**有场景未通过**',
                         '（未覆盖源行合计 %d，见上）' % total_miss if total_miss else ''))
