@@ -17,3 +17,7 @@ build/
 .mcp.json
 .pi
 .zcode*
+# 构建 AdvHDLang.dll 的原件（Steam 资产，自行从游戏 zh-CN/ 复制）
+resource/AdvHDLang.orig.dll
+# 由 script/build_lang_dll.py 生成（构建产物）
+tool/hook/whitelist.h

@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild  # noqa: E402
+from tool import arcbuild, layers  # noqa: E402
 
 ASSET = ROOT / 'asset'
 IMG_DIR = ROOT / 'resource' / 'graphic_overrides'
@@ -39,13 +39,15 @@ def load_table():
 
 
 def apply_arc(arc_name, want, write):
-    arc_path = ASSET / arc_name
+    # 基线取 Steam 原档；产出**只进语言包层**（`asset/zh-CN/<归档>`，只含换掉的成员）
+    arc_path = ROOT / 'backup' / arc_name
     if not arc_path.exists():
-        raise SystemExit('[ERR] %s 不存在（先跑 build_patch.py --bootstrap 或铺好 asset/）' % arc_path)
+        raise SystemExit('[ERR] backup/%s 不存在' % arc_name)
     members = arcbuild.read_raw(arc_path)
     index = {nb.decode('utf-16le'): i for i, (nb, _) in enumerate(members)}
 
     changed = 0
+    changed_names = set()
     for member in want:
         if member not in index:
             raise SystemExit('[ERR] %s 里没有成员 %r' % (arc_name, member))
@@ -59,6 +61,7 @@ def apply_arc(arc_name, want, write):
             print('  [跳过] %s :: %s 已是目标内容（%d 字节）' % (arc_name, member, len(old_data)))
             continue
         changed += 1
+        changed_names.add(member)
         print('  [替换] %s :: %s  %d -> %d 字节' % (arc_name, member, len(old_data), len(new_data)))
         if write:
             members[i] = (members[i][0], new_data)
@@ -69,9 +72,12 @@ def apply_arc(arc_name, want, write):
         print('  [预演] %s 有 %d 处待替换（未落盘）' % (arc_name, changed))
         return changed
 
-    size = arcbuild.write_arc(members, arc_path)
-    count, total, end = arcbuild.verify(arc_path, expect_count=len(members))
-    print('  [写盘] %s: %d members, %d bytes' % (arc_name, count, size))
+    changed_members = [(nb, d) for nb, d in members
+                       if nb.decode('utf-16le') in changed_names]
+    target = layers.pack_arc(arc_name)
+    layers.write_layer(target, changed_members, expect_count=len(changed_members))
+    print('  [写盘] zh-CN/%s: %d members, %d bytes'
+          % (arc_name, len(changed_members), target.stat().st_size))
     return changed
 
 

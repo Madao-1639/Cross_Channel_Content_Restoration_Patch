@@ -2,7 +2,9 @@
 """思源黑体 TTF 子集化：按 `resource/fonts/sourcehan_subset/codepoints.txt` 的码点
 从全量源裁剪，输出到 `resource/fonts/sourcehan_subset/`，供 `script/build_fonts_arc.py` 打包。
 
-体 name 表**先保留全部**记录（不做族名改写，与 Adobe 原始 id1/2/16/17 保持一致）。
+name 表保留**思源本名**（id1 = `Source Han Sans SC Medium/Bold`），与 `LegacyGame_utf8.lua` 的
+`g_fonts`/`g_fonts2` 请求名一致 —— 官方语言包同样用独立字体名（`Noto Sans CJK SC`），
+不伪装成原版 `FOT-マティス Pro`。历史遗留的伪装记录用 `script/fix_font_names.py` 修复。
 
 **全量源不入库**（~40 MB），放到 `resource/fonts/sourcehan_full/`；
 **目录缺失或没有目标 TTF 时幂等跳过** —— pipeline 里 `build_fonts_arc.py`

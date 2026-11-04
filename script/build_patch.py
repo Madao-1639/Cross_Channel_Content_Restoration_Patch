@@ -16,7 +16,6 @@
     ---- 写盘 ----
     apply_graphic_overrides  汉化图替换 Graphic.arc 的整屏图（同名替换，零破坏性）
     splice_restoration       把源 WSC 的删除区间就地插入 12 个宿主
-    remove_cnr_scripts       移除已无引用的 CNR### 还原脚本（backup 基线下为 no-op）
     build_original_stage     插入行随行的原版画面演出 -> resource/original_stage.json
     apply_text_map           按 resource/text_map.json **一次产出结构 + lng**（含名字框、语音、演出）
     import_missing_voices    补入扩覆盖范围所需的原版语音（**采样率对齐 48000**）—— 须在 apply_text_map 之后
@@ -56,7 +55,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild  # noqa: E402
+from tool import arcbuild, layers  # noqa: E402
 
 ASSET = ROOT / 'asset'
 BACKUP = ROOT / 'backup'
@@ -88,7 +87,7 @@ def carry_carried_lng():
     这些 lng 不再由 Res303 直供。幂等：内容相同则跳过。"""
     man = json.loads((ROOT / 'resource' / 'carried_lng' / 'manifest.json').read_text(encoding='utf-8'))
     want = man['members']
-    members = list(arcbuild.read_raw(ASSET / 'Rio.arc'))
+    members = list(layers.read_layer(layers.pack_arc('Rio.arc')))
     idx = {n.decode('utf-16-le'): i for i, (n, _) in enumerate(members)}
     added = replaced = 0
     for name in sorted(want):
@@ -103,8 +102,7 @@ def carry_carried_lng():
             added += 1
     print('[bootstrap] 表外汉化 lng %d 条：新增 %d / 替换 %d' % (len(want), added, replaced))
     if added or replaced:
-        arcbuild.write_arc(members, ASSET / 'Rio.arc')
-        arcbuild.verify(ASSET / 'Rio.arc')
+        layers.write_layer(layers.pack_arc('Rio.arc'), members, expect_count=len(members))
 
 
 def carry_carried_soundlevel():
@@ -148,9 +146,11 @@ def bootstrap_from_backup():
 
     其余一律来自 `backup`，且后续步骤（`splice_restoration` → `apply_text_map`）会重生成 293 个在表脚本。
     """
-    for fname in ('Rio.arc', 'Graphic.arc', 'Chip2.arc', 'Voice.arc', 'SysGraphic.arc'):
+    # 根目录层只铺「与语言无关」的归档；Graphic/SysGraphic 保持 Steam 原样（它们的**语言相关成员**
+    # 由 apply_graphic_overrides / apply_sysgraphic 写进语言包 `asset/zh-CN/`）。
+    for fname in ('Rio.arc', 'Chip2.arc', 'Voice.arc'):
         bootstrap_backup(fname)
-    bootstrap_copy('Script.arc', 14)               # 复用内化 Lua 界面，随后打族名补丁
+    run('build_script_arc.py', '--write')          # 中文 Lua 界面 -> 语言包（只发与 Steam 原版不同的成员）
     run('gen_font_codepoints.py')            # 码点清单（声明语料：text_map/上游 CCS/carried_lng/dump，不依赖任何产物）
     run('subset_sourcehan.py')               # 字体子集化（思源黑体 TTF，**全量源缺失时幂等跳过**）
     run('build_fonts_arc.py')                # 自制 Fonts.arc（思源黑体，不再依赖内化归档）
@@ -162,8 +162,26 @@ def bootstrap_from_backup():
     #    换 backup 起底后必须提前到这里。（流水线里那一步此后为 no-op。）
     run('import_missing_voices.py', '--write')
     run('build_restored_cgs.py', '--write')        # 37 张原版 CG -> asset/Chip2.arc
+    copy_lang_marker()                             # 语言包识别标记 AdvHDLang.dll
     run('build_cg_map.py')                         # 用新 Chip2 重新核对改名映射（幂等）
     run('renumber_evcc9xxx.py')                    # 核对 CG 引用全部可解析
+
+
+def copy_lang_marker():
+    """把 `AdvHDLang.dll` 复制进语言包目录 —— 引擎靠它把该文件夹识别为语言包。"""
+    target = layers.pack_arc('AdvHDLang.dll')
+    for cand in (BACKUP / 'AdvHDLang.dll',
+                 Path('E:/SteamLibrary/steamapps/common/CROSS†CHANNEL Steam Edition/AdvHDLang.dll')):
+        if cand.exists():
+            data = cand.read_bytes()
+            if target.exists() and target.read_bytes() == data:
+                print('[bootstrap] zh-CN/AdvHDLang.dll 已就绪')
+                return
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            print('[bootstrap] zh-CN/AdvHDLang.dll 就位（%d B）' % len(data))
+            return
+    raise SystemExit('[中止] 找不到 AdvHDLang.dll（语言包必需）——放一份到 backup/ 即可')
 
 
 def bootstrap_copy(fname, expect_count):
@@ -174,7 +192,7 @@ def bootstrap_copy(fname, expect_count):
 流水线复次仅做「复制」，产物与定稿逐字节一致。
     ⚠️ 落盘走 `arcbuild.write_arc`（大归档上 `shutil.copy2` 会撞 `OSError 22`）。"""
     src_path = REUSED / fname
-    target = ASSET / fname
+    target = layers.pack_arc(fname)   # 完全复用的归档（Script.arc）都是**语言相关**的 -> 语言包
     if not src_path.exists():
         raise SystemExit('[中止] 缺少 %s（先跑 script/internalize/extract_reused_archives.py）' % src_path)
     if target.exists() and arcbuild.same_file(src_path, target):
@@ -293,7 +311,6 @@ STEPS = [
     #      「选项分支」）：必须在 `apply_text_map` 之前——它会让该脚本的槽位 129 → 152
     #      （+1 提示句 +2 选项 +2 分支入口清框格 `14 "%P"` +18 孤岛行），
     #      表的 `n_steam`/`n_final` 与 lng 随之对齐。幂等：已插过即跳过。
-    (PHASE_WRITE, 'remove_cnr_scripts.py', ('--write',), A),
     (PHASE_WRITE, 'build_original_stage.py', (), A),
     #    ↑ 插入行随行演出 → resource/original_stage.json；**必须在 apply_text_map 之前**（后者读它）
     (PHASE_WRITE, 'apply_text_map.py', ('--write',), A),
@@ -303,6 +320,15 @@ STEPS = [
     #      12 处悬空引用（`CCD4003A` 等）
     (PHASE_WRITE, 'audit_choices.py', ('--write',), A),
     #    ↑ **必须在产出 lng 之后**：它核的是 `.LNG` 的池槽位/条数/内容
+    (PHASE_WRITE, 'build_script_arc.py', ('--write',), A),
+    #    ↑ 语言包 `Script.arc` 的**唯一所有者**：内化中文 UI，只发与 Steam 原版不同的成员
+    #      （官方语言包先例：IMHHW 的 zh-CN/Script.arc 只有 1 个成员）。幂等：内容相同则不重写
+    (PHASE_WRITE, 'apply_caption_utf8.py', ('--write',), A),
+    #    ↑ 把 `resource/captions_zh.json` 的中文字幕写进**语言包 ws2 副本**（0x8f/0x90 走不了 lng），
+    #      并用实际写入的文本重生成 hook 白名单 `resource/caption_utf8.json`。必须排在 apply_text_map 之后。
+    (PHASE_WRITE, 'build_lang_dll.py', (), A),
+    #    ↑ 语言包 `AdvHDLang.dll`：`MultiByteToWideChar` 白名单 hook（只让白名单里的字幕按 UTF-8 解）
+    #      + 原 DSP 资源。白名单刚由上一步刷新，所以这一步必须紧跟其后（译文变了就自动重编）。
     (PHASE_WRITE, 'build_nametable.py', ('--write',), A),
     (PHASE_WRITE, 'apply_sysgraphic.py', ('--write',), A),
     #    ↑ **写盘的最后一步**（UI 汉化）：resource/SysGraphic/ 的图层换进 SysGraphic.arc。

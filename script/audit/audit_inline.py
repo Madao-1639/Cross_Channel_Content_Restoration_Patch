@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, lng, ws2, ws2disasm  # noqa: E402
 
 # 还原范围**直读表**（原先 import 一个流水线步骤只为了拿这张表的内容）
 _SL = json.loads((ROOT / 'resource' / 'scene_slices.json').read_text(encoding='utf-8'))
@@ -59,7 +59,7 @@ def _flag_count_diffs(steam, members):
 
 
 def main():
-    members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'asset/Rio.arc')}
+    members = layers.effective_dict('Rio.arc')   # 两层合并（语言包覆盖根目录）
     steam = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(ROOT / 'backup/Rio.arc')}
     ok_all = True
     total_miss = 0

@@ -18,14 +18,15 @@
 """
 import argparse
 import collections
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import (arcbuild, lng as lngmod, textplan as TP, writer, ws2,  # noqa: E402
-                 wsc, wsc2ws2, ws2disasm)
+from tool import (arcbuild, layers, lng as lngmod, textplan as TP, writer,  # noqa: E402
+                 ws2, wsc, wsc2ws2, ws2disasm)
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -157,8 +158,20 @@ def main():
 
     merged = [(nb, members[nb.decode('utf-16-le').upper()]) for nb in order]
     merged += [(name_for(k).encode('utf-16-le'), newdata[k]) for k in extra]
-    arcbuild.write_arc(merged, rio)
-    backmap = {n.decode("utf-16-le").upper(): v for n, v in arcbuild.read_raw(rio)}
+    # 两层落盘：与语言无关的进根目录 `asset/Rio.arc`；语言成员（`.lng`/`NameTable`）进语言包
+    # `asset/zh-CN/Rio.arc`（换语言只动包；英文玩家/未来英化包读根目录层看到原版文本）。
+    base_members = [(nb, d) for nb, d in merged if not layers.is_language_member(nb)]
+    # 包层 Rio 由本步**独占重算**：= 表外 carried lng（清单顺序）+ 本次生成的 lng（按名排序）。
+    # `NameTable.txt` 由 `build_nametable.py` 在其后并入（同样独占：读包层、原地替换该成员）。
+    carried_dir = ROOT / 'resource' / 'carried_lng'
+    carried = json.loads((carried_dir / 'manifest.json').read_text(encoding='utf-8'))['members']
+    pack_members = [(n.encode('utf-16-le'), (carried_dir / n).read_bytes()) for n in sorted(carried)]
+    # 包层只装语言成员（`.lng`）；ws2 一律留根层
+    pack_members += [(name_for(k).encode('utf-16-le'), newdata[k]) for k in sorted(newdata)
+                     if k.upper().endswith('.LNG')]
+    layers.write_layer(layers.base_arc('Rio.arc'), base_members, expect_count=len(base_members))
+    layers.write_layer(layers.pack_arc('Rio.arc'), pack_members, expect_count=len(pack_members))
+    backmap = layers.effective_dict('Rio.arc')
     for k, v in newdata.items():
         if backmap.get(k) != v:
             raise SystemExit('[失败] 回读不一致：%s' % k)

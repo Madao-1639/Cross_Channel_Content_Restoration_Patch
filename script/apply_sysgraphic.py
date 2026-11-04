@@ -40,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, pna  # noqa: E402
+from tool import arcbuild, layers, pna  # noqa: E402
 
 ASSET = ROOT / 'asset'
 RES = ROOT / 'resource' / 'SysGraphic'
@@ -134,9 +134,13 @@ def main():
     ap.add_argument('--write', action='store_true', help='落盘（缺省只预演）')
     args = ap.parse_args()
 
+    # 基线：根目录层若没有该归档（本补丁不改 Steam 原文件时它就不在 asset/），退回 Steam 原档；
+    # 产出**只进语言包层**（`asset/zh-CN/SysGraphic.arc`，只含改过的 pna 成员）。
     arc_path = ASSET / ARC
     if not arc_path.exists():
-        raise SystemExit('[ERR] %s 不存在（先跑 build_patch.py --bootstrap 或铺好 asset/）' % arc_path)
+        arc_path = ROOT / 'backup' / ARC
+    if not arc_path.exists():
+        raise SystemExit('[ERR] 找不到 %s（asset/ 与 backup/ 都没有）' % ARC)
     plan = load_plan()
     if not plan:
         print('[DONE] 没有配置任何替换，%s 保持原样' % ARC)
@@ -146,6 +150,7 @@ def main():
     index = {nb.decode('utf-16-le').lower(): i for i, (nb, _) in enumerate(members)}
 
     total = dirty = 0
+    changed_keys = set()
     for sub_name in sorted(plan):
         key = sub_name.lower() + '.pna'
         if key not in index:
@@ -156,6 +161,7 @@ def main():
         total += n
         if new_bytes is not None:
             dirty += 1
+            changed_keys.add(key)
             print('  [替换] %s.pna：换 %d 个图层，%d -> %d 字节'
                   % (sub_name, n, len(members[i][1]), len(new_bytes)))
             if args.write:
@@ -165,9 +171,12 @@ def main():
         print('\n[预演] %d 个 pna 共 %d 处待替换；加 --write 落盘' % (dirty, total))
         return 0
     if dirty:
-        arcbuild.write_arc(members, arc_path)
-        arcbuild.verify(arc_path, expect_count=len(members))
-        print('\n[写盘] %s: %d members, %d bytes' % (ARC, len(members), arc_path.stat().st_size))
+        # 本步是 `asset/zh-CN/SysGraphic.arc` 的**唯一所有者**：成员集合按"最终内容 vs Steam 原档"
+        # 重算（不是"只写本次改过的"）⇒ 某 pna 若不再与资源库一致，旧的包内副本会被自然剔除。
+        base = {nb: d for nb, d in arcbuild.read_raw(ROOT / 'backup' / ARC)}
+        changed = [(nb, d) for nb, d in members if d != base.get(nb)]
+        layers.write_layer(layers.pack_arc(ARC), changed, expect_count=len(changed))
+        print('\n[写盘] %s: %d members, %d bytes' % (ARC, len(changed), layers.pack_arc(ARC).stat().st_size))
     else:
         print('\n[DONE] %d 处替换均已生效，归档未改动' % total)
     print('[DONE] 共替换 %d 处' % total)

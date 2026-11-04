@@ -14,6 +14,7 @@ Installation:
 3. Confirm installation
 """
 
+import os
 import sys
 import shutil
 from pathlib import Path
@@ -36,6 +37,15 @@ def get_version():
 CURRENT_VERSION = get_version()
 TARGET_APPID = '812560'
 GAME_FOLDER_NAME = 'CROSS†CHANNEL Steam Edition'
+
+# 平台判定的**唯一来源**：注册表（Steam 库路径、语言设置）都只在 Windows 有。
+# 非 Windows（Linux 下跑本安装器）⇒ 自动检测与"设默认语言"都跳过，语言留给游戏设置界面。
+IS_WINDOWS = sys.platform.startswith("win") and os.name == "nt"
+
+if IS_WINDOWS:
+    import winreg          # 注册表只在 Windows 存在；非 Windows 不导入（Linux 无此模块）
+else:
+    winreg = None
 
 
 def parse_vdf(vdf_path):
@@ -133,42 +143,144 @@ def parse_vdf(vdf_path):
     return libraries
 
 
+def _steam_roots():
+    """Steam 安装根的候选列表：Windows 走注册表，Linux 走常见目录。"""
+    roots = []
+    if IS_WINDOWS:
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam")
+            steam_path, _ = winreg.QueryValueEx(key, "SteamPath")
+            winreg.CloseKey(key)
+            roots.append(Path(steam_path))
+        except Exception as e:  # noqa: BLE001 - 拿不到就走 Linux 候选/手动选择
+            print(f"读取 Steam 安装路径失败: {e}")
+    if not IS_WINDOWS:
+        home = Path.home()
+        for rel in (".steam/steam", ".steam/root", ".local/share/Steam"):
+            roots.append(home / rel)
+    return roots
+
+
 def find_steam_game_path():
-    """
-    自动检测 Steam 游戏路径（仅 Windows）
+    """自动检测 Steam 游戏路径（Windows 走注册表；Linux 扫常见 Steam 根目录）。
+
+    游戏本体是 Windows 版，但 `steamapps/common/<游戏>` 在 Linux 上也是普通目录，
+    因此路径检测与文件替换照常可用 —— 只有注册表相关的步骤（默认语言）要跳过。
 
     Returns:
         Path or None: 游戏路径，如果找不到则返回 None
     """
-    if sys.platform != 'win32':
-        return None
-
-    try:
-        import winreg
-
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam")
-        steam_path, _ = winreg.QueryValueEx(key, "SteamPath")
-        winreg.CloseKey(key)
-
-        steam_path = Path(steam_path)
+    for steam_path in _steam_roots():
         libraryfolders_vdf = steam_path / "steamapps" / "libraryfolders.vdf"
-
         if not libraryfolders_vdf.exists():
-            return None
-
-        libraries = parse_vdf(libraryfolders_vdf)
-
+            continue
+        try:
+            libraries = parse_vdf(libraryfolders_vdf)
+        except Exception as e:  # noqa: BLE001
+            print(f"解析 {libraryfolders_vdf} 失败: {e}")
+            continue
         for library_path, apps in libraries:
-            if TARGET_APPID in apps:
-                game_path = Path(library_path) / "steamapps" / "common" / GAME_FOLDER_NAME
-                if (game_path / "AdvHD.exe").exists():
-                    return game_path
+            if TARGET_APPID not in apps:
+                continue
+            game_path = Path(library_path) / "steamapps" / "common" / GAME_FOLDER_NAME
+            if (game_path / "AdvHD.exe").exists():
+                return game_path
+    return None
 
-        return None
 
-    except Exception as e:
-        print(f"自动检测失败: {e}")
-        return None
+LANG_KEY = r"Software\WillPlus\AdvHD\LanguageSettings"
+
+
+def language_value_name(game_path):
+    """引擎写这条注册表时用的**值名** = 游戏目录，且经**系统 ANSI 代码页**转换（编不出的字符变 `?`）。
+
+    **仅 Windows 使用**（`set_default_language()` 内部调用；非 Windows 不会走到这里）。
+    `CROSS†CHANNEL Steam Edition` 的 `†`(U+2020)：CP932 其实能编（0x8181），但系统 ACP 是 GBK(936)
+    ⇒ 落到注册表就成了 `CROSS?CHANNEL Steam Edition`（本机实测）。安装器必须复刻同一规则，
+    否则写出的值名和引擎读的对不上、等于没设。
+    """
+    s = str(game_path)
+    for enc in ("mbcs", "cp932", "utf-8"):
+        try:
+            return s.encode(enc, errors="replace").decode(enc)
+        except (LookupError, UnicodeError):
+            continue
+    return s
+
+
+def set_default_language(game_path, lang="zh-CN"):
+    r"""把「默认语言」写成语言包名（`zh-CN`），使游戏不选语言也按中文启动。
+
+    引擎启动时读 `HKCU\Software\WillPlus\AdvHD\LanguageSettings`（值名 = 游戏目录），
+    值为空 ⇒ English（语言包整个不生效）。这就是"语言包已就位却仍是英文"的根因。
+
+    **仅 Windows**：注册表是 Windows 专有机制；Linux（Wine/Proton 或无 winreg 的解释器）直接跳过，
+    让玩家在游戏设置界面自己选语言。
+    """
+    if not IS_WINDOWS or winreg is None:
+        print("  [跳过] 非 Windows 平台：注册表不可用，默认语言需在游戏设置界面选择")
+        return False
+
+    name = language_value_name(game_path)
+    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, LANG_KEY, 0, winreg.KEY_SET_VALUE) as k:
+        winreg.SetValueEx(k, name, 0, winreg.REG_SZ, lang)
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, LANG_KEY) as k:
+        got, _ = winreg.QueryValueEx(k, name)
+    print(f"  [OK] 默认语言 = {got!r}（值名 {name!r}）")
+    print("       改回英文：启动游戏，在设置界面把「语言」改回 English")
+    return got == lang
+
+
+def _ask_default_language(game_path):
+    """询问并写入默认语言（仅 Windows）。"""
+    print("是否把游戏默认语言设为「中文(简体，中国)」？")
+    print("Set Chinese (Simplified) as the default in-game language?")
+    answer = input("  设为默认中文? (Y/n): ").strip().lower()
+    if answer in ("n", "no"):
+        print("  [跳过] 未改注册表；启动游戏后在设置界面手动在 Language Pack 选「中文(简体，中国)」即可")
+    else:
+        try:
+            set_default_language(game_path)
+        except Exception as e:  # noqa: BLE001 - 提示即止，不该让安装失败
+            print(f"  [警告] 写注册表失败：{e}")
+            print("         启动游戏后在设置界面手动在 Language Pack 选「中文(简体，中国)」")
+    print()
+
+
+def deploy_language_pack(pack_src, pack_dst):
+    """把 payload/zh-CN/ 原样铺到 <游戏目录>/zh-CN/（语言包，新增文件夹，不碰原版文件）。
+
+    语言包内的归档**只装中文相关成员**，引擎按成员优先读它、其余从根目录读 ⇒
+    卸载＝删这个文件夹 + Steam 校验还原根目录归档。
+    """
+    import hashlib
+    import json
+
+    print(f"部署语言包 {pack_src} -> {pack_dst} ...")
+    pack_dst.mkdir(parents=True, exist_ok=True)
+    manifest_path = pack_src / "PACK_MANIFEST.json"
+    manifest = {}
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    count = 0
+    for src in sorted(p for p in pack_src.iterdir() if p.is_file()):
+        if src.name == "PACK_MANIFEST.json":
+            continue
+        dst = pack_dst / src.name
+        data = src.read_bytes()
+        if dst.exists() and dst.read_bytes() == data:
+            print(f"  [跳过] {src.name}（已是目标内容）")
+        else:
+            dst.write_bytes(data)
+            print(f"  [写入] {src.name}  {len(data):,} bytes")
+        count += 1
+        want = (manifest.get(src.name) or {}).get("sha256")
+        got = hashlib.sha256(dst.read_bytes()).hexdigest()
+        if want and got != want:
+            raise RuntimeError(f"语言包成员 {src.name} 哈希不匹配")
+    print(f"  语言包部署完成：{count} 个文件")
+    print()
 
 
 def merge_arc(game_arc_path, patch_arc_path, output_path, metadata_path=None, asset_name=None):
@@ -369,18 +481,13 @@ def install():
     print()
 
     # 定义需要处理的文件（Chip1.arc、SysVoice.arc 本次无变化，不处理）
+    # 根目录层：与语言无关的归档（脚本/CG/语音）。中文文本与汉化 UI 在语言包 zh-CN/ 里。
     files_to_process = [
         {
-            "name": "Rio.arc (脚本+汉化文本)",
+            "name": "Rio.arc (脚本)",
             "game_path": game_path / "Rio.arc",
             "patch_path": payload_dir / "Rio_patch.arc",
             "output_path": game_path / "Rio.arc",
-        },
-        {
-            "name": "Graphic.arc (立绘+系统图资源)",
-            "game_path": game_path / "Graphic.arc",
-            "patch_path": payload_dir / "Graphic_patch.arc",
-            "output_path": game_path / "Graphic.arc",
         },
         {
             "name": "Chip2.arc (事件 CG)",
@@ -394,25 +501,8 @@ def install():
             "patch_path": payload_dir / "Voice_patch.arc",
             "output_path": game_path / "Voice.arc",
         },
-        {
-            "name": "Fonts.arc (字体)",
-            "game_path": game_path / "Fonts.arc",
-            "patch_path": payload_dir / "Fonts_patch.arc",
-            "output_path": game_path / "Fonts.arc",
-        },
-        {
-            "name": "Script.arc (系统界面, 新增)",
-            "game_path": game_path / "Script.arc",
-            "patch_path": payload_dir / "Script_patch.arc",
-            "output_path": game_path / "Script.arc",
-        },
-        {
-            "name": "SysGraphic.arc (系统界面图片)",
-            "game_path": game_path / "SysGraphic.arc",
-            "patch_path": payload_dir / "SysGraphic_patch.arc",
-            "output_path": game_path / "SysGraphic.arc",
-        },
     ]
+    pack_src = payload_dir / "zh-CN"
 
     print("检查补丁文件...")
     files_to_process = [f for f in files_to_process if f["patch_path"].exists()]
@@ -436,6 +526,8 @@ def install():
     print("About to install the content restoration patch. The following files will be modified:")
     for file_info in files_to_process:
         print(f"  - {file_info['name']}")
+    if pack_src.exists():
+        print("  - zh-CN/（语言包：中文文本 / 汉化 UI / 字体；新增文件夹）")
     print()
     print("建议：安装前通过 Steam 验证游戏完整性以创建备份")
     print("Recommendation: Verify game integrity via Steam before installation to create a backup")
@@ -471,6 +563,17 @@ def install():
 
             print(f"{file_info['name']} 完成")
             print()
+
+        if pack_src.exists():
+            deploy_language_pack(pack_src, game_path / "zh-CN")
+
+            # 语言包不会被自动采用：引擎读注册表里的「所选语言」，缺省/空 = English。
+            if not IS_WINDOWS:
+                print("  [跳过] 非 Windows 平台：无法写注册表")
+                print("         启动游戏后在设置界面手动选「中文(简体，中国)」即可")
+                print()
+            else:
+                _ask_default_language(game_path)
 
         print("验证安装文件...")
         import hashlib

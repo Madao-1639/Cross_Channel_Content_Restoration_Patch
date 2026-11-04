@@ -40,15 +40,16 @@ VERIFY_TMP_DIR = Path('tmp') / 'verify_merge'
 
 # Only archives that actually differ from the Steam baseline are shipped.
 # Chip1.arc / SysVoice.arc are untouched and intentionally excluded.
+# 根目录层（与语言无关）：按成员增量打在玩家原档上。
+# 语言相关的东西（lng/NameTable/汉化 UI/字体/整屏图）在 `asset/zh-CN/`，**整份复制**即可
+# （包内归档本身只装中文成员，体积极小，无需增量）。
 ARCHIVES = [
     'Rio.arc',
-    'Graphic.arc',
     'Chip2.arc',
     'Voice.arc',
-    'Fonts.arc',
-    'Script.arc',
-    'SysGraphic.arc',
 ]
+PACK_DIR = ASSET_DIR / 'zh-CN'
+PACK_OUT = PAYLOAD_DIR / 'zh-CN' 
 
 
 def sha256(data):
@@ -161,6 +162,23 @@ def generate():
     # 一个 `_provenance` / `_toolchain` 之类的键会让它**每次安装都报一条「文件不存在」的 FAIL**。
     # 产物完整性已由各归档的 `checksum` + 下面的回读校验负责，不需要额外的指纹或出处键。
 
+    # ---- 语言包：asset/zh-CN/ 整份复制 + 清单（安装器据此铺到 <game>/zh-CN/）
+    pack_manifest = {}
+    if PACK_DIR.is_dir():
+        PACK_OUT.mkdir(parents=True, exist_ok=True)
+        pack_total = 0
+        for src in sorted(p for p in PACK_DIR.iterdir() if p.is_file()):
+            dst = PACK_OUT / src.name
+            data = src.read_bytes()
+            dst.write_bytes(data)
+            pack_manifest[src.name] = {'sha256': sha256(data), 'bytes': len(data)}
+            pack_total += len(data)
+        (PACK_OUT / 'PACK_MANIFEST.json').write_text(
+            json.dumps(pack_manifest, ensure_ascii=False, indent=2) + chr(10),
+            encoding='utf-8')
+        total_size += pack_total
+        print(f'  [PACK] zh-CN/: {len(pack_manifest)} 个文件, {pack_total:,} bytes')
+
     metadata_file = PAYLOAD_DIR / 'METADATA.json'
     metadata_file.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
 
@@ -218,6 +236,16 @@ def verify(metadata):
             out_path.unlink(missing_ok=True)
     finally:
         shutil.rmtree(VERIFY_TMP_DIR, ignore_errors=True)
+
+    # 语言包：payload/zh-CN 与 asset/zh-CN 逐文件哈希一致
+    if PACK_DIR.is_dir() and PACK_OUT.is_dir():
+        for src in sorted(p for p in PACK_DIR.iterdir() if p.is_file()):
+            dst = PACK_OUT / src.name
+            if not dst.exists() or sha256(dst.read_bytes()) != sha256(src.read_bytes()):
+                ok = False
+                print(f'  [FAIL] zh-CN/{src.name}: 与 asset 不一致')
+        if ok:
+            print('  [OK] 语言包 zh-CN/ 回读一致')
 
     if ok:
         print()

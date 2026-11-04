@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tool import arcbuild, lng as lngmod, pna, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, lng as lngmod, luac53, pna, ptf, ttfnames, ws2, ws2disasm  # noqa: E402
 
 # 控制台按 UTF-8 输出（与流水线里其余脚本一致）。缺这一句时，**失败消息里任何 GBK 编不出的字符
 # 都会在 `print` 处抛 UnicodeEncodeError、把整套验收中止** —— 而失败消息恰恰是带 `−`/`⇒` 那些。
@@ -70,6 +70,10 @@ def name_of(entry):
 
 
 def load_arc(path):
+    """读归档；`asset/<归档>` 自动按**两层**合并（语言包按成员覆盖根目录）。"""
+    p = Path(path)
+    if p.parent == ASSET:
+        return {name_of(m): m[1] for m in layers.effective(p.name)}
     return {name_of(m): m[1] for m in arcbuild.read_raw(path)}
 
 
@@ -88,11 +92,15 @@ def check_arc_integrity():
               'Script.arc', 'SysGraphic.arc']:
         path = ASSET / f
         if not path.exists():
-            if f in OPTIONAL:
+            # 语言相关归档只存在于语言包层（asset/zh-CN/），安装后落在 <game>/zh-CN/
+            if layers.pack_arc(f).exists():
+                path = layers.pack_arc(f)
+            elif f in OPTIONAL:
                 ok('%s not shipped (unchanged vs Steam; installer keeps the original)' % f)
+                continue
             else:
-                fail('%s missing from asset/' % f)
-            continue
+                fail('%s missing from asset/ 与 asset/zh-CN/' % f)
+                continue
         try:
             count, size, end = arcbuild.verify(path)
             ok('%s verified (%d members, %d bytes, no padding)' % (f, count, size))
@@ -543,6 +551,192 @@ def _same_file(a, b, chunk=1 << 22):
                 return True
 
 
+def check_layer_split():
+    """**两层布局的产物级断言**（根目录层与语言包层的成员归属）。
+
+      * 根目录层 `asset/Rio.arc` **不得**含 `.lng`/`NameTable.txt`（否则英文玩家会看到中文）；
+      * 语言包层 `asset/zh-CN/Rio.arc` **只允许**语言成员；
+      * 语言包层其余归档（SysGraphic/Fonts/Script/Graphic）只能装"与根层或 Steam 原档不同的成员"；
+      * 语言包必须带 `AdvHDLang.dll`（引擎靠它识别语言包）。
+    """
+    print('')
+    print('== 两层布局（base / zh-CN）==')
+    bad = []
+    for nb, _ in layers.read_layer(layers.base_arc('Rio.arc')):
+        if layers.is_language_member(nb):
+            bad.append('asset/Rio.arc 含语言成员 %r' % nb.decode('utf-16-le'))
+    # 语言包 Rio 允许：语言成员（`.lng` / `NameTable.txt`）与**脚本副本**（承载 UTF-8 字幕；
+    # 副本的存在性与内容由 check_caption_whitelist() 断言）
+    for nb, _ in layers.read_layer(layers.pack_arc('Rio.arc')):
+        name = nb.decode('utf-16-le')
+        if layers.is_language_member(nb) or name.lower().endswith('.ws2'):
+            continue
+        bad.append('asset/zh-CN/Rio.arc 含非语言成员 %r' % name)
+    # 官方 `zh-CN/Script.arc` 只有 1 个成员（302 字节）即生效 ⇒ 按成员覆盖成立，
+    # 因此 Script.arc 也要求"成员必须与原档不同"（见 script/build_script_arc.py）。
+    for name in ('SysGraphic.arc', 'Fonts.arc', 'Script.arc', 'Graphic.arc'):
+        pack = layers.read_layer(layers.pack_arc(name))
+        base = {nb: d for nb, d in layers.read_layer(layers.base_arc(name))}
+        backup = {nb: d for nb, d in layers.read_layer(Path('backup') / name)}
+        for nb, d in pack:
+            ref = base.get(nb, backup.get(nb))
+            if ref is not None and ref == d:
+                bad.append('asset/zh-CN/%s 含与原档相同的成员 %r（多余）'
+                           % (name, nb.decode('utf-16-le')))
+    if not layers.pack_arc('AdvHDLang.dll').exists():
+        bad.append('语言包缺 AdvHDLang.dll（引擎不会识别 zh-CN/）')
+    for m in bad[:10]:
+        fail(m)
+    if not bad:
+        names = [n for n in ('Rio.arc', 'SysGraphic.arc', 'Fonts.arc', 'Script.arc', 'Graphic.arc')
+                 if layers.pack_arc(n).exists()]
+        ok('语言包 %d 个归档（%s）/ 根层 Rio 无语言成员 / AdvHDLang.dll 就位'
+           % (len(names), ', '.join(names)))
+
+
+def _lua_strings(blob):
+    """Lua 5.3 字节码里出现过的全部字符串常量（含全局名）。"""
+    proto = luac53.load(blob)
+    out = []
+    for p in proto.walk():
+        for t, v in p.constants:
+            if isinstance(v, bytes):
+                try:
+                    out.append(v.decode('utf-8'))
+                except UnicodeDecodeError:
+                    pass
+    return out
+
+
+def check_font_names():
+    """**语言包字体自洽**（`Fonts.arc` ↔ `LegacyGame_utf8.lua` 的字体槽）。
+
+    引擎选字体 = Lua 的 `g_fonts{,2,3}.name`（GDI 族名）+ `.file`（`Fonts.arc` 成员名）+ `.CharSet`。
+    官方做法（IMHHW 的 `zh-CN/`）= 语言包字体**用独立名字**（`Noto Sans CJK SC`），
+    名字 / 成员名 / 字符集三者自洽。本补丁同理，断言：
+
+      * Lua 引用的每个 `.PTF` 成员都在语言包 `Fonts.arc` 里；
+      * 每个 PTF 的内部族名（id1）**等于** Lua 请求的名字（否则 GDI 选不到面 → 掉兜底字体）；
+      * 字符集是 CJK（`GB2312_CHARSET`），不得回落到 `SHIFTJIS_CHARSET`。
+    """
+    print('')
+    print('== 语言包字体自洽（Script.arc ↔ Fonts.arc）==')
+    pack_fonts = layers.pack_arc('Fonts.arc')
+    if not pack_fonts.exists():
+        fail('语言包缺 Fonts.arc')
+        return
+    fonts = {name_of(m): m[1] for m in arcbuild.read_raw(pack_fonts)}
+    script = layers.pack_arc('Script.arc')
+    if not script.exists():
+        fail('语言包缺 Script.arc（字体槽在 LegacyGame_utf8.lua）')
+        return
+    members = {name_of(m): m[1] for m in arcbuild.read_raw(script)}
+    blob = members.get('LegacyGame_utf8.lua')
+    if blob is None:
+        fail('语言包 Script.arc 缺 LegacyGame_utf8.lua（字体槽在这里）')
+        return
+
+    bad = []
+    strs = _lua_strings(blob)
+    faces = []
+    for name, data in sorted(fonts.items()):
+        if not name.upper().endswith('.PTF'):
+            continue
+        try:
+            fam = ttfnames.family_key(ptf.unpack_ptf(data)).get(1)
+        except Exception as e:
+            bad.append('%s 解析失败：%s' % (name, e))
+            continue
+        if not fam:
+            bad.append('%s 没有 id1 族名' % name)
+            continue
+        faces.append(fam)
+        if name not in strs:
+            bad.append('Lua 未引用 %s（成员名与 file 字段不配套）' % name)
+        if fam not in strs:
+            bad.append('%s 的内部族名 %r 没被 Lua 请求（GDI 选不到面 → 兜底字体）' % (name, fam))
+
+    # Lua 里引用的 PTF 必须在 Fonts.arc 里
+    for t in strs:
+        if t.upper().endswith('.PTF') and t not in fonts:
+            bad.append('Lua 引用 %s，但语言包 Fonts.arc 没有该成员' % t)
+    if 'GB2312_CHARSET' not in strs:
+        bad.append('字体槽未使用 GB2312_CHARSET（中文会按 Shift-JIS 字符集匹配）')
+    if 'SHIFTJIS_CHARSET' in strs:
+        bad.append('字体槽仍残留 SHIFTJIS_CHARSET')
+
+    for m in bad[:8]:
+        fail(m)
+    if not bad:
+        ok('%d 个 PTF 的族名与 Lua 请求一致、成员名可解析、字符集 GB2312（%s）'
+           % (len(faces), ', '.join(faces)))
+
+
+def check_caption_utf8():
+    """**字幕编码闸**：中文包 ws2 副本里所有 `0x8f`/`0x90` 文本必须是**合法 UTF-8**。
+
+    为什么：hook 只按位置判定（正在解析 0x8f/0x90 ⇒ 按 CP_UTF8 解），不再逐字节比对白名单
+    ⇒ 译文可随意修改、无需重编 DLL。代价是这里必须保证字幕里不会出现"非 UTF-8 的窄字节"
+    （例如 CP932 日文），否则运行时会解出替换字符。
+    纯 ASCII 天然是合法 UTF-8（且与 CP932 解完全等价），所以未翻译的英文不会报错。
+
+    另断言：语言包 Rio 里出现的 ws2 副本，其字幕文本确实含非 ASCII 的中文（否则副本是多余的）。
+    """
+    print('')
+    print('== 字幕编码（中文包 8f/90 必须是合法 UTF-8）==')
+    pack = {name_of(m).lower(): m[1] for m in layers.read_layer(layers.pack_arc('Rio.arc'))}
+
+    def captions(raw):
+        out = []
+        for o in ws2disasm.disassemble(raw):
+            if o.opcode == 0x8f:
+                p = o.offset + 1
+                for _ in range(2):
+                    p = raw.index(bytes([0]), p) + 1
+                p += 1
+                out.append(('0x8f', raw[p:raw.index(bytes([0]), p)]))
+            elif o.opcode == 0x90:
+                p = o.offset + 1
+                out.append(('0x90', raw[p:raw.index(bytes([0]), p)]))
+        return out
+
+    bad, n_total, n_utf8, wss = [], 0, 0, 0
+    for key in sorted(pack):
+        if not key.endswith('.ws2'):
+            continue
+        wss += 1
+        raw = ws2.decode(pack[key])
+        for op, t in captions(raw):
+            n_total += 1
+            try:
+                t.decode('utf-8')
+            except UnicodeDecodeError as e:
+                bad.append('%s %s 文本不是合法 UTF-8：%r（%s）' % (key, op, t[:24], e.reason))
+                continue
+            if any(b >= 0x80 for b in t):
+                n_utf8 += 1
+    if not wss:
+        ok('语言包无 ws2 副本（0x8f 全部保持 Steam 原文）')
+        return
+    for m in bad[:6]:
+        fail(m)
+    # 根层（Steam 原档）字幕必须是纯 ASCII：英文模式不加载本 DLL，根层若有 UTF-8 中文会显示为乱码
+    root_bad = []
+    for nb, blob in layers.read_layer(layers.base_arc('Rio.arc')):
+        name = nb.decode('utf-16-le')
+        if not name.lower().endswith('.ws2'):
+            continue
+        raw = ws2.decode(blob)
+        for op, t in captions(raw):
+            if any(b >= 0x80 for b in t):
+                root_bad.append('%s %s 含非 ASCII 字幕' % (name, op))
+    for m in root_bad[:4]:
+        fail(m)
+    if not bad and not root_bad:
+        ok('语言包 %d 个 ws2 副本、%d 条 8f/90 文本全部是合法 UTF-8（含中文 %d 条）；根层字幕全为 ASCII'
+           % (wss, n_total, n_utf8))
+
+
 def check_sysgraphic():
     """**UI 汉化（SysGraphic 图层替换）的产物级断言** —— 与 `apply_sysgraphic.py` 同一判据
     的独立第二道（该步自身的回读校验管「写坏了没有」，这里管「写没写、写的是不是资源库里那份」）：
@@ -558,13 +752,14 @@ def check_sysgraphic():
     res = Path('resource') / 'SysGraphic'
     arc_path = ASSET / 'SysGraphic.arc'
     if not arc_path.exists():
-        fail('SysGraphic.arc missing from asset/（UI 汉化产物必须随补丁分发）')
-        return
+        arc_path = Path('backup') / 'SysGraphic.arc'   # 根层不带它；汉化 pna 在语言包层
     if not res.is_dir():
         fail('resource/SysGraphic 缺失（UI 汉化素材库；没有替换也应留空目录占位）')
         return
-    asset = {name_of(m).lower(): m[1] for m in arcbuild.read_raw(arc_path)}
     backup = {name_of(m).lower(): m[1] for m in arcbuild.read_raw(Path('backup') / 'SysGraphic.arc')}
+    # 语言包层的 pna 按成员覆盖在 Steam 原档之上 —— 与引擎读法一致
+    asset = dict(backup)
+    asset.update({name_of(m).lower(): m[1] for m in layers.read_layer(layers.pack_arc('SysGraphic.arc'))})
     subs = sorted(p for p in res.iterdir() if p.is_dir())
     if not subs:
         diff = [k for k in asset if asset[k] != backup.get(k)]
@@ -917,7 +1112,10 @@ def main():
     check_ws2_trailer(rio)
     check_seam_sprite_clear(rio)
     check_voice_format_and_sidecar()
+    check_caption_utf8()
     check_sysgraphic()
+    check_layer_split()
+    check_font_names()
     check_idempotency()
 
     print('\n== Summary ==')

@@ -6,7 +6,7 @@
 Res303 的汉化 —— 于是把它们**内化**成仓库数据，基线构建时显式带过，不再依赖外部 Res303 目录。
 
 取哪些：Res303 `Rio.arc` 里 `.lng`、脚本名**不在表内**、且**不以 `CNR` 开头**的
-（`CNR###` 是 Res303 的还原脚本，本项目走「就地插入」，由 `remove_cnr_scripts` 移除）。
+（`CNR###` 是 Res303 的还原脚本；本项目走「就地插入」，不引入独立还原脚本）。
 
 产出：`resource/carried_lng/<原成员名>`（逐字节原样）；清单 `resource/carried_lng/manifest.json`。
 用法（项目根目录）：

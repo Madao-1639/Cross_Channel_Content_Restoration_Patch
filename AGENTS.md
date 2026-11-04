@@ -2,9 +2,7 @@
 
 ## 项目目的
 
-为 Steam 版游戏《CROSS†CHANNEL》制作内容还原与汉化补丁，恢复被删除的原版场景内容，并将英文文本汉化为简体中文。
-
-**核心目标**：
+为 Steam 版游戏《CROSS†CHANNEL》制作内容还原与汉化补丁，恢复被删除的原版场景内容，并将英文文本汉化为简体中文。**核心目标**：
 1. 保留 Steam 成就系统
 2. 恢复完整 H 场景内容
 3. 零破坏性修改（不替换 Steam 原有资源）
@@ -37,9 +35,7 @@
 
 **绝对禁止修改游戏原始内容和演出**
 
-本项目的目标是**还原**被删除的内容，而不是**创作**或**修改**内容。任何改变游戏演出的行为都是严格禁止的。
-
-**禁止的行为**：
+本项目的目标是**还原**被删除的内容，而不是**创作**或**修改**内容。任何改变游戏演出的行为都是严格禁止的。**禁止的行为**：
 - ❌ 添加原版不存在的 BGM 指令
 - ❌ 移除原版存在的 BGM 停止指令
 - ❌ 修改场景的演出时序（如提前/延后触发事件）
@@ -103,21 +99,19 @@
 
 ### 3. 测试与发布流程
 
-**测试阶段**：
-- 只关注 `asset/` 目录下的文件
-- 测试时直接将 `asset/` 下的文件覆盖到游戏目录
-- **无需关心 `payload/` 中的增量内容**（payload 是给用户用的）
+**两层产物**（详见 `doc/technical-solutions.md`「发布形态」）：
 
-**发布阶段**：
-- 从 `asset/` 生成增量补丁到 `payload/`
-- 制作安装器打包 `payload/` 内容
-
-**原则**：开发和测试使用完整文件（asset/），发布时才制作增量包（payload/）
+- `asset/*.arc` = **根目录层**（与语言无关：ws2/还原 CG/补入语音）；`asset/zh-CN/` = **语言包层**（只放中文：lng/NameTable/汉化 UI/字体/整屏图 + `AdvHDLang.dll`）；
+- 切分由写盘器直接产出（`tool/layers.py`），**不做后置切分脚本**；
+- 所选语言由注册表 `HKCU\Software\WillPlus\AdvHD\LanguageSettings` 按安装路径记录；空值 = 英文（语言包不生效）。**注册表仅 Windows 有效**：安装器的「设为默认中文」在非 Windows 平台自动跳过，语言留给游戏设置界面。**测试阶段**：
+- 只关注 `asset/` 目录：把 `asset/*.arc` 覆盖到游戏根目录，并把 `asset/zh-CN/` 整个复制到 `<游戏目录>/zh-CN/`（根目录的 `Fonts/Script/SysGraphic/Graphic` 保持 Steam 原版）；
+- **无需关心 `payload/` 中的增量内容**（payload 是给用户用的）。**发布阶段**：
+- 从 `asset/` 生成 payload：根目录三档按成员增量 + `payload/zh-CN/` 整份复制（`PACK_MANIFEST.json`）；
+- 安装器把增量打在 `Rio/Chip2/Voice`，并把 `payload/zh-CN/` 铺到 `<游戏目录>/zh-CN/`；卸载＝删 `zh-CN/` + Steam 校验还原根目录归档。**原则**：开发和测试使用完整文件（asset/），发布时才制作增量包（payload/）
 
 ### 3. 库和脚本组织
 
 **tool/ 是 Python 包**（通过 `__init__.py`），提供通用库：
-
 ```
 tool/
 ├── __init__.py      （包标记）
@@ -130,20 +124,27 @@ tool/
 ├── pna.py           （PNA 分层图像读写：图层表 + 内嵌 PNG 切分 + 重序列化）
 ├── saveadv.py       （AdvHD 存档 CCST 快照链只读解析）
 ├── speaker.py       （角色名称映射表 resource/speaker_map.json 的读取层）
+├── hook/            （语言包 `AdvHDLang.dll` 的 C 源码：位置门 + 兜底白名单，构建见 script/build_lang_dll.py）
+├── layers.py        （两层产物布局：根目录层 base / 语言包层 zh-CN，含合并视图）
+├── ttfnames.py      （最小 TTF/OTF name 表读取，用于语言包字体自洽断言）
 ├── luac53.py        （Lua 5.3 字节码解析）
 ├── luadis53.py      （Lua 5.3 反汇编）
 └── install.py       （安装器入口）
 ```
 
 脚本通过 `from tool import arcbuild, ws2` 等方式导入，所有脚本使用相对于项目根的路径。从项目根执行：
-
 ```bash
 python script/build_patch.py            # 按方案产出 asset/（完整文件）
 python script/generate_payload.py       # 生成增量补丁到 payload/（含回读校验）
 python script/final_verification.py     # 全量验收
 python script/apply_sysgraphic.py       # SysGraphic UI 图层汉化（预演/落盘两用）
+python script/build_script_arc.py        # 语言包 Script.arc（只发差异成员）
+python script/apply_caption_utf8.py      # 中文字幕写进语言包 ws2 副本（0x8f/0x90 走不了 lng）
+python script/build_lang_dll.py          # 语言包 AdvHDLang.dll（位置门 hook；--debug 出诊断日志）
+python script/fix_font_names.py          # 子集 TTF 的 name 表恢复思源本名（EDA 环境，一次性修复）
 python script/audit/audit_inline.py           # 就地插入回归守卫
-python script/audit/verify_ws2_conventions.py # 转换器约定回归```
+python script/audit/verify_ws2_conventions.py # 转换器约定回归
+```
 
 各脚本的职责见 `doc/technical-solutions.md`「工具链」。
 
@@ -164,9 +165,7 @@ python script/audit/verify_ws2_conventions.py # 转换器约定回归```
 - 控制台输出使用 ASCII 或配置 UTF-8
 - 使用 NUL 前缀的精确替换模式
 
-**编码处理注意事项**：
-
-*Shift-JIS 与中文字符*：
+**编码处理注意事项**：*Shift-JIS 与中文字符*：
 - **脚本内容**（资源名、对话）使用 **Shift-JIS** 编码
 - **中文字符不能用 Shift-JIS 编码**，会抛出 `UnicodeEncodeError`
 - 搜索/匹配脚本内容时：
@@ -229,9 +228,7 @@ if pattern in decoded:
 **脚本命名**：
 - `*_en.ws2`：Steam 版英文脚本。**本补丁不新增脚本名** —— 原版内容**就地插入**这 363 个脚本中的 12 个，不引入还原脚本、不增加跳转（见 `doc/call-chain.md`）
 
-**PNA 资源命名**：
-
-*立绘（角色标识+分类+编号+变体）*：
+**PNA 资源命名**：*立绘（角色标识+分类+编号+变体）*：
 - 格式：`T{角色代码}{分类}{编号}{变体}.pna`
 - 角色代码：CMM（見里）、CYM（美希）、CSK（霧）、CKT（冬子）、CST（友貴）、CHY（曜子）、CCN（七香）、CSH（桜庭）、CDY（遊紗）、CSY（新川）等
 - 示例：`TCKT1002B.pna`（冬子的立绘 B 变体）
@@ -243,9 +240,7 @@ if pattern in decoded:
 
 *背景*：`BGCC*.png`，位于 `Chip1.arc`（本补丁不改动）
 
-详见 `doc/pna-resources.md`。
-
-**章节前缀**：
+详见 `doc/pna-resources.md`。**章节前缀**：
 - `CC0-CC6`：主要角色线（TOU/MIS/KIR/MIK/YOU/TOM/SAK）
 - `CCA`：A 章节场景
 - `CCB`：B 章节场景
@@ -339,9 +334,7 @@ if pattern in decoded:
 
 ## 与 A Sky Full of Stars 项目的关系
 
-本项目基于 A Sky Full of Stars 内容还原补丁项目的技术经验启动，但两个项目是独立的：
-
-**共同点**：
+本项目基于 A Sky Full of Stars 内容还原补丁项目的技术经验启动，但两个项目是独立的：**共同点**：
 - 同一引擎（AdvHD.exe）
 - 同一资源格式（Arc/WS2/PNA）
 - 同一核心目标（保留成就、还原 H 场景、零破坏性）

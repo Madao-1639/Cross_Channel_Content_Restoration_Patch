@@ -1,0 +1,160 @@
+{
+  "_说明": "0x8f/0x90 字幕行（语音+字幕，走不了 lng）的中文译文，台词一律加中文引号。`old` 是 ws2 原文（cp932 解码后比较，脚本内唯一），`new` 为写入语言包副本的 UTF-8 中文。信源：Steam 英文台词（原版日文语料未覆盖该场景），语义参照汉化组《朋友塔》译文。",
+  "edits": [
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dTaichi...!\\d",
+      "new": "“太一……！”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWh-what are you saying?\\d",
+      "new": "“你、你在说什么？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWhat happened to your clothes...?\\d",
+      "new": "“你的衣服……怎么了？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWhere is Kiri?\\d",
+      "new": "“雾呢？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dThat blood...\\d",
+      "new": "“那血……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWhere is Kiri?!\\d",
+      "new": "“雾在哪儿！？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dThat's amazing...\\d",
+      "new": "“好厉害……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dUm... It looks like Kiri is not one\\nof the materials used but... Where is she?\\d",
+      "new": "“那个……雾好像不在材料里……她在哪儿？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dIs that so.\\d",
+      "new": "“是这样啊。”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dNo... I think I'll head out now.\\d",
+      "new": "“不……我该走了。”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dMove... Move... Move... Move...\\nMove, my legs, move...\\d",
+      "new": "“动……动……动……动……\n动啊，我的腿，动啊……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dMove... Move... Move... Move... Move... Move...\\d",
+      "new": "“动……动……动……动……动……动……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dTaichi? What... No way?\\d",
+      "new": "“太一？什么……不会吧？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dOw... My leg... hurts...\\d",
+      "new": "“呜……我的腿……好痛……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dDon't come near me... Don't!!\\d",
+      "new": "“别过来……别过来！！”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dArrggghhh!!\\d",
+      "new": "“啊啊啊啊！！”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dOh...\\d",
+      "new": "“啊……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWhy... Why?\\d",
+      "new": "“为什么……为什么？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWhy... Didn't I... Run away sooner...\\nWhy is that, Taichi?\\d",
+      "new": "“为什么……我为什么……没有早点逃……\n为什么会这样，太一？”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dMy own life is... Precious...\\d",
+      "new": "“我自己的命……是很宝贵的……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dUh... Ow... If I had ran away sooner...\\nI would've been safe... Hahahah...\\d",
+      "new": "“呜……啊……要是早点逃……\n我就安全了……哈哈……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dOw... Uhhh...\\d",
+      "new": "“啊……呜……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dI didn't have any confidence...\\nLiving on my own...\\d",
+      "new": "“我一个人……\n活下去，一点自信都没有……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dSo I thought if Kiri was still alive...\\d",
+      "new": "“所以我想，如果雾还活着的话……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dBut still... I had prepared to burn it...\\d",
+      "new": "“可是……我本来已经准备烧掉了……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dAhahahahahahahah.\\d",
+      "new": "“哈哈哈哈哈哈哈哈。”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dAhahahah, hahah, hahahahah...\\d",
+      "new": "“哈哈哈哈，哈哈，哈哈哈哈哈……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dWaaaaaaagh!\\d",
+      "new": "“哇啊啊啊啊！”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\d... Ugh.\\d",
+      "new": "“……呜。”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dI loved you...\\d",
+      "new": "“我喜欢过你……”"
+    },
+    {
+      "script": "CC_30A_EN",
+      "old": "\\dI loved you a little, Taichi...\\d",
+      "new": "“我有一点喜欢过你，太一……”"
+    }
+  ]
+}

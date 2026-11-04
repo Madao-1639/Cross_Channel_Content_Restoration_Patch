@@ -34,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, lng, ws2, ws2disasm  # noqa: E402
 from tool.wsc2ws2 import SPEAKER_MAP  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
@@ -128,7 +128,8 @@ def main():
     ap.add_argument('--top', type=int, default=25)
     args = ap.parse_args()
 
-    members = {n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(args.rio)}
+    members = ({n.decode('utf-16-le').upper(): v for n, v in arcbuild.read_raw(args.rio)}
+               if Path(args.rio).resolve() != RIO.resolve() else layers.effective_dict('Rio.arc'))
     ccs_cache = {}
     for name in members:
         if name.endswith('.WS2'):

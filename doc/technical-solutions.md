@@ -1,7 +1,6 @@
 # 技术方案
 
-本文档记录 CROSS†CHANNEL 内容还原与汉化补丁的**现行**技术方案。逐项判据与踩坑记录见
-[lessons-learned.md](lessons-learned.md)，格式细节见 [file-formats.md](file-formats.md)。
+本文档记录 CROSS†CHANNEL 内容还原与汉化补丁的**现行**技术方案。逐项判据与踩坑记录见 [lessons-learned.md](lessons-learned.md)，格式细节见 [file-formats.md](file-formats.md)。
 
 ## 总体形状
 
@@ -37,26 +36,14 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 
 ## 2. 调用链：就地插入（不是穿插新脚本）
 
-**目标**：让 Steam 版运行完整的原版剧情，同时保留 Steam 的成就与原有出口。
-
-**方案**：把源 WSC 的删除区间转换后**就地插入调用脚本**，不引入还原脚本、不增加跳转、
-不删除 Steam 内容：
-
+**目标**：让 Steam 版运行完整的原版剧情，同时保留 Steam 的成就与原有出口。**方案**：把源 WSC 的删除区间转换后**就地插入调用脚本**，不引入还原脚本、不增加跳转、不删除 Steam 内容：
 ```
 宿主脚本 = [前段：Steam 原生，源 0 .. 接缝]
          + [插入段：源 WSC 的删除区间转换后插入]
          + [出口尾段：Steam 原档「末句对话之后」的字节，含原出口]
 ```
 
-12 个宿主，出口与 Steam 原档**逐一致**；`CCC0000_en` 的 `01 mode=0x85` 条件双出口的 `b`
-已按新布局重算。判据、逐场景参数与合并规则见
-[call-chain.md](call-chain.md)「就地插入接线」；`script/splice_restoration.py` 是实施脚本，
-`script/audit/audit_inline.py` 是回归守卫。
-
-**例外（唯一）：`CCB2017_EN` 的选项分支** —— Steam 把该段整段删 + 整段新写，两头都与就地插入对撞，
-故在 `k=30` 之后加一条提示句 + `0e`+`0f`（`扭扭乐` / `一小时的Ｈ赌约`）+ 两条分支入口清框格 `14 "%P"`
-（提示句尾 `%K` 只留框 ⇒ 选完必须由落点清框），H 分支用 `06` 进入紧跟的孤岛
-（源对话序 30..47 的切片转换）、末条 `06` 回 `k=80`；不新增脚本名，但多了一处「增加跳转」。
+12 个宿主，出口与 Steam 原档**逐一致**；`CCC0000_en` 的 `01 mode=0x85` 条件双出口的 `b` 已按新布局重算。判据、逐场景参数与合并规则见 [call-chain.md](call-chain.md)「就地插入接线」；`script/splice_restoration.py` 是实施脚本，`script/audit/audit_inline.py` 是回归守卫。**例外（唯一）：`CCB2017_EN` 的选项分支** —— Steam 把该段整段删 + 整段新写，两头都与就地插入对撞，故在 `k=30` 之后加一条提示句 + `0e`+`0f`（`扭扭乐` / `一小时的Ｈ赌约`）+ 两条分支入口清框格 `14 "%P"` （提示句尾 `%K` 只留框 ⇒ 选完必须由落点清框），H 分支用 `06` 进入紧跟的孤岛（源对话序 30..47 的切片转换）、末条 `06` 回 `k=80`；不新增脚本名，但多了一处「增加跳转」。
 实施 `script/splice_ccb2017_branch.py`，形状与取舍见 [call-chain.md](call-chain.md)「选项分支」
 与 [restoration-targets.md](restoration-targets.md)「例外处理」。
 
@@ -65,23 +52,16 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 > **为什么不是「宿主截断 + 追加还原脚本」**：Steam 删 H 场景时会把该场景压成删节版留在
 > 宿主里，而宿主是**按序跑完整场**的 —— 追加式会造成顺序倒置 + 局部重复；
 > 且截断宿主会一并丢掉宿主承担的演出（立绘/BGM/SE）。详见
-> [call-chain.md](call-chain.md)「就地插入接线」。
-
-**资源引用**：插入段引入的原版资源名必须先跑重命名映射（见上）。
+> [call-chain.md](call-chain.md)「就地插入接线」。**资源引用**：插入段引入的原版资源名必须先跑重命名映射（见上）。
 扩覆盖范围新增的语音由 `script/import_missing_voices.py` 从原版 `Voice.arc` 补入。
-⚠️ 补入时**一律重采样到 48000 Hz**（`resample_ogg()`，ffmpeg `-ar 48000 -c:a libvorbis`）——
-原版有一批 44100 录音，而 Steam 语料 99.86% 是 48000；偏离语料形态会走宿主几乎不走的解码路径
-（早先的一次闪退曾归因于此，后经实机单变量对照**已否定**，真因是脚本尾表未随消息数更新（引擎按旧数分配已读位图、写位越界）—— 见
-[engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」；重采样本身保持现状）。仅 `--bootstrap` 从零重建会触发本步；
-常规复跑因「只增不改」为 no-op。
+⚠️ 补入时**一律重采样到 48000 Hz**（`resample_ogg()`，ffmpeg `-ar 48000 -c:a libvorbis`）——原版有一批 44100 录音，而 Steam 语料 99.86% 是 48000；偏离语料形态会走宿主几乎不走的解码路径（早先的一次闪退曾归因于此，后经实机单变量对照**已否定**，真因是脚本尾表未随消息数更新（引擎按旧数分配已读位图、写位越界）—— 见 [engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」；重采样本身保持现状）。仅 `--bootstrap` 从零重建会触发本步；常规复跑因「只增不改」为 no-op。
 
 ## 3. 文本汉化：lng 位置对应
 
 - **机制**：lng 里没有 id，引擎按播放序把**第 N 条文本**替换为 lng 第 N 条目。严格等式 `lng 条数 == 14 条数 + Σ(0f 的 count)`（选项条目各占一槽）。
 - **来源**：主线复用汉化组官方译文（CCS，`CCS 序号 = 原版 WSC 对话 id + 1`），Steam 新增的 7 条角色线与后日谈以机翻为底稿，已随全量语义复审逐行修订。
-- **宿主 lng 重建**：就地插入后宿主的位置全部变了，lng 必须整体重建 ——
-  **现由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**（原 `script/build_host_lng.py` 已废弃：只写 `.LNG`、输出必被覆写）。尾部控制符照抄源文本（`%K` / `%K%P` / `%N` / `%P`，不是一律 `%K%P`）。
-- **池位错位修复**：由 `script/apply_text_map.py` 按表**一次产出**（表里同一行的拆分记为 `span: [from, to)`——同一格取该行中文的字符片段，**不新增槽位**）。早期的 `script/realign_lng_to_ws2.py`（DP 对齐、会给 ws2 插 `15`+`14`）已废弃：实测它对 `apply_text_map` 的输入逐字节不改任何脚本，且其 lng 必被覆写，贡献为 0。
+- **宿主 lng 重建**：就地插入后宿主的位置全部变了，lng 必须整体重建 —— **由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**。尾部控制符照抄源文本（`%K` / `%K%P` / `%N` / `%P`，不是一律 `%K%P`）。
+- **池位错位修复**：由 `script/apply_text_map.py` 按表**一次产出**（表里同一行的拆分记为 `span: [from, to)`——同一格取该行中文的字符片段，**不新增槽位**）。池位错位一律由表的 `span` 表达（不新增槽位）。
 - **人名不走 lng**：由 `Rio.arc` 的 `NameTable.txt`（UTF-16LE）替换。
 
 详见 [localization.md](localization.md)。
@@ -101,6 +81,17 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 
 ---
 
+## 发布形态：两层产物（根目录层 + 语言包 `zh-CN/`）
+
+AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的文件夹（`zh-CN/`）里放归档，引擎**按成员**优先读包内版本、其余回落根目录（实测：只含 1 个成员的 `Rio.arc` 也能覆盖，见 [engine-mechanics.md](engine-mechanics.md)「语言包（AdvHD ≥1.9）」）。据此把产物切成两层：
+
+| 层 | 位置 | 内容 | 体积 |
+|---|---|---|---|
+| **根目录层** | `asset/*.arc` | 与语言无关的加工资产：`Rio.arc`（ws2，**不含 `.lng`/`NameTable`**）、`Chip2.arc`（+37 张还原 CG）、`Voice.arc`（+2525 条补入语音） | ~867 MB |
+| **语言包层** | `asset/zh-CN/*.arc` | 只放中文相关：`Rio.arc`（328 lng + NameTable + **承载 UTF-8 字幕的 ws2 副本**）、`SysGraphic.arc`（4 个汉化 pna）、`Fonts.arc`（2 PTF）、`Script.arc`（2）、`Graphic.arc`（3 图）、**`AdvHDLang.dll`（自制：位置门 hook + 原件资源）** | ~15 MB |
+
+* **切分由写盘器直接产出**（不是后置切分脚本）：`apply_text_map` 把 ws2 写根层、lng 写包层；`build_nametable` 键取自根层 ws2、表写包层；`apply_sysgraphic` / `apply_graphic_overrides` 以 Steam 原档为基线、只把改过的成员写包层；`build_fonts_arc` 直接产 `asset/zh-CN/Fonts.arc`。机制封装在 `tool/layers.py`（`base_arc` / `pack_arc` / `read_layer` / `write_layer` / `effective`）。* **包层成员集合由"独占所有者"重算**（每次按最终内容 vs Steam 原档，幂等、无残留，不需要事后收敛）：`apply_text_map` 独占 `zh-CN/Rio.arc`（表外 carried lng + 本次生成的 lng）、`build_nametable` 并入 `NameTable.txt`、`apply_sysgraphic` 独占 `zh-CN/SysGraphic.arc`、`apply_graphic_overrides` 独占 `zh-CN/Graphic.arc`、`build_fonts_arc` 独占 `zh-CN/Fonts.arc`、`build_script_arc` 独占 `zh-CN/Script.arc`、`apply_caption_utf8` 独占 `zh-CN/Rio.arc` 的 **ws2 字幕副本**（`0x8f`/`0x90` 走不了 lng）、`build_lang_dll` 独占 `zh-CN/AdvHDLang.dll`（`MultiByteToWideChar` 位置门，见 [engine-mechanics.md](engine-mechanics.md)「语言包 DLL 的码页 hook」）。其中 `Script.arc` **只发差异成员**（2 个）：官方 IMHHW 的 `zh-CN/Script.arc` 只有 1 个成员（302 字节）即生效 ⇒ "按成员覆盖"成立。* **语言包字体自洽**（名字/成员名/字符集三者对齐 `g_fonts2` 槽）：见 [localization.md](localization.md)「语言包字体自洽」。* **默认语言**：安装器可选把 `HKCU\Software\WillPlus\AdvHD\LanguageSettings`（值名 = 游戏目录，经 ANSI 代码页转换）写成 `zh-CN`，否则引擎按空值＝English 启动、语言包整个不生效。**仅 Windows**（`IS_WINDOWS` 守卫）：非 Windows 平台跳过，语言由游戏设置界面决定。* **验收**：`final_verification.load_arc('asset/<归档>')` 自动按两层合并（`layers.effective`），既有检查照常跑；另有 `check_layer_split()`（成员归属）与 `check_font_names()`（字体自洽）。* **发布**：`generate_payload.py` 对根层三档按成员增量、把 `asset/zh-CN/` 整份复制到 `payload/zh-CN/` 并写 `PACK_MANIFEST.json`；`tool/install.py` 只把增量打在 `Rio/Chip2/Voice` 上，另把 `payload/zh-CN/` 铺到 `<游戏目录>/zh-CN/`（逐文件哈希校验）。卸载＝删 `zh-CN/` + Steam 校验还原根目录归档。**英文形态（不选语言包时）**：完整素材 + Steam 英文正文 + 我们插入的还原行显示**日文**（那是源 WSC 原文，`lng` 提供中文）；UI/字体为原版。将来做英化包只需补 `.lng`。
+
 ## 工具链
 
 ### 基线、复跑与回滚（机制）
@@ -109,47 +100,22 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 
 | 带入项 | 来源 |
 |---|---|
-| `Script.arc` | 内化 Lua 界面 `resource/reused_archives/` (**族名 patch 已固化在内化副本**，与 `asset/Script.arc` 定稿一致，流水线只做复制) |
+| `Script.arc` | 内化中文 UI 的 `resource/reused_archives/`，**只取与 Steam 原版不同的 2 个成员**（`ui_language.lua` / `LegacyGame_utf8.lua`） |
 | `Fonts.arc` | **自制**：`script/build_fonts_arc.py` 从 `resource/fonts/sourcehan_subset/` 打包（思源黑体 PTF ×2）—— 不再采用内化归档 |
 | 35 个表外汉化 lng | 内化数据 `resource/carried_lng/` |
 | 967 条 `.soundlevel` 侧车（补入录音的包络） | 内化数据 `resource/carried_soundlevel.json`（`backup` 只带自己那 15,144 条的包络；这 967 条不在任何 Steam 原档里，不显式带过即静默丢失） |
 | 补入的原版录音 | 原版游戏的老式归档 `Voice.arc`（并统一重采样 48000） |
 | 37 张还原 CG | `build_restored_cgs.py`：原版 `Chip.arc` 的 `EVCC####.PNG` 放大到 1280×960（只需目标一致，不必字节级） |
 
-其余全部由后续步骤从 `resource/text_map.json` + 源 WSC（`resource/corpus/wsc`）生成。
-**验收**：从 `backup` 起底**跑两次**全链，五份归档**逐字节一致**（`final_verification` 全过）。
-
-**`build_patch.py` 不复位素材**，而 `apply_text_map.py` **不幂等**（按表在**输入**上再插一遍，在已建成的
-产物上跑会把插入再算一遍）。所以「**复跑 0 处改动**」＝先回到**复位点**再复跑：`check_reset_state.py`
-在**任何写盘之前**拦下"已建成"的输入（判据：有插入/删格的**在表非宿主**脚本，格数 `== n_final`
-⇒ 是建成态；宿主由 `splice` 产生、串接前本就是 Steam 格数，不参与判定）。
-**复位 = 跑一次 `--bootstrap`**（从 `backup` 起底、全链重建；最省事也最可靠，且自带验收）。
-它跑完会把"串接前态"写成 `asset/Rio.arc.before_inline_splice` —— `splice` 每轮按**内容**刷新它，
-那是给**后续非 bootstrap 的复跑**用的复位点（它不存在时，用 `--bootstrap` 重建一次即可）。
-
-**并发保护（`.build.lock`）**：每个实例都会**复位并重写 `asset/`**，两个同时跑必然互相写坏
-（实测：一边把 `Rio` 拉回串接前、另一边刚复位 `Chip2` 而 CG 未补回 ⇒ 假报"CG 改名目标缺失"）。
-`build_patch.py` 起手取锁（记 `pid` + 时间，`atexit` 释放；**`--check` 也取** —— 它只读 `asset/`，
-并发写会让它读到瞬时态、报假缺陷）。同锁的进程**仍活 ⇒ 拒跑**；**进程已死 ⇒ 判陈旧、警告后接管**。
-⚠️ 判活必须用 `tasklist`：`os.kill(pid, 0)` 在 Windows 会**真把进程杀掉**。
-
-**闸的次序固定为「只看表 → 写盘 → 表↔产物 → 全量验收」**：
+其余全部由后续步骤从 `resource/text_map.json` + 源 WSC（`resource/corpus/wsc`）生成。**验收**：从 `backup` 起底**跑两次**全链，五份归档**逐字节一致**（`final_verification` 全过）。**`build_patch.py` 不复位素材**，而 `apply_text_map.py` **不幂等**（按表在**输入**上再插一遍，在已建成的产物上跑会把插入再算一遍）。所以「**复跑 0 处改动**」＝先回到**复位点**再复跑：`check_reset_state.py` 在**任何写盘之前**拦下"已建成"的输入（判据：有插入/删格的**在表非宿主**脚本，格数 `== n_final` ⇒ 是建成态；宿主由 `splice` 产生、串接前本就是 Steam 格数，不参与判定）。**复位 = 跑一次 `--bootstrap`**（从 `backup` 起底、全链重建；最省事也最可靠，且自带验收）。
+它跑完会把"串接前态"写成 `asset/Rio.arc.before_inline_splice` —— `splice` 每轮按**内容**刷新它，那是给**后续非 bootstrap 的复跑**用的复位点（它不存在时，用 `--bootstrap` 重建一次即可）。**并发保护（`.build.lock`）**：每个实例都会**复位并重写 `asset/`**，两个同时跑必然互相写坏（实测：一边把 `Rio` 拉回串接前、另一边刚复位 `Chip2` 而 CG 未补回 ⇒ 假报"CG 改名目标缺失"）。`build_patch.py` 起手取锁（记 `pid` + 时间，`atexit` 释放；**`--check` 也取** —— 它只读 `asset/`，并发写会让它读到瞬时态、报假缺陷）。同锁的进程**仍活 ⇒ 拒跑**；**进程已死 ⇒ 判陈旧、警告后接管**。
+⚠️ 判活必须用 `tasklist`：`os.kill(pid, 0)` 在 Windows 会**真把进程杀掉**。**闸的次序固定为「只看表 → 写盘 → 表↔产物 → 全量验收」**：
 
 - **写盘之前**跑 `verify_text_map_structure.py`（**只看表**：格数自洽 / 覆盖无空档 / 行序单调 / span 可定位）。表自己不自洽就**不该拿去写盘** —— 三道检查若排在写盘之后，报警时产物已被覆盖。
 - **写盘器自身的硬拦截**：`apply_text_map.py` 逐槽核「该槽有没有处置」，**漏一格即中止**，不再静默产出（否则：lng 给它写一条**空条目** ⇒ 屏幕上一行空白；或照旧沿用 Steam 英文）。
 - **写盘器的第二道硬拦截（`check_tails`）**：逐脚本断言「**对话格必带**尾部控制符、**选项格必不带**」。该判据在两版语料上零例外、且不需要任何外部参照（不变量与实测见 [file-formats.md](file-formats.md)「对话文本标记」）；它与 `final_verification.py` 里的同名检查是同一判据的两道接线（写盘期逐脚本中止 / 产物级全库复核）。⚠️ 每格英文**从输入归档的指令流直读**（`en_of_from`），**不读任何派生缓存** ——缓存路径失效过一次，读空的后果是 `fix_tail(zh, '')` 什么都不补、整份产物尾标记静默丢失，而当时其余闸照过；且槽位编号必须与写盘器同口径（`14` 一格、**每个 `0f` 条目也各占一格**）。
-- **写盘之后**跑 `verify_text_map.py`（表 ↔ 产物对账）→ `final_verification.py`（全量验收）。前者七条断言里**只有第 4 条（插入段位置与正文）依赖产物布局**，所以槽位序对不上时**只跳过第 4 条**、其余照跑（产物过期时它们是唯一还验得动的检查）—— 早先整段 `continue` 会把它们连坐跳过。
-
-**素材快照按轮带时间戳**：写盘前调 `snapshot_assets()` —— 与 `asset/<归档>.before_round_<时间戳>`
-里**最近一份逐字节比较**，相同则跳过（`Voice.arc`/`Chip2.arc` 数百 MB，不比内容就会把磁盘堆爆），
-**内容一变就新写一份**（旧规则是"存在就不刷新"，结果那份停在六天前）。
-⚠️ 快照记的是「**运行开始前那一刻的状态**」；若按上面的规矩**先复位 `asset/Rio.arc` 再跑**，
-这份快照记的就是复位后的基线、而非上一轮的产物 —— 此时上一轮产物的回滚点要**自己先留**
-（如 `Rio.arc.before_rebuild_<日期>`）。
-
-**⚠️ 做"一轮改了什么"的全量对账时，基线必须是「那一轮的起点」那份表快照**（＝上一轮收工时、开工前的表），
-**不能拿中途备份**：形如 `text_map.json.before_<某脚本>_<时间>` 的备份是**该脚本写入前**的状态，
-已经含了该轮早先的改动 —— 拿它 diff 会**少算**（实测：用中途备份只看到 9 个脚本，换成真正的起点快照才见 22 个）。
+- **写盘之后**跑 `verify_text_map.py`（表 ↔ 产物对账）→ `final_verification.py`（全量验收）。前者七条断言里**只有第 4 条（插入段位置与正文）依赖产物布局**，所以槽位序对不上时**只跳过第 4 条**、其余照跑（产物过期时它们是唯一还验得动的检查）—— 早先整段 `continue` 会把它们连坐跳过。**素材快照按轮带时间戳**：写盘前调 `snapshot_assets()` —— 与 `asset/<归档>.before_round_<时间戳>` 里**最近一份逐字节比较**，相同则跳过（`Voice.arc`/`Chip2.arc` 数百 MB，不比内容就会把磁盘堆爆），**内容一变就新写一份**（旧规则是"存在就不刷新"，结果那份停在六天前）。
+⚠️ 快照记的是「**运行开始前那一刻的状态**」；若按上面的规矩**先复位 `asset/Rio.arc` 再跑**，这份快照记的就是复位后的基线、而非上一轮的产物 —— 此时上一轮产物的回滚点要**自己先留**（如 `Rio.arc.before_rebuild_<日期>`）。**⚠️ 做"一轮改了什么"的全量对账时，基线必须是「那一轮的起点」那份表快照**（＝上一轮收工时、开工前的表），**不能拿中途备份**：形如 `text_map.json.before_<某脚本>_<时间>` 的备份是**该脚本写入前**的状态，已经含了该轮早先的改动 —— 拿它 diff 会**少算**（实测：用中途备份只看到 9 个脚本，换成真正的起点快照才见 22 个）。
 ⇒ 每轮开工第一件事：留一份 `text_map.json.before_round_<轮次>`。
 
 ### 复用（从 A Sky Full of Stars 项目）
@@ -165,75 +131,41 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 | `tool/ws2disasm.py` | WS2 反汇编（363 个原生脚本 100% 覆盖） |
 | `tool/wsc2ws2.py` | WSC→WS2 逐指令转换（含 `convert_range` 切片模式） |
 | `tool/lng.py` | lng 编解码 + CCS 解析（`parse_ccs` / `parse_ccs_both`）+ **文本体例规则**（`fix_tail` / `normalize_zh`）+ 去说话人包裹 |
-| `tool/writer.py` | **结构写盘器**：还原插入 / 删格 / 名字框同步 / 借用语音删除 → ws2 字节（原 `insert_deleted_dialogues.py`）。其文件内偏移 `fix` 列表覆盖 `0x06`、`0f` 条目内的 `06`、**`01` 的 `a`（指令内 +8）与 `b`（+12）** |
+| `tool/writer.py` | **结构写盘器**：还原插入 / 删格 / 名字框同步 / 借用语音删除 → ws2 字节。其文件内偏移 `fix` 列表覆盖 `0x06`、`0f` 条目内的 `06`、**`01` 的 `a`（指令内 +8）与 `b`（+12）** |
 | `tool/textplan.py` | **表 → 写盘计划**：逐格处置展开、尾标记、名字框、随行演出（原在写盘器里） |
-| `tool/rename_map.py` | 资源**改名表**（原版名 → 本补丁名；原 `build_rename_map.py`） |
+| `tool/rename_map.py` | 资源**改名表**（原版名 → 本补丁名） |
 | `tool/archprobe.py` | 归档探针：运行时可用资源名集合 / PNA 层数（原在 `splice_restoration` 里） |
 | `tool/pna.py` | PNA 分层图像解析：图层表 + 内嵌 PNG 切分（读）；重序列化 `serialize` / 换图校验 `png_dimensions`（写，SysGraphic UI 汉化的图层替换用；签名扫描件不支持写回）。见 `engine-mechanics.md`「PNA 二进制布局」 |
 | `tool/luac53.py` / `tool/luadis53.py` | Lua 5.3 字节码解析 / 反汇编 |
-| `tool/install.py` | 安装器（PyInstaller 入口，`merge_arc` 按 METADATA 重组归档） |
+| `tool/hook/advhdlang_hook.c` | 语言包里那张 DLL 的源码（位置门 + 兜底白名单；资源由 windres 重建） |
+| `tool/install.py` | 安装器（PyInstaller 入口，`merge_arc` 按 METADATA 重组归档）；路径检测 Windows 走注册表 `SteamPath`、Linux 扫 `~/.steam/steam` 等常见根（`IS_WINDOWS` 为平台判定唯一来源，非 Windows 跳过全部注册表步骤） |
 
 ### 流程脚本（`script/`）—— 按角色分
 
-**入口**：`build_patch.py`（流水线总控；`--bootstrap` 从 `backup/` 起底）、`generate_payload.py`（增量包）、
-`pack.sh`（PyInstaller 打包安装器）。
-
-**流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：
-`verify_text_map_structure` · `check_reset_state` · `apply_graphic_overrides` ·
-`splice_restoration` · `splice_ccb2017_branch` · `remove_cnr_scripts` · `build_original_stage` · `apply_text_map` ·
-`import_missing_voices` · `audit_choices` · `build_nametable` · `apply_sysgraphic` ·
-`verify_text_map` · `audit_row_alignment` · `final_verification`；
-**引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。
-
-**目录分组**（`script/` 根只放入口与流水线步骤）：
+**入口**：`build_patch.py`（流水线总控；`--bootstrap` 从 `backup/` 起底）、`generate_payload.py`（增量包）、`pack.sh`（PyInstaller 打包安装器）。**流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：写盘之前：`verify_text_map_structure` · `check_reset_state`；写盘：`apply_graphic_overrides` · `splice_restoration` · `splice_ccb2017_branch` · `build_original_stage` · `apply_text_map` · `import_missing_voices` · `audit_choices` · `build_script_arc` · `apply_caption_utf8` · `build_lang_dll` · `build_nametable` · `apply_sysgraphic`；写盘之后：`verify_text_map` · `audit/audit_row_alignment` · `final_verification`。**引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。**独立核对工具**（不进流水线）：`renumber_evcc9xxx.py`（`EVCC9XXX` 编号对照，`--check`）。**目录分组**（`script/` 根只放入口与流水线步骤）：
 
 - `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：`extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`
 - `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：`build_original_audio` · `build_voice_plan`
-- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `verify_ws2_conventions` · `convert_wsc`
+- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `audit_translation_coverage` · `sysgraphic_contact_sheet` · `verify_ws2_conventions` · `convert_wsc`
 
-**库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/rename_map.py`（改名表）、
-`tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
-⚠️ **流水线步骤不得互相 import** —— 库一律放 `tool/`：把库放 `script/` 会迫使各步用 `sys.path.insert` / `importlib` 绕路加载，同名库出现两份实例，是「静默丢字段」类事故的来源。
-
-**`audit_duplicate_text.py` 是"检测报告"，不是闸**：列**同一脚本内**出现完全相同显示文本的格
-（长度 <8 的短句/纯符号句一律略过，跨脚本不比），并标注每格的出处。
-⚠️ **它只检测、不判错，也不参与流水线的通过/失败** —— 同文本重复**是正常现象**：
-短句与符号句（`……`／`“……”`）原版本就反复出现，姊妹场同对白更是既定设计，
-切分片重合也正常。只有"**至少一条是自撰格**"的那些组值得人看一眼（在现表上实测：
-90 组同文本，其中 1 组含自撰格 —— 经查是 Steam 自己连着两槽同样的笑声，正常）。
-
-**`apply_text_map.py` = 落盘接线的入口**：按 `resource/text_map.json` **一次产出结构 + lng** ——
-它是**表的唯一消费者**，取代了结构写盘的独立入口与 lng 生成的那一族。
-以下脚本**只写 `.LNG`**、处理集全部落在表的 293 个范围内 ⇒ 输出必被 `apply_text_map` 覆写，
-已从流水线摘除并**删除**：
-`realign_lng_to_ws2.py`（DP 对齐）、`build_host_lng.py`（宿主 lng）、`fix_lng_alignment.py`（模型对齐）、
-`fix_nametable_prefix.py`、`rename_speakers.py`、**判定链的 39 个 `textfix_*.py`**，
-以及判定链的**下游**：`build_text_map.py`（表生成器）、`speaker_map_sheet.py`（对照卡）、
-`build_position_overrides.py` / `calibrate_positions.py`（立绘位置标定，锚点输入已清）。
-判定链的**中间层**也随之清理 ⇒ 整条链**不可再跑**，且它本就**顺序敏感、表已成准据**
-—— **要改某一格，改表**。
-（`build_text_map.py` 里仍被复用的两条文本体例规则 `fix_tail` / `normalize_zh` 已移入 `tool/lng.py`。）
+**库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/rename_map.py`（改名表）、`tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
+⚠️ **流水线步骤不得互相 import** —— 库一律放 `tool/`：把库放 `script/` 会迫使各步用 `sys.path.insert` / `importlib` 绕路加载，同名库出现两份实例，是「静默丢字段」类事故的来源。**`audit_duplicate_text.py` 是"检测报告"，不是闸**：列**同一脚本内**出现完全相同显示文本的格（长度 <8 的短句/纯符号句一律略过，跨脚本不比），并标注每格的出处。
+⚠️ **它只检测、不判错，也不参与流水线的通过/失败** —— 同文本重复**是正常现象**：短句与符号句（`……`／`“……”`）原版本就反复出现，姊妹场同对白更是既定设计，切分片重合也正常。只有"**至少一条是自撰格**"的那些组值得人看一眼（在现表上实测：90 组同文本，其中 1 组含自撰格 —— 经查是 Steam 自己连着两槽同样的笑声，正常）。**`apply_text_map.py` = 落盘接线的唯一入口**：按 `resource/text_map.json` **一次产出结构 + lng**。
+表是准据 —— **要改某一格，改表**（不存在独立的 lng/结构写盘入口；文本体例规则 `fix_tail` / `normalize_zh` 在 `tool/lng.py`）。
 - 原理：原始槽位 `k` = ws2 里 `14` 与 `0f` 条目按指令序编号；表的 `items` 给出每格显示什么 + `insert`（`at_k`/`src_rows`）+ `drop`；结构先落（复用 `tool.writer.rebuild`，含跳转回写），lng 按**最终槽位序**逐个取文本。
 - **指令排布照抄 Steam**：相邻的 `15`（`SetDisplayName`）**一律原样保留**（不得折叠），`drop` **删整格**（`14` + 它的设名 `15` + 清框 `15`，带「不改动任何存活格名字框」的守卫）—— 口径与守卫见 [file-formats.md](file-formats.md)「0x15」与 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) [file-formats.md](file-formats.md)「字符串池」.11。
 - **随行画面演出一起补**（演出专项评审的洞 1/洞 2）：`insert` 行补该行的**随行区间**、覆盖层登记的格补「**该说话人最后一次出图 → 本行**」，两者都用同一个转换器转出（坐标与改名一致）。表与判据见 [resource/README.md](../resource/README.md)「original_stage.json / text_map_stage.json」，生成器 `script/build_original_stage.py`（写盘阶段，`apply_text_map` 之前）。
 - 逐脚本断言 `lng 条数 == 14 条数 + Σ(0f 条目数)`，并与表的 `n_final` 相等。
 - 校验：`script/verify_text_map.py`（哨兵**七条**）＋ `script/final_verification.py`（全量验收）＋ 逐格内容比对；产出与表逐脚本相等。
-- 试跑可加 `--rio <副本路径>`（不动 `asset/`）。
+- 试跑可加 `--rio <副本路径>`（不动 `asset/`）。**结构写盘器（`tool/writer.py`）的三处硬要求**：
 
-**结构写盘器（`tool/writer.py`）的三处硬要求**：
-
-- **必须回写文件内跳转**。它在指定占位之后插 `15`+`14`，会平移其后的所有字节；而 `06 <u32>`（无条件跳转）、`01 mode=0x85` 的 `b`、**选项条目里的 `06 <u32>`** 记的都是
-  **文件内绝对偏移** —— 不回写就会让选项 / 双出口**跳错**（实测 `CCB0007` 的 3 个选项、`CCB2007` 的 2 个都是 `06`）。做法与 `splice_restoration.rebase_offsets` 同源：先记「旧指令偏移 → 新偏移」，再把每个跳转目标按该映射改写（目标不是指令边界时告警、不回写）。
+- **必须回写文件内跳转**。它在指定占位之后插 `15`+`14`，会平移其后的所有字节；而 `06 <u32>`（无条件跳转）、`01 mode=0x85` 的 `b`、**选项条目里的 `06 <u32>`** 记的都是 **文件内绝对偏移** —— 不回写就会让选项 / 双出口**跳错**（实测 `CCB0007` 的 3 个选项、`CCB2007` 的 2 个都是 `06`）。做法与 `splice_restoration.rebase_offsets` 同源：先记「旧指令偏移 → 新偏移」，再把每个跳转目标按该映射改写（目标不是指令边界时告警、不回写）。
 - **插入点也允许落在 `0f` 条目之后**（=「选项块之后」）。例：`CCB0007` 的**源 CCS 行 47**（`うむ、ない。`）在**原版**是 `行 46 → 行 47 → 行 48` **连续**（原版该脚本**零选项**，`0f` 计数 = 0），Steam 把这段换成了 3 个「看内裤」选项 —— 故**行 46 + 行 47** 是「是否要看」的**前置铺垫**、选项在其后，**行 47** 的语义位置在**选项块之前**（槽位表里记 `after_k=51`，即「取行 46 的那格」之后）。
 - **指令排布照抄 Steam**：相邻的 `15` **不折叠**（「后者覆盖前者」式的折叠会把原生清框压掉），`drop` **删整格**（`14` + 设名 `15` + 清框 `15`，带名字框守卫）。理由与守卫见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §8 第 11 条与 [file-formats.md](file-formats.md)「场景控制指令」。
 
-回归类：`script/audit/audit_inline.py`（就地插入）、`audit_lng_semantics.py`（lng 语义）、
-`verify_ws2_conventions.py`（转换器约定）、`audit_row_alignment.py`（**行号对位**：
-`op=ccs` 区间块 ↔ Steam 台词流逐格对齐，靠「名字框 vs 源行说话人」成片不符抓错位）；
-`audit_choices.py` 与 `audit_row_alignment.py` 中的**后者也已进流水线**（写盘之后）。
+回归类：`script/audit/audit_inline.py`（就地插入）、`audit_lng_semantics.py`（lng 语义）、`verify_ws2_conventions.py`（转换器约定）、`audit_row_alignment.py`（**行号对位**：`op=ccs` 区间块 ↔ Steam 台词流逐格对齐，靠「名字框 vs 源行说话人」成片不符抓错位）；`audit_choices.py` 与 `audit_row_alignment.py` 中的**后者也已进流水线**（写盘之后）。
 
-转换器的规则、全量验证结果与实现陷阱见
-[wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md)。
+转换器的规则、全量验证结果与实现陷阱见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md)。
 
 ## 打包与发布
 

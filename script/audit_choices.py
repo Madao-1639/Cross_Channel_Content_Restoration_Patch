@@ -34,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, lng, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, lng, ws2, ws2disasm  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -78,7 +78,8 @@ def main():
     ap.add_argument('--write', action='store_true')
     args = ap.parse_args()
 
-    members = {n.decode('utf-16-le').upper(): d for n, d in arcbuild.read_raw(RIO)}
+    # 两层布局：ws2 在根层、`.lng` 在语言包 —— 用合并视图审计（否则一条 `.LNG` 都看不到）
+    members = {n.decode('utf-16-le').upper(): d for n, d in layers.effective('Rio.arc')}
     problems, fixable = [], []
     n_opt = n_scripts = 0
 
@@ -154,17 +155,19 @@ def main():
     if not (BACKUP.exists() and arcbuild.same_file(BACKUP, RIO)):
         arcbuild.write_arc(arcbuild.read_raw(RIO), BACKUP)
         print('\n[备份] asset/Rio.arc -> %s' % BACKUP)
+    # `.lng` 属于语言包层：只回写语言包，根层不动
+    pack_path = layers.pack_arc('Rio.arc')
     out = []
-    for nb, data in arcbuild.read_raw(RIO):
+    n_fix = 0
+    for nb, data in layers.read_layer(pack_path):
         nm = nb.decode('utf-16-le').upper()
         hit = next((f for f in fixable if nm == f[0] + '.LNG'), None)
         if hit:
             data = lng.encode_lng([hit[1]] + hit[2])
+            n_fix += 1
         out.append((nb, data))
-    arcbuild.write_arc(out, RIO)
-    count, size, _ = arcbuild.verify(RIO)
-    print('[写入] 修复 %d 个 lng；回读校验通过（%d 成员，%d 字节）'
-          % (len(fixable), count, size))
+    layers.write_layer(pack_path, out, expect_count=len(out))
+    print('[写入] 修复 %d 个 lng 到 %s（%d 成员）' % (n_fix, pack_path, len(out)))
     return 0
 
 

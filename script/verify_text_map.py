@@ -40,7 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, lng as lngmod, wsc, ws2, ws2disasm       # noqa: E402
+from tool import arcbuild, layers, lng as lngmod, wsc, ws2, ws2disasm  # noqa: E402
 from tool.wsc2ws2 import decrypt_wsc                                 # noqa: E402
 from tool.lng import parse_ccs_both                             # noqa: E402
 
@@ -91,7 +91,9 @@ def main():
     rio = Path(args.rio)
 
     TMAP = json.loads(TM.read_text(encoding='utf-8'))['scripts']
-    members = {n.decode("utf-16-le").upper(): v for n, v in arcbuild.read_raw(rio)}
+    # 两层合并视图（语言包按成员覆盖根目录）——表对的是"玩家实际读到的文本"
+    members = ({n.decode("utf-16-le").upper(): v for n, v in arcbuild.read_raw(rio)}
+               if rio.resolve() != RIO.resolve() else layers.effective_dict('Rio.arc'))
     err = []
 
     for s, m in sorted(TMAP.items()):

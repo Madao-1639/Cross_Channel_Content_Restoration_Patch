@@ -36,7 +36,7 @@ MEMBERS = [
 
 
 def main():
-    out_path = os.path.join('asset', 'Fonts.arc')
+    out_path = os.path.join('asset', 'zh-CN', 'Fonts.arc')   # 字体随语言包
     members = []
     for arc_name, src, magic in MEMBERS:
         if not os.path.exists(src):

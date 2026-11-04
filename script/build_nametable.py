@@ -32,13 +32,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, speaker, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, speaker, ws2, ws2disasm  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 RIO = ROOT / 'asset' / 'Rio.arc'
-BACKUP = ROOT / 'asset' / 'Rio.arc.before_nametable_build'
+PACK_RIO = layers.pack_arc('Rio.arc')
+BACKUP = ROOT / 'asset' / 'zh-CN' / 'Rio.arc.before_nametable_build'
 TABLE_MEMBER = 'NameTable.txt'
 KEY_PREFIX = '%LC'
 CRLF = b'\r\x00\n\x00'
@@ -106,9 +107,11 @@ def main(argv=None):
     ap.add_argument('--check', action='store_true')
     args = ap.parse_args(argv)
 
+    # 键来自**根目录层**的 ws2（`15` 前缀），表本身写进**语言包层**
     members = arcbuild.read_raw(RIO)
     new, order, _ = build_rows(members)
-    cur = dict((n.decode('utf-16le'), d) for n, d in members).get(TABLE_MEMBER, b'')
+    pack = list(layers.read_layer(PACK_RIO))
+    cur = dict((n.decode('utf-16le'), d) for n, d in pack).get(TABLE_MEMBER, b'')
 
     if new == cur:
         print('[一致] %s 与 resource/speaker_map.json 一致（%d 行），无需修改'
@@ -131,15 +134,15 @@ def main(argv=None):
         print('\n[只报告] 未写入。加 --write 落盘。')
         return 1 if args.check else 0
 
-    if not (BACKUP.exists() and arcbuild.same_file(BACKUP, RIO)):
-        arcbuild.write_arc(members, BACKUP)
-        print('[备份] %s -> %s' % (RIO, BACKUP))
-    out = [(n, new if n.decode('utf-16le') == TABLE_MEMBER else d) for n, d in members]
-    if TABLE_MEMBER not in {n.decode('utf-16le') for n, _ in members}:
-        out.append((TABLE_MEMBER.encode('utf-16le'), new))    # backup 基线上首次新建
-    arcbuild.write_arc(out, RIO)
+    if pack and not (BACKUP.exists() and arcbuild.same_file(BACKUP, PACK_RIO)):
+        arcbuild.write_arc(pack, BACKUP)
+        print('[备份] %s -> %s' % (PACK_RIO, BACKUP))
+    out = [(n, new if n.decode('utf-16le') == TABLE_MEMBER else d) for n, d in pack]
+    if TABLE_MEMBER not in {n.decode('utf-16le') for n, _ in pack}:
+        out.append((TABLE_MEMBER.encode('utf-16le'), new))    # 语言包里首次新建
+    layers.write_layer(PACK_RIO, out, expect_count=len(out))
 
-    back = dict((n.decode('utf-16le'), d) for n, d in arcbuild.read_raw(RIO))
+    back = dict((n.decode('utf-16le'), d) for n, d in layers.read_layer(PACK_RIO))
     if back.get(TABLE_MEMBER) != new:
         raise SystemExit('[失败] 回读的 %s 与预期不符' % TABLE_MEMBER)
     count, size, _ = arcbuild.verify(RIO)
