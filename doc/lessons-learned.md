@@ -110,4 +110,4 @@ PNA 布局曾有两版互斥的切法（「头 0x24 + 末条 24 字节」与「�
 
 - **结论**：`0x8f`/`0x90` 的文本由引擎在加载期用 `MultiByteToWideChar(932)` 转宽字符，语言包（`zh-CN/` 目录）**不提供任何码页开关**；但引擎会 `LoadLibraryW("<dir>\AdvHDLang.dll")`，**换掉这张 DLL 就能在 API 层改码页** —— 目前唯一能真简体且不改 exe 的路。
 - **别再试的**：往 ws2 写 UTF-16/UTF-8/GBK（都按 932 解）、清空文本（丢朗读行）、`0x8d`/`0x8e`（文本进 lng 池，但 handler 需要给不了的运行时上下文，实测闪退）、字体码位重映射（要动字体，已否决）。
-- **三个坑**：① RVA 是 **`0xCD400`**（`0x4CD400 − 0x400000`），不是 `0x8D400`；② 包装必须 `jmp` 进 trampoline、**不能 `call`**（栈偏移 +4 ⇒ 参数读错，现象：opcode 读成 `&dword_594F7C`）；③ `AdvHDLang.dll` 的资源**不能手工搬节**（`LoadStringW` 访问违例 → 设置界面文字全空），必须用 `windres` 重建。
+- **三个坑**：① RVA 是 **`0xCD400`**（`0x4CD400 − 0x400000`），不是 `0x8D400`；② 包装必须 `jmp` 进 trampoline、**不能 `call`**（栈偏移 +4 ⇒ 参数读错，现象：opcode 读成 `&dword_594F7C`）；③ `AdvHDLang.dll` 的资源**不能手工搬节**（`LoadStringW` 访问违例 → 设置界面文字全空），必须用 `windres` 重建；④ `.rc` 里写 `LANGUAGE LANG_CHINESE, 1` 得到的是 **1028（繁中）**，不是 2052 —— 简体必须写 `LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED`（官中是 2052），否则判定脚本会报"串表语言不是 2052"。

@@ -126,6 +126,8 @@ tool/
 ├── speaker.py       （角色名称映射表 resource/speaker_map.json 的读取层）
 ├── hook/            （语言包 `AdvHDLang.dll` 的 C 源码：位置门 + 兜底白名单，构建见 script/build_lang_dll.py）
 ├── layers.py        （两层产物布局：根目录层 base / 语言包层 zh-CN，含合并视图）
+├── language_detect.py（首次安装的默认语言判定：Steam 客户端语言 / Windows 界面语言）
+├── peres.py         （PE 资源树只读解析：语言包 `AdvHDLang.dll` 的串表对账）
 ├── ttfnames.py      （最小 TTF/OTF name 表读取，用于语言包字体自洽断言）
 ├── luac53.py        （Lua 5.3 字节码解析）
 ├── luadis53.py      （Lua 5.3 反汇编）

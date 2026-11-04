@@ -8,12 +8,14 @@ import hashlib
 import json
 import re
 import shutil
+import struct
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tool import arcbuild, layers, lng as lngmod, luac53, pna, ptf, ttfnames, ws2, ws2disasm  # noqa: E402
+from tool import (arcbuild, layers, lng as lngmod, luac53, peres, pna, ptf, ttfnames,
+                  ws2, ws2disasm)  # noqa: E402
 
 # 控制台按 UTF-8 输出（与流水线里其余脚本一致）。缺这一句时，**失败消息里任何 GBK 编不出的字符
 # 都会在 `print` 处抛 UnicodeEncodeError、把整套验收中止** —— 而失败消息恰恰是带 `−`/`⇒` 那些。
@@ -608,6 +610,64 @@ def _lua_strings(blob):
     return out
 
 
+def check_lang_dll_strings():
+    """**设置界面中文字串闸**（`zh-CN/AdvHDLang.dll` 的 RT_STRING 串表）。
+
+    设置界面的每一条文字都是 `LoadStringW(hInstance, id)`，`hInstance` = 引擎
+    `LoadLibraryW("<游戏目录>\\<语言>\\AdvHDLang.dll")` 的结果 ⇒ **界面语言 = 本 DLL 的串表**
+    （见 [engine-mechanics.md](../doc/engine-mechanics.md)「启动设置对话框」）。断言：
+
+      * 资源树只有**一块 2052（简中）串表** + manifest —— 多一块 1033/1041，日文/英文系统上就会
+        优先显示日文/英文界面（官中 IMHHW 也只发 2052）；
+      * ID 集合 == 原件（`resource/AdvHDLang.orig.dll` 的 1033 块）全部 ID（漏一条 = 界面空一项）；
+      * 逐条 == `resource/AdvHDLang_zh.json`，且 `LoadStringW` 实测同值（“资源树真能读”的唯一凭据）。
+    """
+    print('')
+    print('== 设置界面字串（语言包 AdvHDLang.dll）==')
+    dll = layers.pack_arc('AdvHDLang.dll')
+    if not dll.exists():
+        fail('语言包缺 AdvHDLang.dll')
+        return
+    zh_path = Path('resource/AdvHDLang_zh.json')
+    zh = {int(k): v for k, v in
+          json.loads(zh_path.read_text(encoding='utf-8'))['strings'].items()}
+    bad = []
+    res = peres.read_resources(dll)
+    blocks = sorted({sid // 16 + 1 for sid in zh})
+    want = sorted([(peres.RT_STRING, b, 2052) for b in blocks]
+                  + [(peres.RT_MANIFEST, 2, 1033)])
+    if sorted(res) != want:
+        bad.append('资源键集合 = %r，应为 %r（只能有一块 2052 串表）' % (sorted(res), want))
+    per_lang = peres.extract_strings(res)[0]
+    if sorted(per_lang) != [2052]:
+        bad.append('串表语言集合 = %r，应只有 2052' % (sorted(per_lang),))
+    orig_ids = sorted({sid for d in peres.extract_strings(
+        peres.read_resources(Path('resource/AdvHDLang.orig.dll')))[0].values() for sid in d})
+    if sorted(zh) != orig_ids:
+        bad.append('表 ID 集合与原件不同：缺 %r / 多 %r'
+                   % (sorted(set(orig_ids) - set(zh)), sorted(set(zh) - set(orig_ids))))
+    diff = [sid for sid in sorted(zh) if per_lang.get(2052, {}).get(sid) != zh[sid]]
+    if diff:
+        bad.append('串表内容与 %s 不符（%d 项，首项 %d）' % (zh_path.name, len(diff), diff[0]))
+    # PE 头时间戳为 0 = 链接时加了 `--no-insert-timestamp` ⇒ 同一份输入重复构建字节一致
+    # （否则流水线“复跑 0 处改动”会每次都报这个文件变了）
+    _ts = struct.unpack_from('<I', dll.read_bytes(), struct.unpack_from('<I', dll.read_bytes(), 0x3c)[0] + 8)[0]
+    if _ts:
+        bad.append('PE 头时间戳 = 0x%08x（应为 0：构建未加 -Wl,--no-insert-timestamp，复跑不幂等）' % _ts)
+    if sys.platform.startswith('win'):
+        real = peres.load_strings(dll, sorted(zh))
+        if real is None:
+            bad.append('LoadLibraryExW(DATAFILE) 失败（资源树不可读）')
+        else:
+            diff = [sid for sid in sorted(zh) if real.get(sid) != zh[sid]]
+            if diff:
+                bad.append('LoadStringW 实测与表不符（%d 项，首项 %d）' % (len(diff), diff[0]))
+    for m in bad[:6]:
+        fail(m)
+    if not bad:
+        ok('单一块 2052 串表 / %d 条与表一致 / LoadStringW 实测可读' % len(zh))
+
+
 def check_font_names():
     """**语言包字体自洽**（`Fonts.arc` ↔ `LegacyGame_utf8.lua` 的字体槽）。
 
@@ -1115,6 +1175,7 @@ def main():
     check_caption_utf8()
     check_sysgraphic()
     check_layer_split()
+    check_lang_dll_strings()
     check_font_names()
     check_idempotency()
 

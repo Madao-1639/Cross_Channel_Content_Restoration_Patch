@@ -18,6 +18,8 @@
 | `scene_slices.json` | 还原场景的**插入范围**（11 场景 + 1 截头宿主） | `splice_restoration` / `build_cg_map` / `check_reset_state` |
 | `cg_map.json` | 事件 CG 的**改名**映射（36 改名 / 37 全量） | `rename_map` / `build_restored_cgs` / `build_cg_map` / `renumber_evcc9xxx` |
 | `speaker_map.json` | 角色名称 + 语音通道 + 立绘前缀（**唯一来源**，90 条） | `build_nametable` / `wsc2ws2` / `speaker` / `tool.writer` / `final_verification` |
+| `AdvHDLang_zh.json` | 语言包 DLL 的**启动设置界面中文串**（2052，56 条） | `build_lang_dll` / `final_verification.check_lang_dll_strings` |
+| `AdvHDLang.orig.dll` | Steam 原版 `AdvHDLang.dll`（串表 ID 集合与 manifest 的**基线**） | `build_lang_dll` / `final_verification` |
 | `original_stage.json` | 洞 1：插入行的**随行画面演出**（派生，237 脚本） | `apply_text_map` / `build_original_stage` |
 | `original_audio.json` | 逐行**原版演出属性**（语音 / SE，237 脚本） | `apply_text_map` / `build_original_stage` |
 | `voice_plan.json` | **补挂语音**计划（27 脚本；键 = 表的 `k`） | `apply_text_map` / `import_missing_voices` |

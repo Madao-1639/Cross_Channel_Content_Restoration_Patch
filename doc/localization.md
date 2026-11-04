@@ -377,7 +377,22 @@ AdvHD ≥1.9 的原生机制：游戏目录下以 locale 命名的文件夹（`z
 | 根目录 `asset/` | 与语言无关：ws2（含还原插入）、还原 CG、补入语音 | `.lng`、`NameTable.txt`、汉化 UI/字体/整屏图 |
 | 语言包 `asset/zh-CN/` | `.lng`（328）、`NameTable.txt`、汉化 `SysGraphic`/`Graphic`、思源字体、中文 Lua `Script.arc` | 与语言无关的资产 |
 
-**所选语言存在注册表**：`HKCU\Software\WillPlus\AdvHD\LanguageSettings`，值名 = **游戏目录整路径**（经系统 ANSI 代码页转换：`†` 在 GBK 系统上变 `?`，故本机值名是 `CROSS?CHANNEL Steam Edition`），值 = 语言包目录名（`zh-CN`）或空（英文）。**空值时语言包整个不生效**（UI/文本/字体都是原版）。* **设默认中文**：把该值写成 `zh-CN` 即可（`tool/install.py` 的 `set_default_language()`，安装时可选；改回英文＝启动游戏在设置界面选 English）。**仅 Windows**：注册表是 Windows 专有机制，非 Windows 平台安装器会跳过这一步（玩家在游戏设置界面自己选）。* 旧引擎的 `HKCU\Software\MoeNovel\<游戏>` 下的 `altLanguage` / `altLanguageSet` 与本作**无关**：这两个串在脱壳 exe 与全部游戏文件里都不存在（新旧两版都查过），本作语言只认上面那条共享键。
+**所选语言存在注册表**：`HKCU\Software\WillPlus\AdvHD\LanguageSettings`，值名 = **游戏目录整路径**（经系统 ANSI 代码页转换：`†` 在 GBK 系统上变 `?`，故本机值名是 `CROSS?CHANNEL Steam Edition`），值 = 语言包目录名（`zh-CN`）或**空串**（英文）。注册表的三种状态行为不同（值**不存在**时引擎会在"恰好一个语言包目录"的情况下无视语言环境直接启用它）—— 机制见 [engine-mechanics.md](engine-mechanics.md)「语言包」。* **默认语言由安装器按玩家环境判定**：Steam 客户端语言 / Windows 界面语言任一为中文 ⇒ 写 `zh-CN`，否则**显式写空串**（挡住上面那条自动启用）；已有非空值则保留玩家选择，`--lang=zh-CN|en` 可强制覆盖。判定与映射见 `tool/language_detect.py`、[technical-solutions.md](technical-solutions.md)「默认语言」。**仅 Windows**：注册表是 Windows 专有机制，非 Windows 平台安装器会跳过这一步（玩家在游戏设置界面自己选）。* 旧引擎的 `HKCU\Software\MoeNovel\<游戏>` 下的 `altLanguage` / `altLanguageSet` 与本作**无关**：这两个串在脱壳 exe 与全部游戏文件里都不存在（新旧两版都查过），本作语言只认上面那条共享键。
+
+### 启动设置界面的汉化（`AdvHDLang.dll` 的 2052 串表）
+
+引擎启动先弹设置对话框，其**全部文字**（含标题、按钮、选项）都是 `LoadStringW(<语言包DLL>, id)`，ID 范围 `101`–`155` + `201`（机制见 [engine-mechanics.md](engine-mechanics.md)「启动设置对话框」）。因此：
+
+| 项 | 做法 |
+|---|---|
+| 译文来源 | `resource/AdvHDLang_zh.json`（56 条，**唯一来源**）；以官中 IMHHW 译文为基础、按本作英文原意校正 |
+| 写盘 | `script/build_lang_dll.py` 用 `windres` 把 2052 串表与码页 hook 一起链接成 `asset/zh-CN/AdvHDLang.dll` |
+| 只发 2052 | 多带 1033/1041 会在日文/英文系统上抢先在 `LoadStringW` 回退序里生效（官中同样只发 2052） |
+| 排版约定 | `108`–`114` 的首/尾空格（引擎拼数字用）、`\n` 换行、`152` 必须是 `English`（“不装语言包”那一项的显示名）都不改 |
+| 不补译 `115`–`117` | 本作英文与日文都只留 `-`（该版本剔除了这三项标签），补译等于自添演出 |
+| 换语言要重启 | 引擎在 `CBN_SELCHANGE` 里只弹「需重启」确认框并 `ShellExecuteW` 重启自己，**不实时重绘** |
+| 字体 | 对话框模板写死 `MS Shell Dlg` 8pt，中文靠 GDI 字体链接渲染，**无需**换字体 |
+
 
 ### 语言包字体自洽：名字 / 成员名 / 字符集三者对齐
 

@@ -37,9 +37,9 @@
 - [ ] `asset/zh-CN/AdvHDLang.dll` 存在（引擎靠它识别语言包）；
 - [ ] 语言包每个 PTF 的**内部族名**（id1）等于 `LegacyGame_utf8.lua` 请求的 `name`，且该 PTF **成员名**出现在 Lua 常量里（名字/成员名配套，否则 GDI 掉兜底字体）；
 - [ ] 字体槽字符集是 `GB2312_CHARSET`，不残留 `SHIFTJIS_CHARSET`；
-- [ ] 语言包 `AdvHDLang.dll` 的 `.rsrc` 用 `LoadStringW` 逐条与原件一致（否则设置界面文字全空）；
+- [ ] 语言包 `AdvHDLang.dll` 的 `.rsrc` **只有一块 2052（简中）串表** + manifest，`LoadStringW` 逐条等于 `resource/AdvHDLang_zh.json`（否则设置界面文字全空 / 日英系统上显示日文英文；`check_lang_dll_strings()`）；串表 ID 集合 == 原件（`resource/AdvHDLang.orig.dll` 的 1033 块）；
 - [ ] 中文包 ws2 副本的 `0x8f`/`0x90` 文本**全部是合法 UTF-8**，且**根层字幕全为 ASCII**；
-- [ ] 安装器可选把 `WillPlus\AdvHD\LanguageSettings`（值名 = 游戏目录经 ANSI 转换）写成 `zh-CN`；**仅 Windows** 执行，非 Windows 平台跳过并提示在游戏内选择；
+- [ ] 安装器把 `WillPlus\AdvHD\LanguageSettings`（值名 = 游戏目录经 ANSI 转换）写成 `zh-CN` 或**空串**（英文）；判定 = Steam 客户端语言 / Windows 界面语言任一为中文，已有非空值则保留，`--lang=` 可覆盖；**仅 Windows** 执行，非 Windows 平台跳过并提示在游戏内选择；
 - [ ] `generate_payload` 回读：`backup + payload` 重放 == `asset`，且 `payload/zh-CN/` 与 `asset/zh-CN/` 逐文件哈希一致。
 
 ## 质量标准
@@ -107,6 +107,10 @@
 - [x] **消息数变多的还原场景不闪退**（定点样本 `CCB0013_EN`，`15 → 235` 句；机制见 [engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」）
 - [x] Steam 成就、保存 / 读取、菜单与系统功能不受影响- [ ] 文本层重排处（插入 `15`+`14` 的那些站点，如 `CCA0002_en`）的演出正常 —— 快进通关未单独盯过- [ ] `CCB2017` 两条分支各走一遍：扭扭乐（Steam 原段）→ 续接 `k=80`；一小时的Ｈ赌约 → 孤岛 18 行 → 回 `k=80`；并确认**选完选项后提示句消失**（不与下一句连成一段）、扭扭乐段台词带全角引号- [ ] `CCB2017` 分支专有项：H 分支首行立绘差分、`0b 1240` / `0b 1491` 不触发（已裁定，见 [restoration-targets.md](restoration-targets.md)「例外处理」）
 - [ ] 安装器**安装 / 卸载链路**在干净环境的实机验证（已有实机通关是直接覆盖 `asset/`）
+- [ ] **启动设置对话框随语言选择变中文**：语言包生效时界面文字/标题为中文（下拉项显示「中文(简体，中国)」）；在设置里改成 English → 确认重启后界面回到英文（机制见 [engine-mechanics.md](engine-mechanics.md)「启动设置对话框」）
+- [ ] **英文系统 / 日文系统**上只装了语言包目录时：设置界面仍是中文（单一块 2052 的回退行为），中文靠 GDI 字体链接渲染、无豆腐块（字体写死为 `MS Shell Dlg`，不能换）
+- [ ] 安装器**第一步选界面语言**（中文 / English，默认值取自环境，`--ui-lang=` 可跳过），选定后**只输出该语言**；阶段之间有清屏 + 分隔线（非终端时退化为空行）；游戏默认语言用 `--lang=zh-CN|en` 强制；冻结成单文件 exe 后默认语言判定仍能读到 Windows 界面语言（`ctypes` 打包问题见 [technical-solutions.md](technical-solutions.md)「发布形态」）
+- [ ] 首次安装的**默认语言**：中文环境安装后直接是中文；把 Steam 客户端语言和系统语言都看作非中文时默认英文（可用 `--lang=zh-CN|en` 强制，实机确认注册表值名与引擎读取一致）
 
 ## 发布标准
 

@@ -1,23 +1,28 @@
 # -*- coding: utf-8 -*-
-"""编译语言包里的 `AdvHDLang.dll`（`MultiByteToWideChar` 位置门 hook + 原样资源）。
+"""编译语言包里的 `AdvHDLang.dll`（`MultiByteToWideChar` 位置门 hook + **中文设置界面串表**）。
 
 流程：
   1. （无需白名单：hook 只按位置判定，见 `tool/hook/advhdlang_hook.c`）
-  2. 从 `resource/AdvHDLang.orig.dll` 解析资源（RT_STRING 各 id 的英/日串 + manifest），
-     生成 `app.rc` + `app.manifest`，用 **windres** 编成 `.res`（链接器生成**合法**资源树；
-     手工搬 `.rsrc` 会被 `LoadStringW` 判为非法 → 设置界面文字全空）；
+  2. 读 `resource/AdvHDLang_zh.json`（设置界面中文串，唯一来源）+ 从 `resource/AdvHDLang.orig.dll`
+     取 manifest，生成 `app.rc` + `app.manifest`，用 **windres** 编成 `.res`
+     （链接器生成**合法**资源树；手工搬 `.rsrc` 会被 `LoadStringW` 判为非法 → 设置界面文字全空）；
   3. 用 32 位 MinGW 编译并链接 hook + 资源 → `asset/zh-CN/AdvHDLang.dll`；
-  4. 校验：i386 / DLL 标志 / 资源键集合与原件一致 / **`LoadStringW` 实测**与原件同值。
+  4. 校验：i386 / DLL 标志 / 资源键集合 = {2052 的 RT_STRING 块} + manifest / **`LoadStringW` 实测**
+     逐条等于表值 / 表覆盖原件的全部字符串 ID。
+
+**为什么只发 2052、不发 1033+1041**：设置界面的每条文字都是 `LoadStringW(hInstance, id)`，
+`hInstance` = 引擎 `LoadLibraryW("<游戏目录>\\<语言>\\AdvHDLang.dll")` 的结果 ⇒ 语言包选中后
+界面语言由本 DLL 的串表决定（官中 IMHHW 的 `zh-CN/AdvHDLang.dll` 同样只有一块 2052）。
+只发 2052 ⇒ 玩家选中文后界面必定是中文（系统语言是日文也走 "any language" 兜底命中 2052）；
+根目录那份 Steam 原档 DLL 不动 ⇒ 英文模式下界面仍是原样。
 
 工具链：`tmp/toolchain/root/mingw32/bin/`（可用 `MINGW32_BIN` 覆盖）。
 
 用法：`python script/build_lang_dll.py [--check]`
 """
 import argparse
-import ctypes
 import json
 import os
-import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -25,18 +30,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import arcbuild, layers, ws2, ws2disasm  # noqa: E402
+from tool import arcbuild, layers, peres, ws2, ws2disasm  # noqa: E402
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 ORIG_DLL = ROOT / 'resource' / 'AdvHDLang.orig.dll'
+ZH_JSON = ROOT / 'resource' / 'AdvHDLang_zh.json'
 HOOK_C = ROOT / 'tool' / 'hook' / 'advhdlang_hook.c'
 OUT = ROOT / 'asset' / 'zh-CN' / 'AdvHDLang.dll'
 WL_H = ROOT / 'tool' / 'hook' / 'whitelist.h'
 BUILD = ROOT / 'tmp' / 'build_dll'
 
-RT_STRING, RT_MANIFEST = 6, 24
+RT_STRING, RT_MANIFEST = peres.RT_STRING, peres.RT_MANIFEST
+LANG_ZH = 2052          # LANG_CHINESE，与官中语言包一致（只发这一块）
+read_resources, extract_strings = peres.read_resources, peres.extract_strings
 
 
 def whitelist_from_pack():
@@ -103,66 +111,10 @@ def run(cmd, what):
     return r
 
 
-def _pe(d):
-    pe = struct.unpack_from('<I', d, 0x3c)[0]
-    nsec = struct.unpack_from('<H', d, pe + 6)[0]
-    opt = pe + 24
-    dd = opt + (96 if struct.unpack_from('<H', d, opt)[0] == 0x10b else 112)
-    so = opt + struct.unpack_from('<H', d, pe + 20)[0]
-    secs = []
-    for i in range(nsec):
-        n, vs, va, rs, ra = struct.unpack_from('<8sIIII', d, so + i * 40)
-        secs.append((va, max(vs, rs), ra))
-    return {'pe': pe, 'nsec': nsec, 'opt': opt, 'dd': dd, 'so': so, 'secs': secs}
-
-
-def read_resources(path):
-    """→ {(type, name, lang): 字节}（本 DLL 的资源偏移是节内相对，按此约定解析）。"""
-    d = Path(path).read_bytes()
-    info = _pe(d)
-    res_rva, _sz = struct.unpack_from('<II', d, info['dd'] + 16)
-
-    def r2o(rva):
-        for va, sz, ra in info['secs']:
-            if va <= rva < va + sz:
-                return ra + (rva - va)
-        raise ValueError('rva 0x%x 不在任何节' % rva)
-
-    out = {}
-
-    def walk(off, path):
-        nname, nid = struct.unpack_from('<HH', d, off + 12)
-        for i in range(nname + nid):
-            nm, tgt = struct.unpack_from('<II', d, off + 16 + i * 8)
-            label = (nm & 0xFFFF) if not (nm & 0x80000000) else 'named'
-            if tgt & 0x80000000:
-                walk(r2o(res_rva + (tgt & 0x7FFFFFFF)), path + (label,))
-            else:
-                drva, dsz = struct.unpack_from('<II', d, r2o(res_rva + tgt))
-                o = r2o(drva)
-                out[path + (label,)] = d[o:o + dsz]
-    walk(r2o(res_rva), ())
-    return out
-
-
-def extract_strings(res):
-    per_lang, manifest = {}, None
-    for (typ, name, lang), data in res.items():
-        if typ == RT_STRING:
-            block = name
-            pos, k = 0, 1
-            while pos + 2 <= len(data):
-                ln = struct.unpack_from('<H', data, pos)[0]
-                pos += 2
-                s = data[pos:pos + ln * 2].decode('utf-16-le')
-                pos += ln * 2
-                sid = (block - 1) * 16 + k - 1     # 实测：块覆盖 (block-1)*16 .. block*16-1
-                k += 1
-                if s:
-                    per_lang.setdefault(lang, {})[sid] = s
-        elif typ == RT_MANIFEST:
-            manifest = data
-    return per_lang, manifest
+def load_zh():
+    """→ {字符串 ID: 中文}（`resource/AdvHDLang_zh.json`）。"""
+    data = json.loads(ZH_JSON.read_text(encoding='utf-8'))
+    return {int(k): v for k, v in data['strings'].items()}
 
 
 def rc_escape(s):
@@ -183,17 +135,22 @@ def rc_escape(s):
     return ''.join(out)
 
 
-def gen_rc(per_lang, manifest, rc_path, man_path):
-    lines = ['#include <winres.h>', '']
-    for lang in sorted(per_lang):
-        name = {1033: 'LANG_ENGLISH', 1041: 'LANG_JAPANESE'}.get(lang)
-        lines.append('LANGUAGE %s, 1' % name if name else 'LANGUAGE %d, 1' % lang)
-        lines.append('STRINGTABLE')
-        lines.append('BEGIN')
-        for sid in sorted(per_lang[lang]):
-            lines.append('  %d "%s"' % (sid, rc_escape(per_lang[lang][sid])))
-        lines.append('END')
-        lines.append('')
+def gen_rc(zh, manifest, rc_path, man_path):
+    """生成 `.rc`：**只有一块 LANG_CHINESE(2052) 串表** + manifest。
+
+    中文直接写在 `.rc` 里 ⇒ 用 `#pragma code_page(65001)` 声明文件是 UTF-8，
+    并给 windres 传 `--codepage=65001`（两者同时给：pragma 管解析，选项管默认输入码页）。
+    """
+    lines = ['#pragma code_page(65001)', '#include <winres.h>', '']
+    # **必须写成 SUBLANG_CHINESE_SIMPLIFIED**：`LANG_CHINESE, 1` 是 SUBLANG_CHINESE_TRADITIONAL（1028），
+    # 官中用 2052 = `LANG_CHINESE, 2`（简中）。
+    lines.append('LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED')
+    lines.append('STRINGTABLE')
+    lines.append('BEGIN')
+    for sid in sorted(zh):
+        lines.append('  %d "%s"' % (sid, rc_escape(zh[sid])))
+    lines.append('END')
+    lines.append('')
     if manifest:
         man_path.write_bytes(manifest)
         lines.append('LANGUAGE LANG_ENGLISH, 1')
@@ -202,51 +159,47 @@ def gen_rc(per_lang, manifest, rc_path, man_path):
     return rc_path
 
 
-def verify(dll_path):
+def verify(dll_path, zh):
     data = Path(dll_path).read_bytes()
-    info = _pe(data)
-    machine = struct.unpack_from('<H', data, info['pe'] + 4)[0]
-    chars = struct.unpack_from('<H', data, info['pe'] + 22)[0]
     bad = []
-    if machine != 0x14c:
-        bad.append('machine=0x%04x 不是 i386' % machine)
-    if not (chars & 0x2000):
+    if not peres.pe_machine_is_i386(dll_path):
+        bad.append('不是 i386（machine != 0x14c）')
+    if not peres.is_dll(dll_path):
         bad.append('缺少 IMAGE_FILE_DLL 标志')
 
+    # ① 资源键集合：只允许 2052 的 RT_STRING 块 + manifest（多一块 1033/1041 都会让
+    #    “选了中文却看到日文/英文界面”）
     got = read_resources(dll_path)
-    want = read_resources(ORIG_DLL)
-    if sorted(got) != sorted(want):
-        bad.append('资源键集合不同：%r vs %r' % (sorted(got), sorted(want)))
+    blocks = sorted({sid // 16 + 1 for sid in zh})
+    want_keys = sorted([(RT_STRING, b, LANG_ZH) for b in blocks] + [(RT_MANIFEST, 2, 1033)])
+    if sorted(got) != want_keys:
+        bad.append('资源键集合不对：%r vs %r' % (sorted(got), want_keys))
 
-    k32 = ctypes.WinDLL('kernel32', use_last_error=True)
-    u32 = ctypes.WinDLL('user32')
-    k32.LoadLibraryExW.restype = ctypes.c_void_p
-    u32.LoadStringW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_wchar_p, ctypes.c_int]
-    u32.LoadStringW.restype = ctypes.c_int
+    # ② 表必须覆盖原件（英文 1033）的全部字符串 ID -- 漏一条就是界面上空白一项
+    orig_ids = sorted({sid for d in extract_strings(read_resources(ORIG_DLL))[0].values()
+                       for sid in d})
+    if sorted(zh) != orig_ids:
+        bad.append('表 ID 集合与原件不同：缺 %r / 多 %r'
+                   % (sorted(set(orig_ids) - set(zh)), sorted(set(zh) - set(orig_ids))))
 
-    ids = sorted({sid for d in extract_strings(want)[0].values() for sid in d})[:24]
+    # ③ 写进去的串表 + `LoadStringW` 实测都得逐条等于表值（后者是“资源树真能读”的唯一凭据）
+    parsed = extract_strings(got)[0]
+    if set(parsed) != {LANG_ZH}:
+        bad.append('串表语言不是单一 %d：%r' % (LANG_ZH, sorted(parsed)))
+    else:
+        diff = [sid for sid in sorted(zh) if parsed[LANG_ZH].get(sid) != zh[sid]]
+        if diff:
+            bad.append('串表内容与表不符（%d 项，首项 %d）' % (len(diff), diff[0]))
 
-    def load_strings(path):
-        h = k32.LoadLibraryExW(str(Path(path).resolve()), None, 0x2)   # AS_DATAFILE
-        if not h:
-            return None
-        try:
-            out = {}
-            for sid in ids:
-                buf = ctypes.create_unicode_buffer(512)
-                n = u32.LoadStringW(ctypes.c_void_p(h), sid, buf, 512)
-                out[sid] = buf.value if n else None
-            return out
-        finally:
-            k32.FreeLibrary(ctypes.c_void_p(h))
-
-    a = load_strings(ORIG_DLL)
-    b = load_strings(dll_path)
-    if b is None:
+    ids = sorted(zh)
+    real = peres.load_strings(dll_path, ids)
+    if real is None:
         bad.append('LoadLibraryExW(DATAFILE) 失败')
-    elif a != b:
-        diff = [k for k in ids if a.get(k) != b.get(k)]
-        bad.append('LoadStringW 与原件不同（%d 项）' % len(diff))
+    else:
+        diff = [sid for sid in ids if real.get(sid) != zh[sid]]
+        if diff:
+            bad.append('LoadStringW 与表不符（%d 项，首项 %d：%r≠%r）'
+                       % (len(diff), diff[0], real.get(diff[0]), zh[diff[0]]))
     return bad, {'size': len(data), 'resources': len(got), 'ids': len(ids)}
 
 
@@ -260,31 +213,34 @@ def main(argv=None):
     wl = whitelist_from_pack()
     print('[白名单] 语言包字幕非 ASCII 项 %d 条（兜底用）' % gen_whitelist(wl))
     BUILD.mkdir(parents=True, exist_ok=True)
-    res = read_resources(ORIG_DLL)
-    per_lang, manifest = extract_strings(res)
-    print('[资源] 原件解析：%d 种语言 / %d 个字符串 / manifest %d 字节'
-          % (len(per_lang), sum(len(v) for v in per_lang.values()), len(manifest or b'')))
-    rc = gen_rc(per_lang, manifest, BUILD / 'app.rc', BUILD / 'app.manifest')
+    zh = load_zh()
+    manifest = extract_strings(read_resources(ORIG_DLL))[1]
+    print('[串表] %s：%d 条中文（2052）/ manifest %d 字节'
+          % (ZH_JSON.name, len(zh), len(manifest or b'')))
+    rc = gen_rc(zh, manifest, BUILD / 'app.rc', BUILD / 'app.manifest')
     res_o = BUILD / 'app_res.o'
-    run([tool('windres.exe', 'i686-w64-mingw32-windres.exe'), str(rc), '-O', 'coff', '-o', str(res_o)],
-        'windres')
+    run([tool('windres.exe', 'i686-w64-mingw32-windres.exe'), '--codepage=65001',
+         str(rc), '-O', 'coff', '-o', str(res_o)], 'windres')
     print('[资源] 编译 %s（%d 字节）' % (res_o.name, res_o.stat().st_size))
 
     hook_dll = BUILD / 'AdvHDLang.hook.dll'
     dbg = [] if args.debug else ['-DADVHDHOOK_SILENT']
+    # `--no-insert-timestamp`：不写 PE 头的时间戳 ⇒ 同一份输入重复构建**字节一致**
+    # （否则流水线“复跑 0 处改动”会每次都报这个文件变了）
     run([tool('i686-w64-mingw32-gcc.exe'), '-O2', '-fno-omit-frame-pointer', '-s', '-shared',
          '-Wall', '-Wextra'] + dbg + [
+         '-Wl,--no-insert-timestamp',
          '-o', str(hook_dll), str(HOOK_C), str(res_o), '-lkernel32'], '编译 DLL')
     print('[编译] %s（%d 字节）' % (hook_dll.name, hook_dll.stat().st_size))
 
-    bad, info = verify(hook_dll)
-    print('[校验] 大小 %d，资源 %d 项，LoadStringW 抽查 %d 个 id'
+    bad, info = verify(hook_dll, zh)
+    print('[校验] 大小 %d，资源 %d 项，LoadStringW 逐条比对 %d 个 id'
           % (info['size'], info['resources'], info['ids']))
     if bad:
         for m in bad:
             print('[FAIL] %s' % m)
         raise SystemExit(1)
-    print('[校验] i386 / DLL 标志 / 资源树 / LoadStringW 全部与原件一致 OK')
+    print('[校验] i386 / DLL 标志 / 资源树（单一 2052）/ LoadStringW 逐条一致 OK')
     if args.check:
         print('[检查] 未写盘')
         return 0

@@ -803,11 +803,49 @@ setInitLang      = function() g_altLanguage = true end
 
 `WinMain`（`sub_4B3B60`，脱壳版）里的启动流程：
 
-1. 从 `HKCU\Software\WillPlus\AdvHD\LanguageSettings`（值名 = **游戏安装路径**）读所选语言；值为空 ⇒ 英文/原版；值为 `zh-CN` 之类的目录名 ⇒ 走语言包。
+1. 从 `HKCU\Software\WillPlus\AdvHD\LanguageSettings`（值名 = **游戏安装路径**）读所选语言；值为**空串** ⇒ 英文/原版；值为 `zh-CN` 之类的目录名 ⇒ 走语言包。
 2. 用 `<当前目录>\<语言>\AdvHDLang.dll` 判定包存在（`PathFileExistsW`），并 `LoadLibraryW` 加载它（包内还带语言显示名等资源）。
 3. 之后 `setlocale(0, "Japanese_Japan.932")` + `std::locale("japanese")` —— **硬编码**：语言包**不改变脚本文本解码**（仍是 CP932，见 `sub_4BA880` 的 `MultiByteToWideChar(932, …)`）。它对 `0x8f`（`lng` 覆盖不到的字幕行）没有帮助。**按成员覆盖**（实测）：包内归档只放"与根目录不同的成员"即可，否则引擎按成员名回落根目录 ——一个只含 1 个成员的 `Rio.arc` 也能覆盖成功，其余 ws2 仍从根目录读。
 
-本地实测记录：本作在中文系统上包名 `zh-CN` 会显示为「中文(简体，中国)」；注册表里为**空**时语言包整体不生效（UI/文本/字体都是原版）。
+三种注册表状态的行为**互不相同**（`sub_4B3B60` 的 LABEL_13 分支）：
+
+| 注册表 | 引擎行为 |
+|---|---|
+| 值**不存在** | 枚举子目录里带 `AdvHDLang.dll` 的语言包；**恰好一个**时**无视语言环境直接启用它**（`dword_58F028` = `<游戏目录>\<包名>`），并把包名与 `GetLocaleInfoEx(nullptr, LOCALE_SNAME)` 比对，结果只用来调 Lua `setAltLanguage(bool)`（本作 Lua 侧没有这个函数 ⇒ 实际上什么都没做） |
+| 值 = **空串** | 英文（原版），语言包整个不生效 |
+| 值 = `zh-CN` | 语言包生效 |
+
+⇒ **“不写注册表” ≠ “默认英文”**：值不存在时引擎反而会强上那个唯一的语言包（安装器因此对英文必须**显式写空串**，见 [technical-solutions.md](technical-solutions.md)「默认语言」）。
+
+#### 引擎**没有**"默认语言跟随环境"这回事（两版 exe 逐点验过）
+
+常见误解是"官中会按系统/Steam 语言决定默认语言"。代码里没有这条路径 —— 默认语言只有两种来源：**注册表的已存值**，或上表那条"值不存在 ⇒ 无条件启用唯一语言包"。四个否证点：
+
+| 检查 | 结果 |
+|---|---|
+| 唯一的 locale 判断 | `WinMain` 把包名与 `GetLocaleInfoEx(nullptr, LOCALE_SNAME)` 比对，结果**只**喂给 `setAltLanguage(bool)`（`sub_417610`）；而 `setAltLanguage` 在 CC 与官中 IMHHW 的**全部 Lua 里都没有定义** ⇒ 死调用（`getAltLanguage()` 那侧倒是活的：C++ 在 ~15 处字体/UI 资源选择点调它，由游戏自己的 Lua 在启动时 `setInitLang()` 置真） |
+| Steam 侧语言 | exe 用 `STEAMAPPS_INTERFACE_VERSION008`，只调到 `GetInstalledDepots` 一类（vtable +40/+96）；**没有** `GetCurrentGameLanguage`（vtable 索引 4）的调用点 |
+| 引擎是否按名调 Lua 语言开关 | `getLangPatchFlag` / `setInitLang` / `PatchFlag` 三个串在 exe 里**都不存在** ⇒ 完全由游戏自己的 Lua 驱动 |
+| 官中包的写法 | IMHHW 的 `ui_language.lua` 是**两份编译期常量**：根目录 `PatchFlag=false / g_altLanguage=false`，`zh-CN/Script.arc` 里 `=true` —— 靠 `Script.arc` 按成员覆盖切换，与 locale 无关 |
+
+⇒ "首启即生效"来自上表的"值不存在 ⇒ 启用唯一语言包"，**与语言环境无关**；"默认语言会变"只发生在**玩家改过一次之后**（引擎在 `CBN_SELCHANGE` 路径把它写进注册表，之后读到的就是玩家的选择）。因此本项目把"默认语言跟随环境"实现在**安装器**侧（`tool/language_detect.py`，见 [technical-solutions.md](technical-solutions.md)「默认语言」）—— 引擎侧没有可用的挂点。
+
+本作在中文系统上包名 `zh-CN` 显示为「中文(简体，中国)」：语言包下拉项的显示名**不是**从 DLL 里取，而是目录名过 `GetLocaleInfoEx("zh-CN", LOCALE_SLANGUAGE)`（`LocaleEnumProcEx` @ `0x49D7D0` 把全部区域名→本语言显示名建成表，`sub_49DAB0` 查表）。查不到的目录名直接显示原名。
+
+### 启动设置对话框：文本全部来自语言包 DLL ★
+
+引擎启动先弹设置对话框（`DialogBoxParamW(hInstance, 102, …)` → `sub_421560`，第二页 `sub_423350`），**每一条文字都是 `LoadStringW(hInstance, id)`**，其中 `hInstance` = 上一步 `LoadLibraryW("<游戏目录>\<语言>\AdvHDLang.dll")` 的返回值（无语言包时是根目录那份 DLL）。
+
+| 事实 | 值 / 证据 |
+|---|---|
+| 串 ID 范围 | `101`–`155` + `201`（`sub_421560` 的 `LoadStringW`/`sub_49D870` 调用点逐个对得上） |
+| 对话框标题 | 也是 DLL 串：`SetWindowTextW(hDlg, <游戏名> + 串 134)`（`134` = `-Settings` / `-起動設定` / `-启动设置`） |
+| 对话框字体 | exe 的 `RT_DIALOG` id 102（仅 `1041`）模板里写死 `MS Shell Dlg` 8pt / charset ANSI —— 汉化**不需要**换字体，中文靠 GDI 字体链接渲染（官中同理） |
+| 串表语言选择 | 走 `LoadStringW` 的标准回退序（线程 UI 语言 → 用户语言 → 系统默认 → `LANG_ENGLISH` → **任意语言**）⇒ 只发一块 `2052` 就够：任何系统上都会命中它，多带 1033/1041 反而会在日文/英文系统上抢先生效 |
+| “随语言选择同步”的真相 | **不是实时重绘**：`CBN_SELCHANGE`（`sub_421560` @ 0x421xxx）先弹 `153`/`154`（确认 / 需重启）的 `MessageBoxW`，确认后 `ShellExecuteW` **重启自己**并 `EndDialog`；注册表在此之前写好 ⇒ 新进程按新语言加载 DLL，界面于是变成新语言 |
+| 官中的做法 | IMHHW 的 `zh-CN/AdvHDLang.dll` **只有一块 `LANG_CHINESE(2052)` 串表 + manifest**（无 1033/1041、无代码） |
+
+本补丁据此把设置界面汉化：`resource/AdvHDLang_zh.json`（56 条）→ `script/build_lang_dll.py` 生成 2052 串表并与 hook 一起链接进 `asset/zh-CN/AdvHDLang.dll`（构建期用 `LoadStringW` 逐条实测）。
 
 ### 语言包的 Lua 侧分工（`ui_language.lua` / `GameInfo.lua` / `LegacyGame*.lua`，按版本）
 
@@ -822,7 +860,7 @@ setInitLang      = function() g_altLanguage = true end
 | `LegacyGame.lua` 的 `g_SetDefaultLangJP` | 只在**部分版本**存在：它为 `true` 时多语言特性不激活（需改成 `false`）。**本作不含该串**（新版本已移除），无需改动 |
 | `Sys_c_*` / `Sys_*` 文件名前缀 | 部分版本的中文模式会请求 `Sys_c_`（或 `Sys_`）前缀资源，语言包需提供同名 pna 或按需更名。**本作没有这个前缀约定**，走的是同名图层覆盖（`Sys_Dialog.pna` / `sys_config_P1..P3.pna`） |
 
-其它事实：引擎**能读未编译的 Lua**（可直接把明文 `.lua` 塞进 `Script.arc`）；`AdvHDLang.dll` 里只有**语言显示名**（`RT_STRING` 102–156、202 的英/日两套 + manifest），可用资源编辑器改；`Script.arc` 与其它归档一样**按成员覆盖**（官方中文包只放 1 个成员 `ui_language.lua`）。本补丁的语言包只发 2 个差异成员：`ui_language.lua`（把开关置为真）与 `LegacyGame_utf8.lua`（字体槽指向思源）。
+其它事实：引擎**能读未编译的 Lua**（可直接把明文 `.lua` 塞进 `Script.arc`）；`AdvHDLang.dll` 的 `RT_STRING` 承担**设置界面全部文字**（101–155、201，见上「启动设置对话框」；原件里是英/日两套 + manifest），可用资源编辑器改；`Script.arc` 与其它归档一样**按成员覆盖**（官方中文包只放 1 个成员 `ui_language.lua`）。本补丁的语言包只发 2 个差异成员：`ui_language.lua`（把开关置为真）与 `LegacyGame_utf8.lua`（字体槽指向思源）。
 
 ## MessageFlag.dat：脚本已读位图与未检查的越界写 ★
 

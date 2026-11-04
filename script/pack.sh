@@ -15,7 +15,9 @@ rm -rf build *.spec
 # 使用 mamba 环境执行 PyInstaller 打包
 mamba run -n GalRev pyinstaller \
     --onefile \
+    --hidden-import ctypes \
     --add-data "tool/arcbuild.py;." \
+    --add-data "tool/language_detect.py;." \
     --add-data "payload;payload" \
     --add-data "VERSION;." \
     --add-data "resource/icon.ico;." \
