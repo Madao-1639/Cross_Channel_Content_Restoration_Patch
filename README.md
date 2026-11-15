@@ -69,6 +69,17 @@ Steam 会检测出被修改的归档并重新下载，恢复到未安装状态�
 
 ---
 
+## 非 Windows 玩家（Wine / Proton）
+
+Steam Deck（GE-Proton 11-12 / 11-15 实测）、DroidDeck（Valve ARM64 Proton 9 / 11 实测）以及其他用 Proton / Wine 游玩本作会遇到场影片卡住的情况。
+
+现象：屏幕停在影片前的底色（`CCB0023`、`CCD0023` 处是白屏，其余是黑屏），按钮无响应，等多久都不动。共 7 处，包括环间过渡与 OP / ED。这是 Wine 的 WMA 解码不可靠导致的，与补丁安装是否正确无关。
+
+解决办法：把三份影片（`CCOP.dat`、`CCOP_B.dat`、`ED.dat`）的音轨**转成 PCM 16-bit**。
+
+
+---
+
 ## 实现原理
 
 Steam 版（App ID 812560，Build ID 812561）删减了部分剧情内容，且文本只有英文。补丁要同时解决
@@ -200,6 +211,6 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 - 工具链与工程经验来自 [A Sky Full of Stars 内容还原补丁](https://github.com/Madao-1639/A_Sky_Full_of_Stars_Content_Restoration_Patch)
 
 ## To-Do
-- [ ] 全量测试
+- [x] 全量测试
 - [x] UI 汉化
-- [ ] 蜜汁内容
+- [x] [蜜汁内容](https://github.com/Madao-1639/Cross_Channel_Uncensored_Patch)

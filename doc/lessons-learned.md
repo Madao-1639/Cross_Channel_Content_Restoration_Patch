@@ -33,7 +33,9 @@
 
 ### Steam Deck（Proton）在环间影片处白屏卡死
 
-`CCD0023_en` 末句「然后……」之后是环间过渡影片（`35 movie CCOP_B.DAT`）。同一处：Windows 正常，Wine 系运行环境（实测 **Android 的 DroidDeck**（Valve ARM64 Proton，32 位游戏走 WoW64/FEX），其 Proton 9 与 11 两个版本）白屏卡死，表现为**整机不响应**（按钮不可交互、等几分钟不动）；且该玩家反映**此前每次环末都看不到影片、直接进了下一环首句**。
+`CCD0023_en` 末句「然后……」之后是环间过渡影片（`35 movie CCOP_B.DAT`）。同一处：Windows 正常，Wine 系运行环境（实测 **Android 的 DroidDeck**（Valve ARM64 Proton，32 位游戏走 WoW64/FEX）的 Proton 9 / 11，**Steam Deck 的 GE-Proton 11-12 / 11-15**）白屏卡死，表现为**整机不响应**（按钮不可交互、等几分钟不动）；且玩家反映**此前每次环末都看不到影片、直接进了下一环首句**。
+
+**已缓解（用户侧，Steam Deck 实机确认）**：把三份 `.dat` 的音轨转成 **PCM 16-bit**（画面流 `-c:v copy`）后，影片能正常播放并继续剧情。无损依据：视频包数/帧数完全相同、解码后 PCM 样本 md5 相同 —— 画面与声音都没变。这一步因此把故障点收敛到**音频解码器**（WMA2 / WMA Pro）：要么建图失败，要么不交结束通知；具体是 quartz / qasf / winegstreamer 哪一环仍未定量，但已不影响用户。做法与体积代价见 [engine-mechanics.md](engine-mechanics.md)「缓解：音轨转 PCM 16-bit」。
 
 已排除（这些前提不必重查）：
 
@@ -41,9 +43,10 @@
 - 本补丁的插入句全在影片之前的正文段，影片前后的指令与 Steam 原档逐条一致；存档当前图层为空（无残留 `ev`/`st`）；
 - 全语料 896 个 `01` 的 `a`/`b` 目标全部落在指令首字节（`backup` 同样 896/896）—— 不是重排算错偏移；
 - 三份 `.dat` 是 Steam 原档散装文件，本补丁不分发、不修改；
-- 不是 Proton 版本差异（9 / 11 同样卡）；不是「解码慢」（等几分钟不动）。
+- 不是 Proton 版本差异（9 / 11 / 11-12 / 11-15 同样卡）；不是「解码慢」（等几分钟不动）；
+- 不是 `WMV3` 视频流的问题（音轨转 PCM 后画面正常）。
 
-日志取法（⚠️ 不要用 `PROTON_LOG=1` 找文件 —— 它落在 guest 的 `$HOME`，用户侧看不见）：DroidDeck 的设置里开 **Session logs** + **Game debug logs** → **重启会话** → 复现 → 侧边抽屉 **Session logs → Share logs**（它会把 Proton/Wine/图形诊断一起打包、抹干净后分享）；日志本体在 app 私有目录。**已知限制**：本项目**不提供**"去影片"变体产物（曾实验性删掉 7 处 `35`+`3a movie` 可绕开卡死，但属改动演出，已停止维护）。机制见 [engine-mechanics.md](engine-mechanics.md)「影片播放（`0x35` PlayMovie）」。
+日志取法（⚠️ 不要用 `PROTON_LOG=1` 找文件 —— 它落在 guest 的 `$HOME`，用户侧看不见）：DroidDeck 的设置里开 **Session logs** + **Game debug logs** → **重启会话** → 复现 → 侧边抽屉 **Session logs → Share logs**（它会把 Proton/Wine/图形诊断一起打包、抹干净后分享）；日志本体在 app 私有目录。**已知限制**：本项目**不提供**"去影片"变体产物（曾实验性删掉 7 处 `35`+`3a movie` 可绕开卡死，但属改动演出，已停止维护）。机制与做法见 [engine-mechanics.md](engine-mechanics.md)「影片播放（`0x35` PlayMovie）」与「缓解：音轨转 PCM 16-bit」。
 
 仍未定量的一点：卡死发生在 `35` 建图、`3a` 启动、还是影片层逐帧更新（整机不响应说明主循环也在DS 调用里，不只是等待表）—— 拿到 Share logs 才能分开；但上述证据已足以选定缓解方式。
 

@@ -368,36 +368,9 @@ PNA 是分层图像容器。**每个非空图层的数据块本身就是一张�
 
 要点：
 
-- **`Fonts.arc` 不在这张表里**：字体由引擎用固定名字加载，**无法**通过 Lua 重定向。⇒ 任何「全局生效」的设计里，字体只能整体替换根目录 `Fonts.arc`，不能走槽位。
-- **返回值不受白名单约束**：任意归档名都会被接受并进入 `sub_4D54F0` 的四层链。这是槽位机制得以成立的前提（实测：把 `evcc` 指向一个全新名字 `patch.arc` 后 CG 正常显示）。
-- 引擎每天运行期的映射只发生一次，**结果不做缓存**（每次取资源都会再调一次 Lua），所以槽位探测的自身开销必须小。
-
-### 通用槽位：`patch.arc` / `patch2.arc` / `patch3.arc` ★
-
-在 `ArcFileName.lua` 的四个分派函数前插入**成员级槽位探测**，即可让第三方补丁以「放下一个归档」的方式接入，无需改引擎、无需注入、无需安装器。
-
-```
-<游戏目录>\patch.arc    优先级最低
-<游戏目录>\patch2.arc
-<游戏目录>\patch3.arc   优先级最高（后注册优先，同名约定见 krkr 侧的 patch.xp3 槽位）
-```
-
-语义：**槽位只提供它想替换的成员**，未命中回落原生归档。
-
-判据（由 `sub_4D54F0` 的四层链推导，缺一不可）：
-
-- **必须做成员级查找，不能无条件返回槽位名**。引擎在**同一个请求名**上依次试 L1 `%APPDATA%` / L2 `<语言包>` / L3 `<cwd>`，**不会**把槽位名还原成原名再试。若对一个槽位里不存在的成员返回了 `patch.arc`，结果是 L3 的 `patch.arc` 里查不到 → 返回空流 → `0x33` **卡死**。实测：只含 1 个成员的 `patch.arc` 与完整 `Chip2.arc` 并存时，槽位命中的成员显示替换图，**其余成员正常回落**。
-- **探测必须只读 TOC 区**。Arc 是 `[u32 成员数][u32 表大小]` + 成员表（每项 `[u32 大小][u32 相对偏移]` + UTF-16LE 名 + `0x0000`），表区之后才是数据。若在整个文件上做子串搜索，图片数据里的字节序列会产生**假命中**。
-- **只扩展全局生效的补丁**。槽位名与 `<语言包>` 无关，因此槽位对**中英文模式一视同仁**。这是刻意的：语言包的作用域是「该语言下的译文」，跨语言生效的内容不应放进语言包。
-- **`%APPDATA%` 层必须显式视为禁用**。它整包独占且成员缺失不回落（见三层链第 1 层），一旦存在会压过槽位并让回落失效。
-
-实现形态（本项目的 `resource/slots/ArcFileName.lua`，约 90 行）：`luaL_openlibs` 已由引擎在 `WinMain`（`0x4B460E`）调用，所以 `io.open` / `string.unpack` 可用；启动时读一次 `patch{n}.arc` 的 TOC，命中即返回槽位名，否则返回原生名。**引擎能直接加载明文 Lua**（`luaL_loadbufferx` 路径），无需字节码编译器。
-
-与语言包的关系（重要）：
-
-- 槽位解决的只是**归档名解析**。`ws2` 与其 `lng` 译文是**同一逻辑单元**：`lng` 按脚本槽位/消息下标替换文本，脚本结构一变，译文必然错配。
-- ⇒ **`ws2` 与其 `lng` 必须由同一作者、同一版本、同一 scope 提供**。优先级规则**不能**用于在两者之间仲裁——这不是同名成员谁赢的问题，而是成员间配合的问题。
-- 推论：只替换与脚本无关的资源（CG、语音、BGM、UI 图）的补丁，与语言包天然同步，可安全走槽位；**修改 `ws2` 的补丁必须自带对应 `lng`**。
+- **返回值不受白名单约束**：任意归档名都会被接受并进入 `sub_4D54F0` 的四层链（实测：把 `evcc` 指向一个全新的归档名后 CG 正常显示）。
+- **`Fonts.arc` 不在这张表里，但也不是引擎写死的**：归档名是 `LegacyGame.lua` 里的明文常量 `'Fonts.arc'`，作为 `CLegacyFontInfo:extention(归档, 成员, 族名, charset)` 的第 1 参传入（exe 中**不存在** `Fonts` 字符串，硬编码的 `.arc` 只有 `Effect`/`TESTDATA`/`Rio`/`Script`；见「字体装载」）。改这个常量即可重定向，代价是要重写 147,544 字节 Lua 字节码里的字符串常量（长度一变全部偏移平移）并另存一整份成员 ⇒ 语言包换字体仍应选「包内同名 `Fonts.arc`」按成员覆盖，这是**成本权衡**而非引擎能力边界。
+- 映射**不做缓存**（每次取资源都会重新调一次 Lua）。
 
 ### 0x33 硬载入（背景）
 
@@ -467,6 +440,24 @@ opcode→handler 表在 runner+`0x1BA4`（注册函数 `sub_45A860`，CC 共注�
 ### 兼容性（Linux / Android 上的 Wine 系环境）
 
 Windows 自带这套栈；Linux/Proton 与 Android（DroidDeck 用 Valve 的 ARM64 Proton跑 32 位游戏，走 WoW64 + FEX）都由 Wine 的同名替代实现（quartz/qasf/winedmo/winegstreamer）承担，`WMV3` + WMA 组合是已知薄弱环节。失败点就是上表的两处：**建图失败 ⇒ 静默跳过**；**拿不到影片结束通知 ⇒ 等待表不空、VM 永久停住**（`CCD0023_en`/`CCB0023_en` 影片前是白底 ⇒ 白屏，其余是黑底 ⇒ 黑屏）。
+
+实测出问题的平台：Android（DroidDeck，Valve ARM64 Proton 9 / 11）、Steam Deck（GE-Proton 11-12 / 11-15）。
+
+### 缓解：音轨转 PCM 16-bit ★
+
+把三份 `.dat` 的**音轨**换成 PCM 16-bit、画面流原样复制，Steam Deck 实机确认影片能正常播放并继续剧情：
+
+```bash
+ffmpeg -i CCOP.dat -map 0 -c:v copy -c:a pcm_s16le -f asf CCOP.dat.new
+```
+
+**为什么能成立**：转换后解码链里不再需要 WMA 解码器，只剩 Wine 能正常处理的 `WMV3` 视频与裸 PCM ⇒ 故障点被限定在**音频解码器**（`CCOP`/`ED` 的 WMA2、`CCOP_B` 的 WMA Pro）：要么建图时它失败（`35` 初始化失败），要么它不交结束通知（`3a` 的等待永不消除）。
+
+**无损判据**（三档实测一致）：视频 `-c:v copy`，包数与帧数完全相同（`CCOP` 5653/5653、`CCOP_B` 211/211、`ED` 8490/8490）；解码后的 PCM 样本 md5 也完全相同 ⇒ **画面与声音都没变**，变的只是容器里的音频编码。代价是体积：`CCOP` 79.4→112.1 MB、`CCOP_B` 4.9→6.3 MB、`ED` 46.1→94.0 MB（合计约 130→212 MB）。
+
+转换只改这 3 个文件的音轨，画面与解码后的声音都不变；改前**先备份**原文件，否则只能靠 Steam 校验还原。
+
+### 不采用的替代路线
 
 本项目**不提供**"去影片"变体产物（曾实验性地删掉 7 处 `35` 与其后的 `3a movie`，能让剧情照常推进，但属于**改动演出**，且该变体已停止维护）。需要时按上面的机制自行处理：`35` 只做初始化、`3a` 登记等待，去掉这两条即可绕开等待表卡死，代价是这 7 处过场影片不再播放。
 
@@ -773,9 +764,9 @@ function setInitLang()       g_altLanguage = true                 end
 
 ## 文字渲染路径：字体加载 + backlog 硬编码膨胀边 ★
 
-### 字体装载（`sub_4591E0` + `CLegacyFontInfo:create`）
+### 字体装载（`sub_4591E0` + `CLegacyFontInfo:extention`）
 
-脚本侧 `LegacyGame_utf8.lua` 定义 `g_fonts`/`g_fonts2`/`g_fonts3` 三组 `{name, file, CharSet}`，`file` 指向 `Fonts.arc` 内成员（`FOT-MatissePro-M/B.PTF` 槽名固定）。`CLegacyFontInfo:create` 用捆绑的 native 层做三件事：
+脚本侧 `LegacyGame_utf8.lua` 定义 `g_fonts`/`g_fonts2`/`g_fonts3` 三组 `{name, file, CharSet}`（`file` = `Fonts.arc` 内成员名，`FOT-MatissePro-M/B.PTF` 槽名固定），由 `LegacyGame.lua`（147,544 B，**非死代码**：`g_fonts*` 的消费方）调 `CLegacyFontInfo:extention(归档, 成员, 族名, charset)` 装载：`getGameEngineVersion() >= 1.4` 才生效，`g_fonts2` 另需 `getLangPatchFlag()`；归档名是该调用点的明文常量 `'Fonts.arc'`。native 链 `sub_4F4EF0`（取 lua 2..5 参）→ `sub_4591E0(a3=归档, a4=成员, a5=族名, a6=charset)` → `sub_4BA6E0`（`0x4ba717` 调 `sub_4D54F0`，走**同一四级链**、裸文件开关 `a5=0` ⇒ `<游戏目录>\Fonts\*.PTF` 这种裸目录路线对字体无效），三件事：
 
 1. 按槽名从 `Fonts.arc` 读出 PTF blob；
 2. **`sub_4591E0` 解压**：头 4 字节 = 解压后大小（LE u32）、随后 LZSS 字节流（flag 字节**bit0 先出**、bit=1→1 字节 literal、bit=0→2 字节 token `src=(b1>>4)+16*b0` / `len=(b1&0xF)+2`，12-bit 环形窗 0x1000、窗体写指针**从 1 起**（`0x4593CD: mov esi,1`）、**环形窗内存的是 XOR 后的字节**）；解压完整输出再**全量 XOR 0x2C** 得到字体文件本体；
@@ -1008,7 +999,7 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
 **已确认**：
 
 - [x] lng 文件的文本替换机制 —— 只覆盖 `0x14` 正文与 `0f` 选项，按**池槽位序**定位；见 [localization.md](localization.md)「lng 位置对应」
-- [x] 字体文件的加载机制 —— `CLegacyFontInfo:create` 以 `file`/`name`/`CharSet` 从 `Fonts.arc` 取 PTF，解压（头 4 字节大小 + LZSS，flag bit0 先出、环形窗 0x1000、窗体写指针从 1 起、窗内存密文）后全量 XOR 0x2C，交 `AddFontMemResourceEx` 注册到进程字体表；后续 `add('system','Txt01'/'Name01', family, size, ...)` 经 GDI `CreateFontIndirectW` 以 `lfCharSet=GB2312_CHARSET` 按**进程内注册的族名**匹配（与系统字体无关）。PTF 封装细节与本补丁打包器的纯字面量 LZSS 方案及族名接线见 [localization.md](localization.md)「PTF 封装格式 / 引擎加载链」
+- [x] 字体文件的加载机制 —— `LegacyGame.lua` 以常量 `'Fonts.arc'` 为归档名调 `CLegacyFontInfo:extention(归档, file, name, CharSet)`，native 侧经 `sub_4F4EF0` → `sub_4591E0` → `sub_4BA6E0` → `sub_4D54F0`（四级链，裸文件 `a5=0`）取 PTF，解压（头 4 字节大小 + LZSS，flag bit0 先出、环形窗 0x1000、窗体写指针从 1 起、窗内存密文）后全量 XOR 0x2C，交 `AddFontMemResourceEx` 注册到进程字体表；后续 `add('system','Txt01'/'Name01', family, size, ...)` 经 GDI `CreateFontIndirectW` 以 `lfCharSet=GB2312_CHARSET` 按**进程内注册的族名**匹配（与系统字体无关）。PTF 封装细节与本补丁打包器的纯字面量 LZSS 方案及族名接线见 [localization.md](localization.md)「PTF 封装格式 / 引擎加载链」
 - [x] 脚本内窄字节文本的编码 —— CP932（见「文本编码路径」）
 - [x] 角色名替换机制 —— `NameTable.txt`（见「名字替换表」）
 - [x] **名字框显示简体中文** —— `NameTable.txt` 前缀改为 `%LC` 后实机验证通过（见「名字替换表」）

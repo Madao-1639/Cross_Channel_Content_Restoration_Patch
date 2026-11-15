@@ -491,21 +491,6 @@ LNG 是 AdvHD 引擎的文本替换机制，每个含文本的 `.ws2` 对应一�
 - 明文成员按 CP932 读取（引擎的窄→宽路径），**只放 ASCII 内容**最安全；非 ASCII 需谨慎。
 - 归档内大小写与成员名保持原样即可，加载按成员名精确匹配。
 
-### 从 Lua 读 Arc 的成员表（槽位探测用）
-
-`WinMain`（`0x4B45FA` / `0x4B460E`）依次调用 `luaL_newstate` + `luaL_openlibs`，所以**完整 Lua 5.3 标准库可用**（`io` / `string` / `os`）。因此 Lua 侧可以直接读归档的 TOC 来判断「某个成员是否存在」：
-
-```lua
-local f = io.open("patch.arc", "rb")
-local blob = f:read("a"); f:close()
-local count, table_size = string.unpack("<I4I4", blob)   -- 8 字节头
-local toc = blob:sub(1, 8 + table_size)                  -- 只取成员表区
--- 成员名为 UTF-16LE 且以 0x0000 结尾；ASCII 名可按字节构造同样的模式
-local found = string.find(toc, utf16le(name) .. "\0\0", 1, true) ~= nil
-```
-
-**必须只搜索 TOC 区**（`1 .. 8 + table_size`）：成员表之后是成员数据，整文件子串搜索会被图片数据里的字节序列误命中。
-
 ## NameTable.txt（说话人名替换表）
 
 引擎的说话人名替换表，放在 `Rio.arc` 里。脚本中的 `%L?<名>` 标记会被拿去查它。**这是角色名汉化的通路** —— 表是 UTF-16LE，不受脚本内窄字节 CP932 的限制。
