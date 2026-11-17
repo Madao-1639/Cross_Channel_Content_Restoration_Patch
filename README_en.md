@@ -74,9 +74,38 @@ These archives are **left untouched**; the installer keeps your originals: `Chip
 
 On Steam Deck (tested with GE-Proton 11-12 / 11-15), DroidDeck (Valve ARM64 Proton 9 / 11) and any other setup running the game through Proton / Wine, cutscene movies stall.
 
-Symptom: the screen stays on the backdrop that precedes the movie (white for `CCB0023` / `CCD0023`, black everywhere else), buttons do not respond and waiting does not help. There are 7 such points, including the loop transitions and the OP / ED. The cause is Wine's unreliable WMA decoding, not the patch or how it was installed.
+Symptom: the screen stays on the backdrop that precedes the movie (white for `CCB0023` / `CCD0023`, black everywhere else), buttons do not respond and waiting does not help. There are 7 such points over a full playthrough, including the OP / ED and the transitions at the end of each chapter and of the final chapter. The cause is Wine's unreliable audio decoding for these movies — **a compatibility issue of the game itself**, unrelated to whether the patch is installed.
 
-Workaround: convert the audio tracks of the three movie files (`CCOP.dat`, `CCOP_B.dat`, `ED.dat`) to **PCM 16-bit**.
+Workaround: convert the audio track of the three movies (`CCOP.dat`, `CCOP_B.dat`, `ED.dat`) to **PCM 16-bit**.
+
+Open a terminal in the game folder and run:
+
+```bash
+# convert the audio tracks to PCM
+ffmpeg -i CCOP.dat   -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf CCOP_fixed.dat
+ffmpeg -i CCOP_B.dat -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf CCOP_B_fixed.dat
+ffmpeg -i ED.dat     -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf ED_fixed.dat
+```
+
+Once all three have finished without errors, back up the original files, then rename the `_fixed.dat` files back to the original names. For example:
+
+```bash
+# back up the originals
+cp CCOP.dat   CCOP.dat.orig
+cp CCOP_B.dat CCOP_B.dat.orig
+cp ED.dat     ED.dat.orig
+
+# rename the converted movies back
+mv CCOP_fixed.dat   CCOP.dat
+mv CCOP_B_fixed.dat CCOP_B.dat
+mv ED_fixed.dat     ED.dat
+```
+
+Notes:
+
+- If you get `ffmpeg: command not found`, make sure `ffmpeg` is installed on your system
+- Conversion is independent of patch installation — converting first or installing first makes no difference to gameplay. The patch never modifies these three `.dat` files
+- Verifying the game files (see “Uninstall” above) will restore them, in which case you need to convert again
 
 ## How it works
 

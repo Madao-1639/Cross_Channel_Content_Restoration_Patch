@@ -73,10 +73,38 @@ Steam 会检测出被修改的归档并重新下载，恢复到未安装状态�
 
 Steam Deck（GE-Proton 11-12 / 11-15 实测）、DroidDeck（Valve ARM64 Proton 9 / 11 实测）以及其他用 Proton / Wine 游玩本作会遇到场影片卡住的情况。
 
-现象：屏幕停在影片前的底色（`CCB0023`、`CCD0023` 处是白屏，其余是黑屏），按钮无响应，等多久都不动。共 7 处，包括环间过渡与 OP / ED。这是 Wine 的 WMA 解码不可靠导致的，与补丁安装是否正确无关。
+现象：屏幕停在影片前的底色（`CCB0023`、`CCD0023` 处是白屏，其余是黑屏），按钮无响应，等多久都不动。全流程共 7 处，包括 OP / ED 与各章末、终章的过场。这是 Wine 的影片音频解码不可靠导致的，**属于游戏本体的兼容性问题**，与补丁安装与否无关。
 
 解决办法：把三份影片（`CCOP.dat`、`CCOP_B.dat`、`ED.dat`）的音轨**转成 PCM 16-bit**。
 
+在游戏目录打开终端执行：
+
+```bash
+# 将音频转换为 PCM 格式
+ffmpeg -i CCOP.dat   -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf CCOP_fixed.dat
+ffmpeg -i CCOP_B.dat -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf CCOP_B_fixed.dat
+ffmpeg -i ED.dat     -map 0:v:0 -map 0:a:0 -c:v copy -c:a pcm_s16le -f asf ED_fixed.dat
+```
+
+待三条命令正确执行完毕后，先备份原文件，再把 `_fixed.dat` 改回原文件名。可参考以下方式：
+
+```bash
+# 备份原文件
+cp CCOP.dat   CCOP.dat.orig
+cp CCOP_B.dat CCOP_B.dat.orig
+cp ED.dat     ED.dat.orig
+
+# 将修改后的影片改成原文件名
+mv CCOP_fixed.dat   CCOP.dat
+mv CCOP_B_fixed.dat CCOP_B.dat
+mv ED_fixed.dat     ED.dat
+```
+
+注意：
+
+- 如遇错误提示 `ffmpeg: command not found`，请确保系统安装了 `ffmpeg`
+- 转换操作与补丁的安装独立，先转换还是先安装都不影响正常游玩。补丁也不会改动这三份 `.dat` 文件
+- Steam 验证完整性（见上方「卸载与恢复」）会把它们还原，此时需要重新转换一次
 
 ---
 
