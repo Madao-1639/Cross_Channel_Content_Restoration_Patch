@@ -15,8 +15,7 @@ Instruction fields:
     fields   dict   parsed fields (names, u16/u32/f32 values, text, ...)
 
 All layouts below were derived by requiring a single rule per opcode to tile
-every one of the 363 Steam .ws2 files + 12 Res303 CNR*.ws2 files (375 files,
-100% byte coverage, see verify_corpus.py).
+every one of the 363 Steam .ws2 files (100% byte coverage, see verify_corpus.py).
 """
 import struct
 
@@ -94,7 +93,7 @@ def _read_cstring(data, pos, limit=4096):
     return data[pos:end], end + 1
 
 def _is_name(b):
-    """Name may be ASCII or Shift-JIS (CNR scripts); reject control bytes."""
+    """Name may be ASCII or Shift-JIS; reject control bytes."""
     if len(b) > 200:
         return False
     return all(0x20 <= c <= 0xfc and c != 0x7f for c in b)

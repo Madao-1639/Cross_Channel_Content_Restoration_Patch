@@ -103,12 +103,14 @@ def native_scripts():
     return [(k, ws2.decode(v)) for k, v in sorted(members.items()) if k.endswith('.WS2')]
 
 
-def shipped_cnr():
+def shipped_extra_scripts():
+    """产物里**Steam 原档没有**的 `.ws2`（正常应为空：还原走就地插入，不新增脚本）。"""
     if not RIO.exists():
         return []
+    native = {k.upper() for k, _ in native_scripts()}
     members = {n.decode('utf-16-le'): v for n, v in arcbuild.read_raw(RIO)}
     return [(k, ws2.decode(v)) for k, v in members.items()
-            if k.upper().startswith('CNR') and k.lower().endswith('.ws2')]
+            if k.lower().endswith('.ws2') and k.upper() not in native]
 
 
 def main():
@@ -118,7 +120,7 @@ def main():
     print('原生语料 %d 个脚本' % len(native))
     # 反汇编只做一次（每个脚本被多项检查用到）
     disasm = []
-    for name, d in native + shipped_cnr():
+    for name, d in native + shipped_extra_scripts():
         try:
             disasm.append((name, d, ws2disasm.disassemble(d)))
         except Exception as e:

@@ -18,7 +18,7 @@
 
 ### 语音
 
-`Voice.arc` 在 Steam 原档（15,144 条 OGG）基础上补入缺失的原版录音：由 `script/import_missing_voices.py` 从原版游戏的老式归档 `Voice.arc` 取 OGG，统一重采样 48 kHz 对齐语料。原版录音**不带** `.soundlevel`（Steam 侧才带逐段音量包络），其中 967 条补入录音的包络由内化数据 `resource/carried_soundlevel.json` 提供；其余补入录音本来就没有包络，照常播放 —— **不凭空造包络**。
+`Voice.arc` 在 Steam 原档（15,144 条 OGG）基础上补入缺失的原版录音：由 `script/import_missing_voices.py` 从原版游戏的老式归档 `Voice.arc` 取 OGG，统一重采样 48 kHz 对齐语料。原版录音**不带** `.soundlevel`（Steam 侧才带逐段音量包络），其中 967 条补入录音的包络由 `resource/carried_soundlevel.json` 提供；其余补入录音本来就没有包络，照常播放 —— **不凭空造包络**。
 
 ### 背景与特效
 
@@ -72,9 +72,9 @@ Steam 与原版同名图片（`EVCC*`）逐对比较：**没有任何一例被�
 | 正文/选项 | `.lng`，**位置对应**（引擎按播放序第 N 条替换）；共 328 个 |
 | 说话人名 | `Rio.arc` 的 `NameTable.txt`（UTF-16LE，不受脚本内 CP932 限制） |
 | 字体 | 自制：`script/build_fonts_arc.py` 从 `resource/fonts/sourcehan_subset/` 子集打包（思源黑体 Medium/Bold）；PTF 封装与族名接线见 [localization.md](localization.md)「字体处理」 | |
-| 系统界面 | 内化归档 `resource/reused_archives/` 的 `Script.arc`（外部汉化产出，**原样采用**；14 个 Lua 成员）；`SysGraphic.arc` 按「同名 pna、同名图层」换入自制汉化图（素材 `resource/SysGraphic/`） |
+| 系统界面 | `Script.arc` **自产**（`script/build_script_arc.py`：拿 Steam 原版改字体槽/语言开关常量，只发 2 个差异成员）；`SysGraphic.arc` 按「同名 pna、同名图层」换入自制汉化图（素材 `resource/SysGraphic/`） |
 
-**译文来源**：主线复用 [CROSS†CHANNEL 中文化项目](https://github.com/MewX/cross-channel_chinese-localization_project) 的官方译文（经汉化组 CCS 逐行对位，`CCS 序号 = 原版 WSC 对话 id + 1`）；Steam 新增的 7 条角色线与后日谈以机翻为底稿，已随全量语义复审逐行修订。
+**译文来源**：主线复用 [CROSS†CHANNEL 中文化项目](https://github.com/MewX/cross-channel_chinese-localization_project) 的官方译文（经汉化组 CCS 逐行对位，`CCS 序号 = 原版 WSC 对话 id + 1`）；Steam 新增的 7 条角色线与后日谈**上游无译文**，以 **GPT-5.6-sol** 机翻为底稿、已经全量语义复审逐行修订。**上游授权（GPL-2.0 + 禁商用）与署名义务**见 [localization.md](localization.md)「上游授权与署名义务」与 [`CREDITS.md`](../CREDITS.md)。
 
 **质量状态**：文本已定稿 —— 删格复审与全量语义复审均已收口，正文与译文的**唯一准据**是 `resource/text_map.json`（最终 42,857 格，含 `CCB2017` 选项分支的 23 格：1 提示句 + 2 选项 + 2 清框格 + 18 还原行）。详见 [localization.md](localization.md)。
 
@@ -127,6 +127,8 @@ Steam **整段删除 + 整段新写**：`k=31–79`（49 格）是自成一体�
 
 ### 发布
 
+- **许可证与致谢随物分发**：`LICENSE` / `CREDITS.md` / `DISCLAIMER.md` / `resource/fonts/sourcehan_subset/OFL.txt` 目前只在仓库根，**未打进 `payload/` 与安装器** —— GPL-2.0 与 SIL OFL 1.1 都要求许可证随分发物提供给接收者。需在 `script/generate_payload.py` / `script/pack.sh` / `tool/install.py` 三处接线（落点与展示方式未定）。
+- **字体 Reserved Font Name**：子集被 OFL 视为 Modified Version，而族名仍为 `Source Han Sans SC Medium/Bold`（保留名 `Source`）—— 待定处置：改族名（需同步 `fix_font_names.py` / `LegacyGame_utf8.lua` / `final_verification.check_font_names()`）或向 Adobe 取书面许可。
 - **安装器/卸载链路的实机验证**：`payload/` 已按当前 `asset/` 生成并回读校验（`generate_payload.py` 重放结果与 `asset/` 逐归档一致），`releases/` 的 exe 不是当前 `payload/` 的产物 ⇒ **发布前须 `bash script/pack.sh` 重新打包**。⚠️ 但已有实机通关走的是**直接把 `asset/` 覆盖进游戏目录** ⇒ 走安装器安装（安装前备份、安装后哈希校验、卸载恢复）仍待在干净环境实机跑一遍（判据见 [acceptance-criteria.md](acceptance-criteria.md)「发布标准」）。
 
 ### 已裁定：保持现状（非待办，缺证据）

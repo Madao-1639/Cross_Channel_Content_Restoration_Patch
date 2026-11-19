@@ -37,16 +37,16 @@ CROSS†CHANNEL 的 PNA 资源使用不同于 A Sky Full of Stars 的命名规�
 - 变体后缀：保留原版后缀（A/B/C/D/E），重编号时只改数字段
 - **对照表**：`resource/cg_map.json` —— **这是 CG 对应关系的唯一权威来源**，由 `script/build_cg_map.py` 生成；`tool/rename_map.py`（产出就地插入用的改名表）与 `script/renumber_evcc9xxx.py`（核对引用可解析）都**读这张表**，不再各自硬编码。表项形如：`{"EVCC0017B.PNG": {"patch": "EVCC9006B.PNG", "steam_same_name": false, "refs": [{"host": "CCC3027", "script_id": 227, "opcode": "0x46", "offset": "0x3436"}]}}` —— 一张 CG 被多处引用，故 `refs` 是**列表**。
 
-**「同名冲突」的判定必须比像素，不能比 sha**：第三方补丁出货的图是把原版 **LANCZOS 放大到 1280×960** 并重编码过的，所以同一张画的sha256 必然不同。早期据此把 `EVCC0017`/`EVCC0027`/`EVCC0049`/`EVCC0058`/`EVCC0063` 等判成「冲突」，实测**全部是同名同内容**（降到 200×150 灰度后平均绝对差 0.14–0.22）。
+**「同名冲突」的判定必须比像素，不能比 sha**：放大并重编码过的图（原版 **LANCZOS 至 1280×960**），所以同一张画的sha256 必然不同。早期据此把 `EVCC0017`/`EVCC0027`/`EVCC0049`/`EVCC0058`/`EVCC0063` 等判成「冲突」，实测**全部是同名同内容**（降到 200×150 灰度后平均绝对差 0.14–0.22）。
 `build_cg_map.py` 用像素识别来源，`patch` 为 `null` 即表示「用 Steam 侧同名文件、不改名」。
-放大方法的确定性已用对照验证：把原版 `EVCC0017B.PNG` 按 LANCZOS 放大到 1280×960，与第三方补丁产出的同名图 **逐像素完全相同（最大差 0）**。
+放大方法的确定性已用对照验证：把原版 `EVCC0017B.PNG` 按 LANCZOS 放大到 1280×960，与成品同名图 **逐像素完全相同（最大差 0）**。
 
 **改名必须限定在还原宿主内**：同一个原版名在不同脚本里含义不同 —— `SGCC0020.PNG` 在 `CCB2101_en.ws2` 的**插入段**指原版系统图（该用 `EVCC9004.PNG`），而同一脚本的**宿主前缀**（Steam 自己的内容，`0x33 bg02 SGCC0020.PNG`）、 `CCD2002B_en.ws2`、画廊页 `CG_PAGE.ws2` 指的是 **Steam 的同名图**（必须保持原名）。
 所以改名只在 `splice_restoration` 生成插入段的那一趟里落到字节上， `renumber_evcc9xxx.py` **只核对、不改写**。
 
 **命名白名单机制**：
 - Steam 引擎对 Chip2.arc 中的事件 CG 实施前缀白名单，只加载 `EVCC` 开头的文件
-- 使用其他前缀（如 `CN_EVCC`）的文件会被引擎静默忽略（不报错，但不加载）
+- 使用其他前缀（如 `CN_*`）的文件会被引擎静默忽略（不报错，但不加载）
 - 还原 CG 因此一律落在 `EVCC9XXX` 段（见 [restoration-targets.md](restoration-targets.md)「事件 CG」）
 
 **背景资源**（Chip1.arc 中）：
@@ -134,9 +134,9 @@ same_file = sha256(orig_data) == sha256(steam_data)
 | **Chip1.arc** | 背景图片 | PNG | `BGCC*.png` |
 | **Chip2.arc** | 事件 CG | PNG | `EVCC*.png`（包括 `EVCC9XXX` 补丁 CG） |
 
-### 与第三方补丁的差异
+### 资源落位：为什么必须进 Chip2.arc + EVCC 前缀
 
-第三方补丁把全部 37 个新增 `CN_*` 资源都堆进 **Graphic.arc**（事件 CG 混入立绘存储区），且用 `CN_EVCC` 前缀 —— 因引擎白名单导致 CG 全部加载不了。
+把新增 CG 堆进 **Graphic.arc**（事件 CG 混入立绘存储区）、或用 `CN_` 前缀，都会因引擎白名单导致 CG 全部加载不了。
 
 本项目：
 

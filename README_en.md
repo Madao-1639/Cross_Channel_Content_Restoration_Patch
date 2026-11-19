@@ -6,7 +6,9 @@ Restores the story content that was removed from the Steam release of [*CROSS†
 
 For personal use with a legitimately purchased copy. This repository contains no game assets.
 
-> **Current version: v0.6.0** — restoration is complete and in widescale play-testing.
+> **Current version: v1.0.0** — restoration and localization are complete and fully verified.
+
+> **License**: the patch itself is released under [GPL-2.0](LICENSE) , **completely free, commercial use prohibited** — see [DISCLAIMER.md](DISCLAIMER.md). Text sources and the original translation team's credits are in [CREDITS.md](CREDITS.md).
 
 ![Banner](https://shared.steamstatic.com/store_item_assets/steam/apps/812560/library_hero.jpg?t=1573643366)
 
@@ -221,9 +223,11 @@ Please use [Issues](../../issues) and include:
 
 ## Credits
 
+- **Main-story Chinese text** comes from the [CROSS†CHANNEL Chinese localization project](https://github.com/MewX/cross-channel_chinese-localization_project) (群青学院·群Ｘ会 / 群青学院放送部) — full staff credits, the list of changes made to our copy and the licensing basis are in [CREDITS.md](CREDITS.md)
 - Original-game assets (CGs and voices) used for the restoration, added after item-by-item content comparison
 - Tooling and engineering experience from the
   [A Sky Full of Stars Content Restoration Patch](https://github.com/Madao-1639/A_Sky_Full_of_Stars_Content_Restoration_Patch)
+- **Fonts**: subset of Source Han Sans SC (Adobe), licensed under the SIL OFL 1.1 — see [OFL.txt](resource/fonts/sourcehan_subset/OFL.txt)
 
 ## To-Do
 

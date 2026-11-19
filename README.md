@@ -6,7 +6,9 @@
 
 本补丁仅供已购买正版游戏的用户使用，不包含任何游戏本体文件。
 
-> **当前版本：v0.6.0** — 内容还原与汉化已落地，等待全量实机验证。
+> **当前版本：v1.0.0** — 内容还原与汉化已落地，并通过全量验收。
+
+> **授权**：补丁本体以 [GPL-2.0](LICENSE) 发布，**完全免费、严禁商用** —— 详见 [DISCLAIMER.md](DISCLAIMER.md)；译文来源与原汉化组署名见 [CREDITS.md](CREDITS.md)。
 
 ![Banner](https://shared.steamstatic.com/store_item_assets/steam/apps/812560/library_hero.jpg?t=1573643366)
 
@@ -234,9 +236,10 @@ Steam 删减场景时会把该场景压成几句**删节版**留在原来的脚�
 
 ## 致谢
 
-- 主线中文译文来自 [群青学院放送部](https://github.com/MewX/cross-channel_chinese-localization_project)
-- 还原用的原版素材（CG、语音）取自原版游戏，经逐项内容比对后补入
-- 工具链与工程经验来自 [A Sky Full of Stars 内容还原补丁](https://github.com/Madao-1639/A_Sky_Full_of_Stars_Content_Restoration_Patch)
+- **主线中文译文**来自 [CROSS†CHANNEL 中文化（汉化）项目](https://github.com/MewX/cross-channel_chinese-localization_project)（群青学院·群Ｘ会 / 群青学院放送部）—— 完整 STAFF 署名、所用副本的修改声明与授权依据见 [CREDITS.md](CREDITS.md)
+- **还原用的原版素材**（CG、语音）取自原版游戏，经逐项内容比对后补入
+- **工具链与工程经验**来自 [A Sky Full of Stars 内容还原补丁](https://github.com/Madao-1639/A_Sky_Full_of_Stars_Content_Restoration_Patch)
+- **字体**为思源黑体（Adobe Source Han Sans SC）子集，授权见 [OFL.txt](resource/fonts/sourcehan_subset/OFL.txt)
 
 ## To-Do
 - [x] 全量测试

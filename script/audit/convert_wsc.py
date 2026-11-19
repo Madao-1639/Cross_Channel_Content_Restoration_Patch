@@ -27,7 +27,7 @@ from tool.ws2disasm import disassemble as disassemble_ws2
 from tool.wsc2ws2 import ConvertOptions, convert, decrypt_wsc
 
 ROOT = Path(__file__).resolve().parents[2]
-# 项目外输入（原版游戏 / 上游补丁）与本项目同级；不写死绝对路径。
+# 项目外输入（原版游戏）与本项目同级；不写死绝对路径。
 SIBLINGS = ROOT.parent
 DEFAULT_ORIGINAL_RIO = SIBLINGS / 'CROSS_CHANNEL_Original' / 'Rio.arc'
 DEFAULT_STEAM_RIO = ROOT / 'backup' / 'Rio.arc'
@@ -38,8 +38,6 @@ DEFAULT_INVENTORY_ARCS = [
     ROOT / 'backup' / 'Chip2.arc',
     ROOT / 'backup' / 'Graphic.arc',
     ROOT / 'backup' / 'Voice.arc',
-    SIBLINGS / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3' / 'Graphic.arc',
-    SIBLINGS / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3' / 'Voice.arc',
     SIBLINGS / 'CROSS_CHANNEL_Original' / 'Se.arc',
     SIBLINGS / 'CROSS_CHANNEL_Original' / 'Bgm.arc',
 ]

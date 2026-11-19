@@ -1,10 +1,10 @@
-# `resource/` —— **能改变产物的输入**与内化数据
+# `resource/` —— **能改变产物的输入**
 
 流水线只**读表**，不各自硬编码一份映射。本目录就是那些表的唯一来源。
 
 **两条操作规则**：
 
-1. **进本目录的东西要么是"仓库内无法再生的输入"，要么是"内化数据"** —— 凡是能从仓库里已有的东西现算出来的（归档成员、缓存），一律**不落副本**、改由消费方直读源（见 [lessons-learned](../doc/lessons-learned.md)「派生缓存」）。
+1. **进本目录的只能是"仓库内无法再生的输入"**（译组语料、表、自制素材）—— 凡是能从仓库里已有的东西现算出来的（归档成员、缓存、Lua 常量 dump），一律**不落副本**、改由消费方直读源（见 [lessons-learned](../doc/lessons-learned.md)「派生缓存」）。
 2. **改了本目录的表 ⇒ 必须重跑一轮**（表是写盘的唯一依据，`asset/` 会立刻与它不一致）。 **既没有"输入指纹"、也没有出处元信息**：`METADATA.json` **只放归档条目**（多一个 `_` 前缀的键，安装器的安装后校验就会把它当归档名、报一条假的「文件不存在」）。逐文件哈希**刻意不钉** ——钉不住的输入太多（`backup/`、仓库外的原版归档、ffmpeg 版本），只会给出假保证；产物完整性由逐归档 `checksum` + 回读校验负责。
 
 ## 索引
@@ -29,9 +29,8 @@
 | `graphic_overrides/` | **图片汉化**替换清单 + 图（3 张） | `apply_graphic_overrides` |
 | `SysGraphic/` | **UI 图层汉化**替换图库（`<pna 名>/L<图层下标>.png`） | `apply_sysgraphic` |
 | `corpus/wsc/` | **原版 WSC 语料**（324 个） | 见下「corpus」 |
-| `carried_lng/` | 表外**汉化 lng**（35 条，外部来源内化） | `build_patch.carry_carried_lng` |
+| `carried_lng/` | 表外**汉化 lng**（35 条，本项目自译） | `build_patch.carry_carried_lng` |
 | `carried_soundlevel.json` | 补入录音的**音量包络**（967 条） | `build_patch.carry_carried_soundlevel` |
-| `reused_archives/` | **完全复用**的外部汉化归档（字体 / Lua 界面） | `build_patch.bootstrap_copy` |
 | `ws2_operand_formats.json` | WS2 全部 164 个 opcode 的格式串（参考表） | （无代码消费者） |
 | `wsc_handlers.json` | 原版 WSC 的 256 项 opcode→handler（参考表） | （无代码消费者） |
 | `icon.ico` | 安装器图标 | `script/pack.sh` |
@@ -247,22 +246,15 @@ SysGraphic/
 > **Steam 侧语料不落副本**：`backup/Rio.arc` 已在仓库里，凡需要原生 WS2 的地方
 > （`verify_ws2_conventions` 的原生语料统计等）**直读归档**，不另存一份 `corpus/ws2`。
 
-### `carried_lng/` 与 `carried_soundlevel.json` —— **显式带入**的内化数据
+### `carried_lng/` 与 `carried_soundlevel.json` —— **显式带入**的表外数据
 
 基线改从 `backup/`（Steam 原版）起底后，有两样东西不在任何 Steam 原档里，必须显式带过（否则静默丢）：
 
-- **`carried_lng/`** = **本项目处理集之外**（脚本不在 `text_map.json` 的 293 个内）但**要保留**的 35 个汉化 `.lng`（+ `manifest.json` 记名与哈希）。由 `script/internalize/extract_carried_lng.py` 一次性内化。
-- **`carried_soundlevel.json`** = **967 条 `.soundlevel`** 音量包络（按秒 ASCII，与采样率无关）——产物需要 16,111 条 = `backup` 的 **15,144**（Steam 对**每条**语音都配了包络，实测 OGG 与侧车的 stem 逐一相等）**＋ 967 条（补入的原版录音）**，后者不在任何 Steam 原档里，不显式带过即静默丢失（`import_missing_voices.py` 只补 OGG）。余下 585 条补入语音没有包络 —— 本来就没有， **不凭空造**（引擎容忍缺包络）。由 `script/internalize/extract_carried_soundlevel.py` 提取。
+- **`carried_lng/`** = **本项目处理集之外**（脚本不在 `text_map.json` 的 293 个内）的 35 个汉化 `.lng` —— 即 Steam 原生那 35 个追加脚本的**本项目自译**（+ `manifest.json` 记名与哈希）。改译文即改这里。
+- **`carried_soundlevel.json`** = **967 条 `.soundlevel`** 音量包络（按秒 ASCII，与采样率无关）——产物需要 16,111 条 = `backup` 的 **15,144**（Steam 对**每条**语音都配了包络，实测 OGG 与侧车的 stem 逐一相等）**＋ 967 条（补入的原版录音）**，后者不在任何 Steam 原档里，不显式带过即静默丢失（`import_missing_voices.py` 只补 OGG）。余下 585 条补入语音没有包络 —— 本来就没有， **不凭空造**（引擎容忍缺包络）。
 
 消费方：`build_patch` 的 `carry_carried_lng()` / `carry_carried_soundlevel()`（仅 `--bootstrap` 时）。
-`final_verification` 有产物级断言「侧车条数 ≥ backup + 内化清单」。
-
-### `reused_archives/` —— **完全复用**的外部汉化归档
-
-`Fonts.arc`（汉字字体）+ `Script.arc`（Lua 系统界面）—— 外部汉化产出，**原样采用、不涉裁定**。
-由 `script/internalize/extract_reused_archives.py` 一次性内化（+ `manifest.json` 记哈希）。
-`build_patch` 的 `bootstrap_copy()` 据此带入 `asset/` ⇒ **构建期不再依赖任何仓库外目录**。
-（`SysGraphic.arc` **不整包采用外部产物**：基线取 `backup/` 的 Steam 原版，UI 汉化改为按图层替换 —— 素材见上文「SysGraphic/」。）
+`final_verification` 有产物级断言「侧车条数 ≥ backup + 本表条数」。
 
 ## 参考表（无代码消费者）
 

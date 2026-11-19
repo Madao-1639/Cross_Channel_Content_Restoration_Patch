@@ -7,7 +7,7 @@
 2. 核心功能：文本(0x41/0x42)、语音(0x23)、CG/背景(0x46/0x48)、场景切换(0x07/0x09/0xff)。
    完整支持：SE(0x00)、BGM(0x0a)、遮罩(0x54)、选项(0x02)、文件内跳转(0x06)。
 3. 字节模板全部取自 Steam 原生脚本语料（tmp/ws2_analysis/opcode_table.md）与
-   Res303 实测可玩的 CNR 块，见各 emit_* 函数，勿随手改动。
+   本项目已实机验证的可玩块，见各 emit_* 函数，勿随手改动。
 """
 import json
 import os
@@ -276,7 +276,7 @@ class ConvertOptions:
         self.default_fade = kw.get('default_fade', 1.0)  # 无 0x22 时的图像渐变秒数
         self.bgm_stop_fade = kw.get('bgm_stop_fade', 1.0)
         self.mask_fade = kw.get('mask_fade', 1.0)
-        self.rename_map = kw.get('rename_map', {})       # {'EVCC0001': 'CN_EVCC0001'}
+        self.rename_map = kw.get('rename_map', {})       # {'EVCC0001': 'EVCC9001'}
         self.exit_target_map = kw.get('exit_target_map', {})   # stem -> 出口脚本名
         self.transfer_target_map = kw.get('transfer_target_map', {})  # stem -> {原目标: 新名}
         self.steam_exit_map = kw.get('steam_exit_map', {})     # stem -> Steam 对应脚本出口名
@@ -443,7 +443,7 @@ class _Emitter:
         did = self.pool_index
         self.pool_index += 1
         # 原始 WSC id 保留供配套 lng 生成用（CCS 行号 = 原始 id + 1，见
-        # doc/localization.md "翻译来源"；CNR0005_en 还原已验证此关系）
+        # doc/localization.md "翻译来源"；还原段已验证此关系）
         self.report['dialogue_wsc_ids'].append(ins.fields['id'])
 
         if self.pending_voice is not None:
@@ -583,7 +583,7 @@ class _Emitter:
         # 关卡的 `EFMSK_11`/`EFMSK_21` 随 H 场景被 Steam 删除，Steam 的 Graphic.arc 里没有对应
         # PNG（编号与其他蒙版同源，实测 Graphic.arc 有 41 个但独缺这两个）。
         # 传递 `opts.available` 时，指向不存在资源的蒙版**不发射**并计入 report（绝不静默丢弃）
-        # —— 与 Res303 的处理一致（它的还原脚本 0 个蒙版，实机验证可玩）。
+        # —— 还原段一律 0 个蒙版，已实机验证可玩。
         if self.opts.available is not None and fname not in self.opts.available:
             self.count('mask_skipped_missing')
             self.warn('mask %s 在归档里不存在（原版独有资源，WillPlus 格式未解码），已跳过'

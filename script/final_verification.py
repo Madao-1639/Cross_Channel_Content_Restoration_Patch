@@ -29,7 +29,7 @@ STEAM_RIO = {m[0].decode('utf-16le'): m[1]
 STEAM_IDX = {k.upper(): v for k, v in STEAM_RIO.items()}
 
 # 就地插入接线（见 doc/call-chain.md）：源 WSC 的删除区间直接插进宿主脚本，
-# **不再有 CNR### 还原脚本、不再有额外跳转**。宿主保留 Steam 原档的出口，
+# **不引入任何独立还原脚本、不增加跳转**。宿主保留 Steam 原档的出口，
 # 所以这里的判据就是「宿主的出口集合 == Steam 原档的出口集合」。
 # 12 个宿主全部没有 `06` / `01` / `0f` 绝对偏移，插入不破坏指针；
 # `01` 的 `a`/`b`（文件内偏移）在重排脚本后必须重算（写盘器 / 切片重定基）。
@@ -130,8 +130,8 @@ def check_call_chain(rio):
                 fail('%s 出口与 Steam 原档不一致：%s != %s' % (name, now, was))
             else:
                 ok('%s 出口保持 Steam 原档 %s' % (name, now))
-        elif now != was and stem.startswith('CNR'):
-            fail('%s 是遗留的还原脚本，接线已改为就地插入' % name)
+        elif now != was and name.upper() not in STEAM_IDX:
+            fail('%s 是 Steam 原档没有的脚本，其出口不该被改动' % name)
 
     for entry in HOSTS_INLINE:
         h_ws2 = entry.upper()
@@ -236,7 +236,7 @@ def check_lng_pairing(rio):
         if n != expect:
             bad.append('%s lng %d 条 != 对话 %d + 选项 %d' % (name, n, n_dlg, n_opt))
     # 就地插入的 12 个宿主是本项目产出的，必须严格通过；
-    # 其余是 Res303 遗留的已知债务（已确定要重开语义复审），只报告不判失败。
+    # 其余是表外 lng 遗留的已知债务（待语义复审），只报告不判失败。
     host_bad = [b for b in bad if b.split()[0].upper() in
                 {h.upper() for h in HOSTS_INLINE}]
     debt = [b for b in bad if b not in host_bad]
@@ -245,7 +245,7 @@ def check_lng_pairing(rio):
     else:
         ok('12 个就地插入宿主的 lng 条数 == `14` 条数 + `0f` 条目数')
     if debt:
-        print('[债务] Res303 遗留的 lng 条数不符 %d 处（待语义复审）：%s'
+        print('[债务] 表外 lng 条数不符 %d 处（待语义复审）：%s'
               % (len(debt), debt[:8]))
 
 
@@ -382,17 +382,11 @@ def check_ccb2017_branch(rio):
 
 def check_resource_classification(graphic, chip2):
     print('\n== Resource classification ==')
-    bad_chip2 = [n for n in chip2 if not n.upper().startswith('EVCC') and not n.upper().startswith('CN_EVCC')]
+    bad_chip2 = [n for n in chip2 if not n.upper().startswith('EVCC')]
     if bad_chip2:
         fail('Chip2.arc has non-EVCC members: %s' % bad_chip2[:10])
     else:
-        ok('Chip2.arc contains only EVCC*/CN_EVCC* (%d members)' % len(chip2))
-
-    bad_graphic = [n for n in graphic if n.upper().startswith('CN_EVCC')]
-    if bad_graphic:
-        fail('Graphic.arc contains CN_EVCC* members (should be in Chip2.arc): %s' % bad_graphic)
-    else:
-        ok('Graphic.arc contains no CN_EVCC* members')
+        ok('Chip2.arc contains only EVCC* (%d members)' % len(chip2))
 
     # 引擎只加载 EVCC 前缀的 CG（doc/lessons-learned.md 「Chip2 事件 CG 的前缀白名单」）；CN_ 前缀一律不得残留
     bad_prefix = [n for n in list(graphic) + list(chip2) if n.upper().startswith('CN_')]
@@ -666,6 +660,61 @@ def check_lang_dll_strings():
         fail(m)
     if not bad:
         ok('单一块 2052 串表 / %d 条与表一致 / LoadStringW 实测可读' % len(zh))
+
+
+def check_lua_emitter():
+    """**Lua 字节码写回闸**（`tool/luac53.dump` 的往返正确性）。
+
+    `build_script_arc.py` 靠 `load()` → 改常量 → `dump()` 自产语言包 `Script.arc`。
+    emitter 一旦偏一个字节，产物就是坏字节码 —— 而那**只在实机启动时才炸**，
+    所有「成员集合 / 差异成员」类检查都是绿的。所以这里逐个断言：
+
+      * Steam 原版 `backup/Script.arc` 的**每个** Lua 成员 `dump(load(x)) == x`（逐字节）；
+      * 语言包 `Script.arc` 的每个成员都能被 `load()` 解析完整（无 trailing bytes）。
+
+    判据取「与原文逐字节相同」而不是「能解析」——**能解析不证明重序列化正确**
+    （见 doc/lessons-learned.md「只读解析的隐性错误假设」）。
+    """
+    print('')
+    print('== Lua 字节码写回（dump 往返）==')
+    from tool import luac53
+    backup = Path('backup') / 'Script.arc'
+    if not backup.exists():
+        print('[skip] 无 backup/Script.arc（Steam 原版），跳过')
+        return
+    n = 0
+    for nb, data in layers.read_layer(backup):
+        if not data.startswith(b'Lua'):
+            continue
+        name = nb.decode('utf-16-le')
+        try:
+            again = luac53.dump(luac53.load(data))
+        except Exception as e:                       # noqa: BLE001
+            fail('原版 %s 无法 load→dump：%s' % (name, e))
+            continue
+        if again != data:
+            fail('原版 %s 的 dump 往返不一致（%d -> %d 字节）' % (name, len(data), len(again)))
+        n += 1
+    if n == 0:
+        fail('原版 Script.arc 里没有 Lua 成员（计数为 0 即失败）')
+
+    pack = layers.pack_arc('Script.arc')
+    if pack.exists():
+        m = 0
+        for nb, data in layers.read_layer(pack):
+            if not data.startswith(b'Lua'):
+                continue
+            try:
+                luac53.load(data)
+            except Exception as e:                   # noqa: BLE001
+                fail('语言包 Script.arc 的 %s 不是完整字节码：%s'
+                     % (nb.decode('utf-16-le'), e))
+            m += 1
+        if m == 0:
+            fail('语言包 Script.arc 里没有 Lua 成员（计数为 0 即失败）')
+        ok('原版 %d 个 Lua 成员 dump 往返逐字节一致；语言包 %d 个成员可完整解析' % (n, m))
+    else:
+        ok('原版 %d 个 Lua 成员 dump 往返逐字节一致（无语言包 Script.arc）' % n)
 
 
 def check_font_names():
@@ -1111,7 +1160,7 @@ def check_voice_format_and_sidecar():
 
       ① `asset/Voice.arc` 里**所有 OGG 采样率必须 = 48000**（Steam 语料形态；44100 分支是隐患）；
       ② `.soundlevel` 侧车条数**不得低于** `backup` 的侧车数 + `resource/carried_soundlevel.json`
-         的内化条数（防"基线从 backup 起底"时静默丢侧车）。
+         的表外条数（防"基线从 backup 起底"时静默丢侧车）。
     """
     def load(p):
         return {n.decode('utf-16-le'): d for n, d in arcbuild.read_raw(p)}
@@ -1134,9 +1183,9 @@ def check_voice_format_and_sidecar():
         floor += len([k for k in json.loads(carried.read_text(encoding='utf-8')) if not k.startswith('_')])
     n = sum(1 for k in a if k.lower().endswith('.soundlevel'))
     if n < floor:
-        fail('`.soundlevel` 侧车 %d 条 < 下限 %d（backup 侧车 + 内化清单）—— 侧车被丢了' % (n, floor))
+        fail('`.soundlevel` 侧车 %d 条 < 下限 %d（backup 侧车 + 表外清单）—— 侧车被丢了' % (n, floor))
     else:
-        ok('`.soundlevel` 侧车 %d 条 ≥ 下限 %d（backup + 内化清单）' % (n, floor))
+        ok('`.soundlevel` 侧车 %d 条 ≥ 下限 %d（backup + 表外清单）' % (n, floor))
 
 
 def main():
@@ -1177,6 +1226,7 @@ def main():
     check_layer_split()
     check_lang_dll_strings()
     check_font_names()
+    check_lua_emitter()
     check_idempotency()
 
     print('\n== Summary ==')

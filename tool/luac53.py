@@ -190,3 +190,83 @@ def load(blob):
         raise LuaFormatError('%d trailing bytes after top-level function'
                              % (len(blob) - r.pos))
     return top
+
+
+# ---------------------------------------------------------------------------
+# 写回（undump 的逆）：本引擎的 dump 格式已由 `load()` 逐字段确定，
+# 因此按同一顺序重新序列化即可 —— **不改指令、只换常量**是本模块唯一的用途
+# （`script/build_script_arc.py` 用它把字体槽/语言开关改掉，见 doc/localization.md）。
+# ---------------------------------------------------------------------------
+
+def _dump_string(value):
+    """`load_string` 的逆：1 字节长度 = `len + 1`（长度**含**结尾 NUL 计数，但
+    **不写出** NUL —— lundump 的 `DumpString` 就是 `DumpByte(size+1); DumpVector(str, size)`），
+    None → 0x00。"""
+    if value is None:
+        return b'\x00'
+    if not isinstance(value, (bytes, bytearray)):
+        raise LuaFormatError('string constant must be bytes, got %r' % type(value))
+    if len(value) + 1 >= 0xFF:
+        raise LuaFormatError('string too long for the 1-byte length field: %d' % len(value))
+    return bytes((len(value) + 1,)) + bytes(value)
+
+
+def _dump_proto(f, sizes):
+    out = bytearray()
+    out += _dump_string(f.source)
+    out += f.line_defined.to_bytes(sizes['int'], 'little')
+    out += f.last_line_defined.to_bytes(sizes['int'], 'little')
+    out += bytes((f.num_params, f.is_vararg, f.max_stack_size))
+    out += len(f.code).to_bytes(sizes['int'], 'little')
+    for w in f.code:
+        out += w.to_bytes(4, 'little')
+    out += len(f.constants).to_bytes(sizes['int'], 'little')
+    for tag, value in f.constants:
+        out.append(tag)
+        if tag == T_NIL:
+            pass
+        elif tag == T_BOOLEAN:
+            out.append(1 if value else 0)
+        elif tag == T_NUMFLT:
+            out += struct.pack('<d', value)
+        elif tag == T_NUMINT:
+            out += int(value).to_bytes(sizes['lua_Integer'], 'little', signed=True)
+        elif tag in STR_TAGS:
+            out += _dump_string(value)
+        else:
+            raise LuaFormatError('bad constant tag %d' % tag)
+    out += len(f.upvalues).to_bytes(sizes['int'], 'little')
+    for instack, idx in f.upvalues:
+        out += bytes((instack, idx))
+    out += len(f.protos).to_bytes(sizes['int'], 'little')
+    for p in f.protos:
+        out += _dump_proto(p, sizes)
+    out += len(f.lineinfo).to_bytes(sizes['int'], 'little')
+    out += bytes(f.lineinfo)
+    out += len(f.locvars).to_bytes(sizes['int'], 'little')
+    for name, startpc, endpc in f.locvars:
+        out += _dump_string(name)
+        out += startpc.to_bytes(sizes['int'], 'little')
+        out += endpc.to_bytes(sizes['int'], 'little')
+    out += len(f.upvalue_names).to_bytes(sizes['int'], 'little')
+    for name in f.upvalue_names:
+        out += _dump_string(name)
+    return bytes(out)
+
+
+def dump(top, sizes=None):
+    """把 `load()` 的产物写回字节码。`sizes` 缺省用本引擎实测值 (1, 4, 4, 4, 8)。"""
+    # 本引擎实测值（`backup/Script.arc` 全部成员头一致）：int/size_t/Instruction = 4，
+    # **lua_Integer = 8**（写成 4 会让 LUAC_INT 字段少 4 字节，整段错位）
+    sizes = sizes or {'int': 4, 'size_t': 4, 'Instruction': 4,
+                      'lua_Integer': 8, 'lua_Number': 8}
+    out = bytearray(SIGNATURE)
+    out += bytes((0x53, 0))
+    out += b'\x19\x93\r\n\x1a\n'
+    out += bytes((sizes['int'], sizes['size_t'], sizes['Instruction'],
+                  sizes['lua_Integer'], sizes['lua_Number']))
+    out += (0x5678).to_bytes(sizes['lua_Integer'], 'little', signed=True)
+    out += struct.pack('<d', 370.5)
+    out.append(1)                               # sizeupvalues
+    out += _dump_proto(top, sizes)
+    return bytes(out)

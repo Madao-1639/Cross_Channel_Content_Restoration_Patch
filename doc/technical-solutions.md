@@ -16,7 +16,7 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 | `Chip2.arc` | 补入 37 个 `EVCC9XXX.PNG`（还原 CG） |
 | `Voice.arc` | 补入 186 条原版语音 |
 | `Fonts.arc` | 自制：思源黑体 TTF 子集经 `tool/ptf.py` 纯字面量 LZSS 封装为 M/B 两 PTF（`script/build_fonts_arc.py`） |
-| `Script.arc` | 整体采用内化归档的 Lua 系统界面（`resource/reused_archives/`；Steam 原版无此归档） |
+| `Script.arc` | **自产**（`script/build_script_arc.py`）：拿 Steam 原版改字体槽 + 语言开关常量 |
 | `Graphic.arc` | 3 张整屏图换汉化版（`resource/graphic_overrides/`，同名替换） |
 | `SysGraphic.arc` | UI 汉化：`resource/SysGraphic/` 的图层换进同名 pna（见「系统界面」） |
 | `Chip1.arc` / `SysVoice.arc` | **不改动，不打包**（安装器保留玩家原文件） |
@@ -59,7 +59,7 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 ## 3. 文本汉化：lng 位置对应
 
 - **机制**：lng 里没有 id，引擎按播放序把**第 N 条文本**替换为 lng 第 N 条目。严格等式 `lng 条数 == 14 条数 + Σ(0f 的 count)`（选项条目各占一槽）。
-- **来源**：主线复用汉化组官方译文（CCS，`CCS 序号 = 原版 WSC 对话 id + 1`），Steam 新增的 7 条角色线与后日谈以机翻为底稿，已随全量语义复审逐行修订。
+- **来源**：主线复用汉化组官方译文（CCS，`CCS 序号 = 原版 WSC 对话 id + 1`）；Steam 新增的 7 条角色线与后日谈上游无译文，以 GPT-5.6-sol 机翻为底稿，已随全量语义复审逐行修订。
 - **宿主 lng 重建**：就地插入后宿主的位置全部变了，lng 必须整体重建 —— **由 `script/apply_text_map.py` 按 `resource/text_map.json` 一次产出**。尾部控制符照抄源文本（`%K` / `%K%P` / `%N` / `%P`，不是一律 `%K%P`）。
 - **池位错位修复**：由 `script/apply_text_map.py` 按表**一次产出**（表里同一行的拆分记为 `span: [from, to)`——同一格取该行中文的字符片段，**不新增槽位**）。池位错位一律由表的 `span` 表达（不新增槽位）。
 - **人名不走 lng**：由 `Rio.arc` 的 `NameTable.txt`（UTF-16LE）替换。
@@ -76,7 +76,7 @@ Steam 原档 (backup/)  ──┬─ 未改动  → 安装器保留玩家原文�
 
 ## 5. 系统界面
 
-- **采用内化归档 `resource/reused_archives/` 的 `Script.arc`**（外部汉化产出，**原样采用**；14 个成员：13 个 Lua 字节码 + `LegacyGame.inc`），提供图形化菜单/设置/画廊。Steam 原版不含此归档。
+- **自产 `Script.arc`**（`script/build_script_arc.py`）：Steam 原版**本身就有**这个归档（`backup/Script.arc`，14 个成员：13 个 Lua 5.3 字节码 + `LegacyGame.inc`），但它是日文配置。本步用 `tool/luac53.py` 的 `load()`/`dump()` **只替换常量表里的值**（字体名、`CharSet`、语言包开关的布尔），指令/行号/调试信息原样保留 ⇒ 产物与 Steam 原版的差异**精确等于那几个常量**（`--diff` 可逐项核对）。语言包只发差异成员（2 个）。
 - **`SysGraphic.arc` UI 图层汉化**：系统界面文案烙在 PNA 图层里，按「同名 pna、同名图层」替换 —— 素材在 `resource/SysGraphic/<pna 名>/L<图层下标>.png` （由项目负责人制作导入），`script/apply_sysgraphic.py` 把它们换进 `asset/SysGraphic.arc` （**写盘的最后一步**）。中文常比英文宽，**尺寸可不同**：记录表 w/h 与数据块大小随新图更新，x/y 与画布不动。写回规则见 [pna-resources.md](pna-resources.md)「PNA 图层替换」，方案详情见 [localization.md](localization.md)「SysGraphic.arc」。
 
 ---
@@ -100,10 +100,10 @@ AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的�
 
 | 带入项 | 来源 |
 |---|---|
-| `Script.arc` | 内化中文 UI 的 `resource/reused_archives/`，**只取与 Steam 原版不同的 2 个成员**（`ui_language.lua` / `LegacyGame_utf8.lua`） |
-| `Fonts.arc` | **自制**：`script/build_fonts_arc.py` 从 `resource/fonts/sourcehan_subset/` 打包（思源黑体 PTF ×2）—— 不再采用内化归档 |
-| 35 个表外汉化 lng | 内化数据 `resource/carried_lng/` |
-| 967 条 `.soundlevel` 侧车（补入录音的包络） | 内化数据 `resource/carried_soundlevel.json`（`backup` 只带自己那 15,144 条的包络；这 967 条不在任何 Steam 原档里，不显式带过即静默丢失） |
+| `Script.arc` | 自产（`build_script_arc.py` 改 Steam 原版的字体/开关常量），**只发与 Steam 原版不同的 2 个成员**（`ui_language.lua` / `LegacyGame_utf8.lua`） |
+| `Fonts.arc` | **自制**：`script/build_fonts_arc.py` 从 `resource/fonts/sourcehan_subset/` 打包（思源黑体 PTF ×2） |
+| 35 个表外汉化 lng | `resource/carried_lng/`（本项目自译） |
+| 967 条 `.soundlevel` 侧车（补入录音的包络） | `resource/carried_soundlevel.json`（`backup` 只带自己那 15,144 条的包络；这 967 条不在任何 Steam 原档里，不显式带过即静默丢失） |
 | 补入的原版录音 | 原版游戏的老式归档 `Voice.arc`（并统一重采样 48000） |
 | 37 张还原 CG | `build_restored_cgs.py`：原版 `Chip.arc` 的 `EVCC####.PNG` 放大到 1280×960（只需目标一致，不必字节级） |
 
@@ -144,7 +144,7 @@ AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的�
 
 **入口**：`build_patch.py`（流水线总控；`--bootstrap` 从 `backup/` 起底）、`generate_payload.py`（增量包）、`pack.sh`（PyInstaller 打包安装器）。**流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：写盘之前：`verify_text_map_structure` · `check_reset_state`；写盘：`apply_graphic_overrides` · `splice_restoration` · `splice_ccb2017_branch` · `build_original_stage` · `apply_text_map` · `import_missing_voices` · `audit_choices` · `build_script_arc` · `apply_caption_utf8` · `build_lang_dll` · `build_nametable` · `apply_sysgraphic`；写盘之后：`verify_text_map` · `audit/audit_row_alignment` · `final_verification`。**引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。**独立核对工具**（不进流水线）：`renumber_evcc9xxx.py`（`EVCC9XXX` 编号对照，`--check`）。**目录分组**（`script/` 根只放入口与流水线步骤）：
 
-- `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：`extract_carried_lng` · `extract_carried_soundlevel` · `extract_reused_archives`
+- `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：`extract_carried_lng` · `extract_carried_soundlevel`
 - `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：`build_original_audio` · `build_voice_plan`
 - `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `audit_translation_coverage` · `sysgraphic_contact_sheet` · `verify_ws2_conventions` · `convert_wsc`
 
