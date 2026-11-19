@@ -8,7 +8,7 @@ test_save_files/*.png
 
 asset/
 payload/*
-!payload/metadata.json
+!payload/METADATA.json
 releases
 build/
 *.spec
@@ -21,3 +21,9 @@ build/
 resource/AdvHDLang.orig.dll
 # 由 script/build_lang_dll.py 生成（构建产物）
 tool/hook/whitelist.h
+
+# 原版 WSC 语料（构建期派生：script/gen/extract_wsc_corpus.py 从用户自备的原版 Rio.arc 解出）
+# 著作权属 FlyingShine / MoeNovel，不随补丁分发
+resource/corpus/wsc/
+# 思源黑体全量源 TTF（~40 MB，不入库；子集由 script/subset_sourcehan.py 生成）
+resource/fonts/sourcehan_full/

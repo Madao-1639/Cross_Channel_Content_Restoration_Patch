@@ -2,7 +2,7 @@
 
 为什么不用「lng 和 CCS 对位」
 --------------------------
-Res303 的 lng 本来就是从汉化组 CCS 抄来的（等数量时按序 zip）。把 lng 和 CCS 对位只能
+主线 lng 本来就是从汉化组 CCS 抄来的（等数量时按序 zip）。把 lng 和 CCS 对位只能
 还原出**当年用的下标**，测不出对错 —— 是循环论证。
 
 可用的独立信号
@@ -20,12 +20,10 @@ ws2 每句对话前有 `15 %LC<角色名>`（英文名），CCS 每行有 `[角�
 用法（项目根目录）：
     python script/audit/audit_lng_semantics.py                 # 扫 asset/Rio.arc
     python script/audit/audit_lng_semantics.py --rio backup.arc
-    python script/audit/audit_lng_semantics.py --calibrate     # 用 Res303 已确认的 6 条做正对照
 """
 import argparse
 import difflib
 import io
-import json
 import re
 import sys
 from collections import Counter
@@ -42,8 +40,6 @@ if hasattr(sys.stdout, 'buffer'):
 
 CCS_DIR = ROOT / 'resource' / 'corpus' / 'ccs'
 RIO = ROOT / 'asset' / 'Rio.arc'
-RES303_REPORT = (ROOT / '..' / 'CROSS_CHANNEL_Steam_CN_Restored_v3.0.3'
-                 / 'docs' / 'report.json')
 _QUOTES = '“”「」『』\'"'
 _SPK = re.compile(r'^\[([^\]]+)\]\s*')
 CTRL = re.compile(r'^(?:%[A-Za-z])+$')
@@ -124,7 +120,6 @@ def derive_speaker_map(members, ccs_cache):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--rio', default=str(RIO))
-    ap.add_argument('--calibrate', action='store_true')
     ap.add_argument('--top', type=int, default=25)
     args = ap.parse_args()
 
@@ -185,7 +180,7 @@ def main():
             if at_true:
                 aligned += 1
             elif at_self:
-                # lng 抄的是「同下标」而真实对应在别处 ⇒ Res303 的按序 zip 抄错了
+                # lng 抄的是「同下标」而真实对应在别处 ⇒ 按序 zip 抄错了
                 zip_only.append((k, spk, src_sym[k] if k < len(src_sym) else '?',
                                  src_sym[j] if j < len(src_sym) else '?', j, ccs[j][1][:14]))
             else:
@@ -195,22 +190,6 @@ def main():
             bad.append(rec)
         else:
             clean += 1
-
-    if args.calibrate:
-        d = json.loads(RES303_REPORT.read_text(encoding='utf-8'))
-        ex = d['translation_alignment_audit']['confirmed_live_examples']
-        print('Res303 已确认的错配 %d 条（脚本:记录下标）' % len(ex))
-        for e in ex:
-            st, idx = e['id'].split(':')
-            idx = int(idx)
-            ccs = ccs_rows(st.upper() + '_EN') or ccs_rows(st.upper())
-            key = st.upper() + '_EN.WS2'
-            rows = ws2_rows(members[key]) if key in members else []
-            spk = rows[idx][0] if idx < len(rows) else None
-            jp = ccs[idx][0] if ccs and idx < len(ccs) else None
-            print('  %-16s ws2说话人=%-12s 源同行说话人=%-10s %s'
-                  % (e['id'], spk, jp,
-                     '（本条已修复）' if jp2en.get(jp) == spk else '**仍不一致**'))
 
     print()
     print('扫描 %s：%d 个 ws2' % (args.rio, len(members)))

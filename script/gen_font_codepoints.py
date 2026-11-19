@@ -12,11 +12,10 @@
   3. **`resource/carried_lng/*.lng`**（35 个接手 lng，`build_patch.py carry_carried_lng()` 白名单直接带入 Rio.arc）
   4. **`resource/speaker_map.json`**（`build_nametable.py` 的唯一来源：`zh`/`ja`/`en`/`channel`/`pna_prefix`/
      `_note` 全字列——名字框实际渲染文本 + voice/PNA 路径名）
-  5. **`resource/other_texts/Script_lua_strings.txt`**（Script.arc 全部 14 个 Lua 常量，系统 UI）
-  7. **`resource/typo_overrides.json`**（**替换后的目标字**也在字体里会显示，纳入码点）
+  5. **`asset/zh-CN/Script.arc` 的 Lua 字符串常量**（系统 UI；由 `build_script_arc.py` 现算，
+     **不落副本** —— 逐码点实测与业已删除的离线 dump 完全一致）
 
-**{第 2 源和第 5 源之间的 choice}**： 日文列（`>0`）和「非渲染的 Rio ws2 路径池」
-**不 scan**—— 日文列不进游戏、ws2 paths 不是显示层。
+日文列（`>0`）和「非渲染的 Rio ws2 路径池」**不 scan**—— 日文列不进游戏、ws2 paths 不是显示层。
 
 **结构性兜底**（**不依赖以上**任何扫描）：
   * GB2312 全表 6,763 汉字 + 常用符号
@@ -44,7 +43,6 @@ _spec.loader.exec_module(m53)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CCS_DIR = (
     os.path.join(ROOT, 'resource', 'corpus', 'ccs'))
-TEXT_DIR = os.path.join(ROOT, 'resource', 'other_texts')
 SUBSET_DIR = os.path.join(ROOT, 'resource', 'fonts', 'sourcehan_subset')
 
 codepoints = set()
@@ -127,16 +125,33 @@ for _fn in _DERIVED_FILES:
             if o:
                 codepoints.update(ord(ch) for ch in o if not ch.isspace())
     walk_all(obj)
-print('after speaker_map + typo_overrides:', len(codepoints))
+print('after speaker_map:', len(codepoints))
 
-# 5) other_texts 离线 dump
-for _fn in ('Script_lua_strings.txt',):
-    _p = os.path.join(TEXT_DIR, _fn)
-    if not os.path.exists(_p):
-        continue
-    with open(_p, encoding='utf-8') as fh:
-        codepoints.update(ord(ch) for ch in fh.read() if not ch.isspace())
-print('after dumps:', len(codepoints))
+# 5) 语言包 Script.arc 的 Lua 字符串常量（系统 UI 文本）
+#    现算而不落副本：该集合完全由 backup/Script.arc + 本项目的常量替换决定。
+try:
+    from tool import arcbuild as _arcbuild, luac53 as _luac53
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location('_bsa', os.path.join(ROOT, 'script', 'build_script_arc.py'))
+    _bsa = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_bsa)
+    for _nb, _data in _arcbuild.read_raw(_bsa.ORIG):
+        if not _data.startswith(b'Lua'):
+            continue
+        _top = _luac53.load(_data)
+        _name = _nb.decode('utf-16-le')
+        if _name == 'ui_language.lua':
+            _bsa.flip_lang_switch(_top)
+        elif _name == 'LegacyGame_utf8.lua':
+            _bsa.sub_font_constants(_top)
+        for _p in _top.walk():
+            for _s in _p.strings:
+                if _s:
+                    codepoints.update(ord(_c) for _c in _s.decode('utf-8', 'ignore')
+                                      if not _c.isspace())
+    print('after Script.arc:', len(codepoints))
+except FileNotFoundError:
+    print('after Script.arc: 跳过（backup/Script.arc 缺失）')
 
 # 6) GB2312
 for hi in range(0xA1, 0xF8):

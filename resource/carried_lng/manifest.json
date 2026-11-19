@@ -1,5 +1,5 @@
 {
- "_说明": "本项目处理集之外、需随产物发布的汉化 lng（取自 Res303 Rio.arc）。基线构建（build_patch --bootstrap）时由 build_patch 显式带回 asset/Rio.arc。",
+ "_说明": "本项目处理集之外的汉化 lng（Steam 原生 35 个追加脚本，本项目自译）。基线构建（build_patch --bootstrap）时由 build_patch 显式带回 asset/Rio.arc。",
  "members": {
   "CC0TOU_en.lng": {
    "bytes": 24430,

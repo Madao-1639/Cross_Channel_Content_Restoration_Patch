@@ -12,7 +12,7 @@
      （回退会让内容在时间上倒流）。同一脚本内的**每一处**回退都报，不只报第一处。
   4. **复用可定位**：带 `span` 的条目，其 `[from,to)` 必须落在那行中文里且非空
   5. **引用行有中文列**：`op=ccs`/`split`/`insert` 引用的每个 CCS 行，中文列都必须非空
-     （内化副本被截断时，产物会在该格显示**一行空白**，其余闸全照过）
+     （语料副本被截断时，产物会在该格显示**一行空白**，其余闸全照过）
 
 用法：
     python script/verify_text_map_structure.py
@@ -128,7 +128,7 @@ def main():
             a, b = it['span']
             if not (0 <= a < b <= len(full)):
                 bad.append((s, 'span %s 越界（该行 %d 字）' % (it['span'], len(full))))
-        # ⑤ **引用行必须有中文列**：内化副本被截断（`>1` 光秃行）时，`op=ccs` 取到空串、
+        # ⑤ **引用行必须有中文列**：语料副本被截断（`>1` 光秃行）时，`op=ccs` 取到空串、
         #    产物只写出一条 `%K%P`（屏幕上**一行空白**），而格数/条数/覆盖/span 全照过
         #    （实测 28 行，只有 3 行因带 span 才被发现）。修法与判据见
         #    script/internalize/repair_corpus_truncated.py。
@@ -145,7 +145,7 @@ def main():
                 rows = list(range(it['src_rows'][0], it['src_rows'][1] + 1))
             for r in rows:
                 if not tab.get(r):
-                    bad.append((s, '行 %d 在 %s.CCS 里没有中文列（内化副本被截断？）' % (r, m['ccs'])))
+                    bad.append((s, '行 %d 在 %s.CCS 里没有中文列（语料副本被截断？）' % (r, m['ccs'])))
 
     tot = sum(m['n_final'] for m in tmap.values())
     ins = sum(x['n'] for m in tmap.values() for x in m['items'] if x['op'] == 'insert')

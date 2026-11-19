@@ -6,7 +6,7 @@
 **顺序与阶段由 `STEPS` 一张表给出**（下面这份是同一件事的散文版，两者不要各改一处）：
 
     ---- 引导（仅 `--bootstrap`）----
-    bootstrap_from_backup     以 backup/ 起底 + 显式带入：Fonts/Script（内化：resource/reused_archives/）、
+    bootstrap_from_backup     以 backup/ 起底 + 显式带入：
                               35 个表外 lng、967 条 .soundlevel 侧车、补入的原版语音、37 张原版 CG
                               （build_restored_cgs → build_cg_map → renumber_evcc9xxx 核对）
     ---- 写盘之前 ----
@@ -41,7 +41,8 @@ ffmpeg/libvorbis 版本）太多，一张"全输入"清单只会给出假保证�
     python script/build_patch.py --check         # 只跑四道闸，不写任何东西
 
 ⚠️ **`--bootstrap` 会按 `backup/`（Steam 原版）覆盖 `asset/` 的 5 份归档**，再显式带入
-Fonts/Script、35 个表外 lng、37 张原版 CG；之后必须再跑后续步骤才能得到产物。
+Script（Lua 界面）、35 个表外 lng、37 张原版 CG；字体由管线自建（思源黑体）。
+之后必须再跑后续步骤才能得到产物。
 """
 import argparse
 import atexit
@@ -59,7 +60,6 @@ from tool import arcbuild, layers  # noqa: E402
 
 ASSET = ROOT / 'asset'
 BACKUP = ROOT / 'backup'
-REUSED = ROOT / 'resource' / 'reused_archives'   # 完全复用的上游归档（汉字字体 / Lua 界面）
 LOCK = ROOT / '.build.lock'
 
 
@@ -83,8 +83,7 @@ def bootstrap_backup(fname):
 def carry_carried_lng():
     """把 `resource/carried_lng/`（**本项目处理集之外、但要保留的汉化 lng**）显式带回 `asset/Rio.arc`。
 
-    内化数据由 `script/internalize/extract_carried_lng.py` 从 Res303 一次提取；基线改从 `backup` 起底后，
-    这些 lng 不再由 Res303 直供。幂等：内容相同则跳过。"""
+    数据在 `resource/carried_lng/`（+ `manifest.json` 记名与哈希）。幂等：内容相同则跳过。"""
     man = json.loads((ROOT / 'resource' / 'carried_lng' / 'manifest.json').read_text(encoding='utf-8'))
     want = man['members']
     members = list(layers.read_layer(layers.pack_arc('Rio.arc')))
@@ -109,7 +108,8 @@ def carry_carried_soundlevel():
     """把 `resource/carried_soundlevel.json` 的音量包络显式带回 `asset/Voice.arc`。
 
     ⚠️ **`backup/Voice.arc` 里一条 `.soundlevel` 都没有**（实测 15,144 成员全无侧车），而产物
-    需要 16,111 条 —— 多出的 **967** 条只在 Res303 的 Voice.arc 里。起底时不显式带过就会**静默丢失**。
+    需要 16,111 条 —— 多出的 **967** 条 Steam 原档里没有（随补入的原版录音一起存在
+    `resource/carried_soundlevel.json`）。起底时不显式带过就会**静默丢失**。
     `.soundlevel` 是按秒的 ASCII 包络（30 样本/秒，与采样率无关）。幂等：内容相同则跳过。"""
     d = json.loads((ROOT / 'resource' / 'carried_soundlevel.json').read_text(encoding='utf-8'))
     want = {k: v for k, v in d.items() if not k.startswith('_')}
@@ -136,12 +136,12 @@ def carry_carried_soundlevel():
 def bootstrap_from_backup():
     """以 `backup/`（Steam 原版）为基线起底，**显式带入**少数几项：
 
-      * `Script.arc` —— 复用内化 Lua 界面（**族名 patch 已固化在内化副本**，无需再跑补丁）；
-      * `Fonts.arc` —— **不再复用**：全链在管线内自建：`gen_font_codepoints.py`（码点清单，
+      * `Script.arc` —— **自己构建**（`build_script_arc.py`：拿 Steam 原版改字体槽/语言开关常量）；
+      * `Fonts.arc` —— 全链在管线内自建：`gen_font_codepoints.py`（码点清单，
         声明性来源＝text_map/上游 CCS/carried_lng/离线 dump，不依赖任何产物）→
         `subset_sourcehan.py`（fontTools 子集化思源黑体）→
         `build_fonts_arc.py`（纯字面量 LZSS PTF），
-      * **35 个处理集之外的汉化 lng** —— 内化在 `resource/carried_lng/`；
+      * **35 个处理集之外的汉化 lng**（本项目自译）—— 在 `resource/carried_lng/`；
       * **37 张还原 CG** —— 由 `build_restored_cgs.py` 从**原版** `Chip.arc` 放大（LANCZOS 1280×960）改名补入。
 
     其余一律来自 `backup`，且后续步骤（`splice_restoration` → `apply_text_map`）会重生成 293 个在表脚本。
@@ -153,13 +153,11 @@ def bootstrap_from_backup():
     run('build_script_arc.py', '--write')          # 中文 Lua 界面 -> 语言包（只发与 Steam 原版不同的成员）
     run('gen_font_codepoints.py')            # 码点清单（声明语料：text_map/上游 CCS/carried_lng/dump，不依赖任何产物）
     run('subset_sourcehan.py')               # 字体子集化（思源黑体 TTF，**全量源缺失时幂等跳过**）
-    run('build_fonts_arc.py')                # 自制 Fonts.arc（思源黑体，不再依赖内化归档）
-    # Script.arc： **族名已固化在内化副本**，直接复制 asset 即定稿
+    run('build_fonts_arc.py')                # 自制 Fonts.arc（思源黑体子集）
     carry_carried_lng()
     carry_carried_soundlevel()
     # ⚠️ **语音必须在 `splice_restoration` 之前补全**：splice 的改名核对要求被引用的语音已在档，
-    #    而 backup 里没有它们。流水线里本步排在 splice 之后（当时靠 Res303 的 Voice 已含），
-    #    换 backup 起底后必须提前到这里。（流水线里那一步此后为 no-op。）
+    #    而 backup 里没有它们。故起底时本步必须排在 splice 之前。
     run('import_missing_voices.py', '--write')
     run('build_restored_cgs.py', '--write')        # 37 张原版 CG -> asset/Chip2.arc
     copy_lang_marker()                             # 语言包识别标记 AdvHDLang.dll
@@ -182,25 +180,6 @@ def copy_lang_marker():
             print('[bootstrap] zh-CN/AdvHDLang.dll 就位（%d B）' % len(data))
             return
     raise SystemExit('[中止] 找不到 AdvHDLang.dll（语言包必需）——放一份到 backup/ 即可')
-
-
-def bootstrap_copy(fname, expect_count):
-    """把一份**完全复用**的归档（`resource/reused_archives/`）铺进 `asset/`。
-
-    `Script.arc` 的 Lua 系统界面**原样采用**、不涉裁定；字体的族名 patch 已经
-    **固化在该内化副本**（与 `asset/Script.arc` 定稿一致），因此 **无需再跑** 
-流水线复次仅做「复制」，产物与定稿逐字节一致。
-    ⚠️ 落盘走 `arcbuild.write_arc`（大归档上 `shutil.copy2` 会撞 `OSError 22`）。"""
-    src_path = REUSED / fname
-    target = layers.pack_arc(fname)   # 完全复用的归档（Script.arc）都是**语言相关**的 -> 语言包
-    if not src_path.exists():
-        raise SystemExit('[中止] 缺少 %s（先跑 script/internalize/extract_reused_archives.py）' % src_path)
-    if target.exists() and arcbuild.same_file(src_path, target):
-        print('[bootstrap] %s 与内化副本逐字节相同，跳过' % fname)
-    else:
-        arcbuild.write_arc(arcbuild.read_raw(src_path), target)
-    arcbuild.verify(target, expect_count=expect_count)
-    print('[bootstrap] %s copied from reused_archives' % fname)
 
 
 def _pid_alive(pid):
@@ -298,6 +277,10 @@ PHASE_PRE, PHASE_WRITE, PHASE_POST = '写盘之前', '写盘', '写盘之后'
 
 STEPS = [
     # 阶段,          目标,                         参数,         when, 为什么排在这儿
+    (PHASE_PRE, 'gen/extract_wsc_corpus.py', ('--write',), A),
+    #    ↑ **原版 WSC 语料的唯一来源**：从用户自备的原版 `Rio.arc` 解出 324 个 `.WSC`
+    #      （著作权属 FlyingShine，**不随补丁分发、不入库**）。一切读语料的步骤都在它之后；
+    #      语料已存在且与原版一致时本步是 no-op。原版归档缺失即中止（见 doc/localization.md）。
     (PHASE_PRE, 'verify_text_map_structure.py', (), A),
     #    ↑ **只看表**的闸必须先跑：表自己不自洽就不该拿去写盘（且它不读产物）
     (PHASE_PRE, 'check_reset_state.py', (), NB),
@@ -321,7 +304,7 @@ STEPS = [
     (PHASE_WRITE, 'audit_choices.py', ('--write',), A),
     #    ↑ **必须在产出 lng 之后**：它核的是 `.LNG` 的池槽位/条数/内容
     (PHASE_WRITE, 'build_script_arc.py', ('--write',), A),
-    #    ↑ 语言包 `Script.arc` 的**唯一所有者**：内化中文 UI，只发与 Steam 原版不同的成员
+    #    ↑ 语言包 `Script.arc` 的**唯一所有者**：中文 UI，只发与 Steam 原版不同的成员
     #      （官方语言包先例：IMHHW 的 zh-CN/Script.arc 只有 1 个成员）。幂等：内容相同则不重写
     (PHASE_WRITE, 'apply_caption_utf8.py', ('--write',), A),
     #    ↑ 把 `resource/captions_zh.json` 的中文字幕写进**语言包 ws2 副本**（0x8f/0x90 走不了 lng），

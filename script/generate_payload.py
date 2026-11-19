@@ -49,7 +49,18 @@ ARCHIVES = [
     'Voice.arc',
 ]
 PACK_DIR = ASSET_DIR / 'zh-CN'
-PACK_OUT = PAYLOAD_DIR / 'zh-CN' 
+PACK_OUT = PAYLOAD_DIR / 'zh-CN'
+
+# 授权与署名文件：**必须随分发物一起给到接收者**（GPL-2.0 §1 要许可证全文 +
+# 版权/无担保声明；SIL OFL 1.1 §2 要版权声明 + 许可证）。落点是 language pack
+# 目录里（`payload/zh-CN/` → `<游戏目录>/zh-CN/`），与 `Fonts.arc` 同处一目录，
+# 玩家与下游都能直接看到；卸载＝删 `zh-CN/`，一并清干净。
+LEGAL_FILES = [
+    Path('LICENSE'),                                   # GPL-2.0 全文
+    Path('CREDITS.md'),                                # 上游 STAFF + 修改声明
+    Path('DISCLAIMER.md'),                             # 非官方 / 禁商用 / 无担保
+    Path('resource/fonts/sourcehan_subset/OFL.txt'),   # SIL OFL 1.1（思源黑体）
+]
 
 
 def sha256(data):
@@ -173,6 +184,17 @@ def generate():
             dst.write_bytes(data)
             pack_manifest[src.name] = {'sha256': sha256(data), 'bytes': len(data)}
             pack_total += len(data)
+        # 授权与署名文件（见 LEGAL_FILES 说明）：同一份清单，安装器按它校验
+        for src in LEGAL_FILES:
+            if not src.exists():
+                raise SystemExit(f'[中止] 缺少 %s —— 授权文件必须随包分发' % src)
+            data = src.read_bytes()
+            dst = PACK_OUT / src.name
+            dst.write_bytes(data)
+            pack_manifest[src.name] = {'sha256': sha256(data), 'bytes': len(data),
+                                       'role': 'license'}
+            pack_total += len(data)
+            print(f'  [LEGAL] {src} -> zh-CN/{src.name}  {len(data):,} bytes')
         (PACK_OUT / 'PACK_MANIFEST.json').write_text(
             json.dumps(pack_manifest, ensure_ascii=False, indent=2) + chr(10),
             encoding='utf-8')
@@ -246,6 +268,18 @@ def verify(metadata):
                 print(f'  [FAIL] zh-CN/{src.name}: 与 asset 不一致')
         if ok:
             print('  [OK] 语言包 zh-CN/ 回读一致')
+
+    # 授权与署名文件：必须在 payload/zh-CN/ 里且与源逐字节一致
+    for src in LEGAL_FILES:
+        dst = PACK_OUT / src.name
+        if not dst.exists():
+            ok = False
+            print(f'  [FAIL] 授权文件未随包：zh-CN/{src.name}')
+        elif sha256(dst.read_bytes()) != sha256(src.read_bytes()):
+            ok = False
+            print(f'  [FAIL] zh-CN/{src.name}: 与 {src} 不一致')
+        else:
+            print(f'  [OK] 授权文件随包 zh-CN/{src.name}（{dst.stat().st_size:,} bytes）')
 
     if ok:
         print()

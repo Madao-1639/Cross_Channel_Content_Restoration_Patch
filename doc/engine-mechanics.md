@@ -110,7 +110,7 @@ CC 的 `AdvHD.exe` 的 `.text` 是**加壳**的（熵 8.00，开头即随机字�
 
 ### CROSS†CHANNEL 的 LAYER_ORDER
 
-Steam 版与第三方补丁的 LAYER_ORDER 内容完全相同：
+Steam 版的 LAYER_ORDER（本项目未改动）：
 ```
 0x3f 0x13 ev\x00 bg01\x00 bg02\x00 st01\x00 st02\x00 st03\x00 st04\x00 st05\x00 
 st06\x00 st07\x00 st08\x00 st09\x00 st10\x00 st11\x00 st12\x00 movie\x00 
@@ -623,7 +623,7 @@ if ( !v13 )                       // v13 = 比较结果
 | 事件 CG 槽 | 双槽（`ev01`/`ev02`） | 单槽（`ev`） |
 | ev 槽限制 | 7 字节 stem 硬限制 | **待实测** |
 | blink/talk 子图层 | ✅ 有（`ev01blink`/`ev01talk` 三元组，用于眨眼、口型） | ❌ LAYER_ORDER 不包含（引擎可能仍按 PNA 内部结构处理动画，但不显式注册子图层） |
-| `Script.arc` | Steam 版无 | 第三方补丁借入 |
+| `Script.arc` | Steam 版无 | **Steam 版自带**（日文配置；本补丁只改字体槽/开关常量） |
 | `.text` 段 | 明文，可反汇编 | 加密（结论以外推为准） |
 
 ## E-mote 表情系统
@@ -726,7 +726,7 @@ include "ui_language"        include "ui_scrollbar"
 
 ### 本项目的修正
 
-第三方补丁在 `Rio.arc` 里放了 `NameTable.txt`（73 行），**内容与脚本的 73 个 `%LC` 名字一一对应、零偏差**，中文也是简体 —— 表本身是对的，**只是前缀写成了 `%LR`**，与脚本的 `%LC` 对不上，引擎查不到，名字框就一直显示英文。
+`NameTable.txt`（73 行）的**内容与脚本的 73 个 `%LC` 名字一一对应、零偏差**，中文也是简体 —— 表本身是对的，**但若前缀写成 `%LR`**（外部样本的错法）则与脚本的 `%LC` 对不上，引擎查不到，名字框就一直显示英文。
 
 本项目由 `script/build_nametable.py` 从 `resource/speaker_map.json` **生成**该表，前缀天然写成 `%LC`（键集合 = 脚本里 `15` 指令实际出现的 `%LC` 键），因此不需要额外的前缀修正步骤。
 
@@ -737,15 +737,15 @@ include "ui_language"        include "ui_scrollbar"
 
 | | A Sky Full of Stars | CROSS†CHANNEL |
 |---|---|---|
-| 语言目录 | `zh-CN/` | 无（第三方补丁借 `Script.arc` 提供 Lua） |
+| 语言目录 | `zh-CN/` | `zh-CN/`（`Script.arc` + `Fonts.arc` + `Rio.arc` + `SysGraphic.arc` + `AdvHDLang.dll`） |
 | 目录内容 | `AdvHDLang.dll`、`Fonts.arc`、`Rio.arc`、`Script.arc`、`SysGraphic.arc` | — |
 | 中文剧本载体 | `zh-CN/Rio.arc`：298 个 `.lng` + `NameTable.txt` | `Rio.arc` 内的 `.lng` + `NameTable.txt` |
 
 **ASF 的中文包里没有 ws2** —— 剧本仍用英文 ws2，中文全部经 `.lng`（正文/选项）
-与 `NameTable.txt`（人名）注入。这对本项目是可直接复用的范式。`ui_language.lua` 是语言开关，官方简中版与第三方补丁的**实现完全相同**：
+与 `NameTable.txt`（人名）注入。这对本项目是可直接复用的范式。`ui_language.lua` 是语言开关，官方简中版与本补丁的**实现完全相同**：
 ```lua
-function getLangPatchFlag()  PatchFlag = true;  return PatchFlag  end
-function setInitLang()       g_altLanguage = true                 end
+function getLangPatchFlag()  return true                      end
+function setInitLang()       g_altLanguage = true            end
 ```
 
 ## 文字渲染路径：字体加载 + backlog 硬编码膨胀边 ★
@@ -885,8 +885,8 @@ setInitLang      = function() g_altLanguage = true end
 |---|---|
 | 唯一的 locale 判断 | `WinMain` 把包名与 `GetLocaleInfoEx(nullptr, LOCALE_SNAME)` 比对，结果**只**喂给 `setAltLanguage(bool)`（`sub_417610`）；而 `setAltLanguage` 在 CC 与官中 IMHHW 的**全部 Lua 里都没有定义** ⇒ 死调用（`getAltLanguage()` 那侧倒是活的：C++ 在 ~15 处字体/UI 资源选择点调它，由游戏自己的 Lua 在启动时 `setInitLang()` 置真） |
 | Steam 侧语言 | exe 用 `STEAMAPPS_INTERFACE_VERSION008`，只调到 `GetInstalledDepots` 一类（vtable +40/+96）；**没有** `GetCurrentGameLanguage`（vtable 索引 4）的调用点 |
-| 引擎是否按名调 Lua 语言开关 | `getLangPatchFlag` / `setInitLang` / `PatchFlag` 三个串在 exe 里**都不存在** ⇒ 完全由游戏自己的 Lua 驱动 |
-| 官中包的写法 | IMHHW 的 `ui_language.lua` 是**两份编译期常量**：根目录 `PatchFlag=false / g_altLanguage=false`，`zh-CN/Script.arc` 里 `=true` —— 靠 `Script.arc` 按成员覆盖切换，与 locale 无关 |
+| 引擎是否按名调 Lua 语言开关 | `getLangPatchFlag` / `setInitLang` 两个串在 exe 里**都不存在** ⇒ 完全由游戏自己的 Lua 驱动 |
+| 官中包的写法 | IMHHW 的 `ui_language.lua` 是**两份编译期常量**：根目录 `g_altLanguage=false`，`zh-CN/Script.arc` 里 `=true` —— 靠 `Script.arc` 按成员覆盖切换，与 locale 无关 |
 
 ⇒ "首启即生效"来自上表的"值不存在 ⇒ 启用唯一语言包"，**与语言环境无关**；"默认语言会变"只发生在**玩家改过一次之后**（引擎在 `CBN_SELCHANGE` 路径把它写进注册表，之后读到的就是玩家的选择）。因此本项目把"默认语言跟随环境"实现在**安装器**侧（`tool/language_detect.py`，见 [technical-solutions.md](technical-solutions.md)「默认语言」）—— 引擎侧没有可用的挂点。
 
@@ -996,5 +996,5 @@ wstring 脚本名（UTF-16LE，NUL 结尾，如 'CCB0013_EN'）
 1. **优先实测**：资源注册、显示效果一类问题，A/B 测试 > 静态逆向（快，且是确定性结论）
 2. **但也别放弃逆向**：有明文样本时静态分析能给出实测难以枚举的结论（见上文）
 3. **先找同引擎的官方样本**：「实测优先」之前先问这个机制在同引擎的其他游戏里长什么样
-4. **复用而不要盲信**：第三方补丁的方案可作参考，但其产物未经 Steam 版验证（见 [lessons-learned.md](lessons-learned.md)「不能盲信第三方产物，也不能盲信外部复审」）
+4. **复用而不要盲信**：外部的现成方案只作参考，其产物未经 Steam 版验证（见 [lessons-learned.md](lessons-learned.md)「不能盲信外部产物，也不能盲信外部复审」）
 5. **工具选择**：静态分析 IDA Pro / Ghidra；动态调试 x64dbg / WinDbg；文件分析 010 Editor / HxD；最终验证 —— 修改游戏文件 + 运行游戏
