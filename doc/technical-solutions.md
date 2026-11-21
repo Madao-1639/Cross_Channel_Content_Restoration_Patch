@@ -142,13 +142,13 @@ AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的�
 
 ### 流程脚本（`script/`）—— 按角色分
 
-**入口**：`build_patch.py`（流水线总控；`--bootstrap` 从 `backup/` 起底）、`generate_payload.py`（增量包）、`pack.sh`（PyInstaller 打包安装器）。**流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：写盘之前：`verify_text_map_structure` · `check_reset_state`；写盘：`apply_graphic_overrides` · `splice_restoration` · `splice_ccb2017_branch` · `build_original_stage` · `apply_text_map` · `import_missing_voices` · `audit_choices` · `build_script_arc` · `apply_caption_utf8` · `build_lang_dll` · `build_nametable` · `apply_sysgraphic`；写盘之后：`verify_text_map` · `audit/audit_row_alignment` · `final_verification`。**引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。**独立核对工具**（不进流水线）：`renumber_evcc9xxx.py`（`EVCC9XXX` 编号对照，`--check`）。**目录分组**（`script/` 根只放入口与流水线步骤）：
+**入口**：`build_patch.py`（流水线总控；`--bootstrap` 从 `backup/` 起底）、`generate_payload.py`（增量包）、`pack.sh`（PyInstaller 打包安装器）。**流水线步骤**（顺序与阶段划分见 `build_patch.py` 的文档头）：写盘之前：`verify_text_map_structure` · `check_reset_state`；写盘：`apply_graphic_overrides` · `splice_restoration` · `splice_ccb2017_branch` · `build_original_stage` · `apply_text_map` · `import_missing_voices` · `audit_choices` · `build_script_arc` · `apply_caption_utf8` · `build_lang_dll` · `build_nametable` · `apply_sysgraphic`；写盘之后：`verify_text_map` · `audit/audit_row_alignment` · `audit/audit_cg_unlock` · `final_verification`。**引导步**（仅 `--bootstrap`）：`build_cg_map` · `build_restored_cgs` · `renumber_evcc9xxx`。**独立核对工具**（不进流水线）：`renumber_evcc9xxx.py`（`EVCC9XXX` 编号对照，`--check`）。**目录分组**（`script/` 根只放入口与流水线步骤）：
 
 - `script/internalize/` —— 把**外部来源的数据搬进仓库**，各跑一次；跑完构建不再需要外部目录：`extract_carried_lng` · `extract_carried_soundlevel`
 - `script/gen/` —— **手工生成 `resource/` 的输入表**（产出的就是流水线输入）：`build_original_audio` · `build_voice_plan`
-- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `audit_translation_coverage` · `sysgraphic_contact_sheet` · `verify_ws2_conventions` · `convert_wsc`
+- `script/audit/` —— **只读检查与分析**（不改 `asset/`、不改 `resource/`）：`audit_inline` · `audit_cg_unlock` · `audit_lng_semantics` · `audit_row_alignment` · `audit_duplicate_text` · `audit_translation_coverage` · `sysgraphic_contact_sheet` · `verify_ws2_conventions` · `convert_wsc`
 
-**库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/rename_map.py`（改名表）、`tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
+**库全在 `tool/`**：`tool/writer.py`（结构写盘器）、`tool/cgunlock.py`（CG 解锁对的编号归属：图名 → `(A,B)` 反查、单射断言、搬运字节）、`tool/rename_map.py`（改名表）、`tool/archprobe.py`（归档资源 / PNA 层数探针）、`tool/textplan.py`（表 → 写盘计划）。
 ⚠️ **流水线步骤不得互相 import** —— 库一律放 `tool/`：把库放 `script/` 会迫使各步用 `sys.path.insert` / `importlib` 绕路加载，同名库出现两份实例，是「静默丢字段」类事故的来源。**`audit_duplicate_text.py` 是"检测报告"，不是闸**：列**同一脚本内**出现完全相同显示文本的格（长度 <8 的短句/纯符号句一律略过，跨脚本不比），并标注每格的出处。
 ⚠️ **它只检测、不判错，也不参与流水线的通过/失败** —— 同文本重复**是正常现象**：短句与符号句（`……`／`“……”`）原版本就反复出现，姊妹场同对白更是既定设计，切分片重合也正常。只有"**至少一条是自撰格**"的那些组值得人看一眼（在现表上实测：90 组同文本，其中 1 组含自撰格 —— 经查是 Steam 自己连着两槽同样的笑声，正常）。**`apply_text_map.py` = 落盘接线的唯一入口**：按 `resource/text_map.json` **一次产出结构 + lng**。
 表是准据 —— **要改某一格，改表**（不存在独立的 lng/结构写盘入口；文本体例规则 `fix_tail` / `normalize_zh` 在 `tool/lng.py`）。
@@ -163,7 +163,7 @@ AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的�
 - **插入点也允许落在 `0f` 条目之后**（=「选项块之后」）。例：`CCB0007` 的**源 CCS 行 47**（`うむ、ない。`）在**原版**是 `行 46 → 行 47 → 行 48` **连续**（原版该脚本**零选项**，`0f` 计数 = 0），Steam 把这段换成了 3 个「看内裤」选项 —— 故**行 46 + 行 47** 是「是否要看」的**前置铺垫**、选项在其后，**行 47** 的语义位置在**选项块之前**（槽位表里记 `after_k=51`，即「取行 46 的那格」之后）。
 - **指令排布照抄 Steam**：相邻的 `15` **不折叠**（「后者覆盖前者」式的折叠会把原生清框压掉），`drop` **删整格**（`14` + 设名 `15` + 清框 `15`，带名字框守卫）。理由与守卫见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md) §8 第 11 条与 [file-formats.md](file-formats.md)「场景控制指令」。
 
-回归类：`script/audit/audit_inline.py`（就地插入）、`audit_lng_semantics.py`（lng 语义）、`verify_ws2_conventions.py`（转换器约定）、`audit_row_alignment.py`（**行号对位**：`op=ccs` 区间块 ↔ Steam 台词流逐格对齐，靠「名字框 vs 源行说话人」成片不符抓错位）；`audit_choices.py` 与 `audit_row_alignment.py` 中的**后者也已进流水线**（写盘之后）。
+回归类：`script/audit/audit_inline.py`（就地插入）、`audit_cg_unlock.py`（**CG 画廊/成就解锁**：逐宿主位点/位序守恒 + 禁止给还原段 CG 写伪造解锁，判据见 [call-chain.md](call-chain.md)「解锁指令的保留」）、`audit_lng_semantics.py`（lng 语义）、`verify_ws2_conventions.py`（转换器约定）、`audit_row_alignment.py`（**行号对位**：`op=ccs` 区间块 ↔ Steam 台词流逐格对齐，靠「名字框 vs 源行说话人」成片不符抓错位）；`audit_choices.py` 与 `audit_row_alignment.py` 中的**后者也已进流水线**（写盘之后）。
 
 转换器的规则、全量验证结果与实现陷阱见 [wsc_to_ws2_conversion.md](wsc_to_ws2_conversion.md)。
 
@@ -175,4 +175,5 @@ AdvHD ≥1.9 有官方**语言包**机制：游戏目录下以 locale 命名的�
 4. **核实安装器内嵌的就是当前 `payload/`**（`pack.sh` 之后必做）：PyInstaller 用 zlib(level 9) 压缩 data 条目，故把 `zlib.compress(open('payload/<名>', 'rb').read(), 9)` 的字节流在 exe 里做查找，`payload/` 的 8 个产物（含 `METADATA.json`）全命中，即证明安装器与 `payload/` 逐字节一致。
 
 > `asset/` 或 `backup/` 任一变动后**必须**重新生成 `payload/`。
+> ⚠️ **新增成员必须有确定位置**：语言包 `zh-CN/Rio.arc` 的 `NameTable.txt` **统一前置**（`script/build_nametable.py`，幂等判据同时比内容与位置）。此前它由 `append` 新建，位置取决于与 `apply_caption_utf8`（发 `CC_30A_EN.WS2`）的先后 ⇒ 全链复跑会挪位、文件哈希变化。**语言包层不发 METADATA，安装器核不到**，所以这类问题只能靠「复跑 0 处改动」抓。
 > ⚠️ **安装包元数据必须取产物的成员顺序**：METADATA 的成员表若按「原档顺序 + 追加」生成，而安装器**按这张表重排**，重放的归档会**内容全对、字节序不同** ⇒ 哈希必然不符。元数据描述的是**产物**，顺序就取**产物自己的**顺序；末尾的**回读校验（重放安装流程）不能注释掉**（它是唯一能抓到此类问题的检查）。

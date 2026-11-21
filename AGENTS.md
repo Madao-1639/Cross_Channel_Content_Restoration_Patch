@@ -144,6 +144,7 @@ python script/apply_caption_utf8.py      # 中文字幕写进语言包 ws2 副�
 python script/build_lang_dll.py          # 语言包 AdvHDLang.dll（位置门 hook；--debug 出诊断日志）
 python script/fix_font_names.py          # 子集 TTF 的 name 表恢复思源本名（EDA 环境，一次性修复）
 python script/audit/audit_inline.py           # 就地插入回归守卫
+python script/audit/audit_cg_unlock.py        # CG 画廊/成就解锁闸（位点/位序守恒 + 禁止伪造解锁）
 python script/audit/verify_ws2_conventions.py # 转换器约定回归
 ```
 

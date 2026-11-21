@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
-"""把 UTF-8 中文字幕写进**语言包里的 ws2 副本**，并重生成 hook 白名单表。
+"""把 UTF-8 中文字幕写进**语言包里的 ws2 副本**。
 
 为什么需要副本：`0x8f`（语音 + 字幕行）的文本按 CP932 解码、不参与 lng 池，简体字写不进去；
 只有语言包里的副本承载 UTF-8 文本（引擎按成员覆盖，英文模式读根层原档）。
-DLL 侧用白名单（`resource/caption_utf8.json`）逐字节匹配后才改按 UTF-8 解码。
+
+解码侧：`AdvHDLang.dll` 的 hook（`tool/hook/advhdlang_hook.c`）用**位置门**判定
+（正常路径），并在位置门不可用时用**兜底白名单**——那份白名单由
+`script/build_lang_dll.py` 的 `whitelist_from_pack()` **扫描语言包 ws2 自动生成**，
+不是本步产出的文件。（曾经写过 `resource/caption_utf8.json`，但无人消费、与
+`build_lang_dll` 的扫描重复，已删。）
 
 输入：`resource/captions_zh.json`
     { "edits": [ {"script": "CC_30A_EN", "old": "<ws2 里的原文>", "new": "<中文>"} ] }
     `old` 用于在该脚本里唯一定位（0x8f 文本比较时按 cp932 解码后比较）。
 
 输出：
-    * `asset/zh-CN/Rio.arc` 里该脚本的 ws2 副本（只改文本字节，不动 id/尾表/指令数）；
-    * `resource/caption_utf8.json`（白名单唯一来源，由**实际写入的文本**生成，避免二者不一致）。
+    * `asset/zh-CN/Rio.arc` 里该脚本的 ws2 副本（只改文本字节，不动 id/尾表/指令数）。
 
 用法：`python script/apply_caption_utf8.py [--write]`
 """
@@ -29,7 +33,6 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 TABLE = ROOT / 'resource' / 'captions_zh.json'
-WHITELIST = ROOT / 'resource' / 'caption_utf8.json'
 
 
 def caption_spans(raw):
@@ -68,7 +71,6 @@ def main(argv=None):
     pack = {n.decode('utf-16-le').upper(): [n, d] for n, d in arcbuild.read_raw(pack_path)}
     base = {n.decode('utf-16-le').upper(): d for n, d in arcbuild.read_raw(layers.base_arc('Rio.arc'))}
 
-    written = set()
     total = 0
     for stem in sorted(by_script):
         key = stem + '.WS2'
@@ -94,12 +96,11 @@ def main(argv=None):
         if raw[-8:] != tr0:
             raise SystemExit('[ERR] %s：尾表变了' % stem)
         for _a, new in todo:
-            written.add(new.decode('utf-8'))
             total += 1
         pack[key] = [pack[key][0] if key in pack else key.encode('utf-16-le'), ws2.encode(raw)]
         print('[写字幕] %s：%d 条（副本 %d 字节）' % (stem, len(todo), len(raw)))
 
-    print('共写入 %d 条，去重后 %d 条 → 白名单' % (total, len(written)))
+    print('共写入 %d 条（%d 个脚本）' % (total, len(by_script)))
     if not args.write:
         print('[预演] 未写盘；加 --write 落盘')
         return 0
@@ -107,11 +108,6 @@ def main(argv=None):
     members = [(v[0], v[1]) for k, v in pack.items()]
     layers.write_layer(pack_path, members, expect_count=len(members))
     print('[写盘] %s：%d 成员' % (pack_path, len(members)))
-
-    WHITELIST.write_text(json.dumps(
-        {'_说明': '自动生成：script/apply_caption_utf8.py 写入的中文字幕（hook DLL 白名单的唯一来源）。',
-         'strings': sorted(written)}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print('[写盘] %s：%d 条' % (WHITELIST.name, len(written)))
     return 0
 
 

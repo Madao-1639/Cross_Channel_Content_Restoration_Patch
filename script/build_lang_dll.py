@@ -2,7 +2,10 @@
 """编译语言包里的 `AdvHDLang.dll`（`MultiByteToWideChar` 位置门 hook + **中文设置界面串表**）。
 
 流程：
-  1. （无需白名单：hook 只按位置判定，见 `tool/hook/advhdlang_hook.c`）
+  1. **白名单兜底由本步自己扫**：`whitelist_from_pack()` 遍历语言包 ws2 的 `8f/90` 非 ASCII 字幕，
+     直接生成 C 头文件（`tool/hook/advhdlang_hook.c` 的位置门为主、此白名单为兜底）。
+     **不读任何外部清单文件** —— 曾经由 `apply_caption_utf8.py` 写出 `resource/caption_utf8.json`，
+     但无人消费、且与本步扫描重复，已删。
   2. 读 `resource/AdvHDLang_zh.json`（设置界面中文串，唯一来源）+ 从 `resource/AdvHDLang.orig.dll`
      取 manifest，生成 `app.rc` + `app.manifest`，用 **windres** 编成 `.res`
      （链接器生成**合法**资源树；手工搬 `.rsrc` 会被 `LoadStringW` 判为非法 → 设置界面文字全空）；

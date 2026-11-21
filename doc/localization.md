@@ -504,6 +504,10 @@ Steam 侧**自己的**语音名（`MIK_0686.OGG` 等）满足 `通道 = char + �
 
 **结论：角色名走引擎的名字替换表，不改 ws2 字节。**表是 **UTF-16LE**，任意简体字都能写 —— 完全绕开脚本内窄字节的 CP932 限制。**该表由 `resource/speaker_map.json` 生成**（`script/build_nametable.py`，在 `script/build_patch.py` 的写盘阶段跑），不是手工维护的资产 ⇒ 前缀（`%LC`）与中文名都由生成器保证，从零重建不会丢。详见 `resource/README.md`。
 
+**成员位置：统一前置**。`NameTable.txt` 恒位于 `zh-CN/Rio.arc` 成员列表的**最前一位**。
+理由：Arc 成员顺序决定文件字节与哈希，而此前两步都用 `append` 新建成员（`apply_caption_utf8` 发 `CC_30A_EN.WS2`、本步发 `NameTable.txt`），谁先跑谁在前 ⇒ 历史产物与现流水线的顺序相反，**语言包层不发 METADATA、安装器核不到**，因此一直没暴露。引擎按成员名查表、不依赖位置（`layers.effective()` 也是按名覆盖），所以前置只把「顺序」从历史巧合变成不变量。
+幂等判据必须同时看**内容与位置**：只比内容会把「内容对、但位置不对」当成无需修改。
+
 机制、格式与判定依据见 [engine-mechanics.md](engine-mechanics.md)「名字替换表」与 [engine-mechanics.md](engine-mechanics.md)「名字替换表」。要点：
 
 - 脚本里 `15 %LC<英文名> 00 00` 的 `%LC` 是**引擎命令标记**；引擎拿 `%LC<英文名>` 去查 `Rio.arc` 里的 `NameTable.txt`，命中就替换成表右列。

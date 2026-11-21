@@ -39,7 +39,7 @@ if hasattr(sys.stdout, 'buffer'):
 
 RIO = ROOT / 'asset' / 'Rio.arc'
 PACK_RIO = layers.pack_arc('Rio.arc')
-BACKUP = ROOT / 'asset' / 'zh-CN' / 'Rio.arc.before_nametable_build'
+BACKUP = ROOT / 'tmp' / 'Rio.arc.before_nametable_build'
 TABLE_MEMBER = 'NameTable.txt'
 KEY_PREFIX = '%LC'
 CRLF = b'\r\x00\n\x00'
@@ -112,11 +112,16 @@ def main(argv=None):
     new, order, _ = build_rows(members)
     pack = list(layers.read_layer(PACK_RIO))
     cur = dict((n.decode('utf-16le'), d) for n, d in pack).get(TABLE_MEMBER, b'')
-
-    if new == cur:
-        print('[一致] %s 与 resource/speaker_map.json 一致（%d 行），无需修改'
+    # 幂等判据必须同时看**内容**与**位置**：只看内容会把「内容对、但位置不对」
+    # 当成无需修改（这正是历史产物停在旧顺序、而流水线重跑会挪位的原因）。
+    at_front = bool(pack) and pack[0][0].decode('utf-16le') == TABLE_MEMBER
+    if new == cur and at_front:
+        print('[一致] %s 与 resource/speaker_map.json 一致（%d 行）且已前置，无需修改'
               % (TABLE_MEMBER, len(order)))
         return 0
+    if new == cur:
+        print('[重排] %s 内容已一致，但不在首位 —— 统一前置（不影响引擎，只定死顺序）'
+              % TABLE_MEMBER)
 
     old_rows = [l.decode('utf-16le') for l in cur.split(CRLF) if l.strip()]
     new_rows = new.decode('utf-16le').split('\r\n')[:-1]
@@ -134,12 +139,23 @@ def main(argv=None):
         print('\n[只报告] 未写入。加 --write 落盘。')
         return 1 if args.check else 0
 
-    if pack and not (BACKUP.exists() and arcbuild.same_file(BACKUP, PACK_RIO)):
-        arcbuild.write_arc(pack, BACKUP)
-        print('[备份] %s -> %s' % (PACK_RIO, BACKUP))
-    out = [(n, new if n.decode('utf-16le') == TABLE_MEMBER else d) for n, d in pack]
-    if TABLE_MEMBER not in {n.decode('utf-16le') for n, _ in pack}:
-        out.append((TABLE_MEMBER.encode('utf-16le'), new))    # 语言包里首次新建
+    # 备份放 `tmp/`，**绝不能放 `asset/zh-CN/`**：`generate_payload.py` 把语言包目录
+    # **整份复制**进 `payload/zh-CN/`（遍历目录下所有文件），备份留在那里会被发给玩家。
+    if pack:
+        BACKUP.parent.mkdir(parents=True, exist_ok=True)
+        if not (BACKUP.exists() and arcbuild.same_file(BACKUP, PACK_RIO)):
+            arcbuild.write_arc(pack, BACKUP)
+            print('[备份] %s -> %s' % (PACK_RIO, BACKUP))
+    # ⚠️ **成员位置必须确定性**：此前是「缺就 append 到末尾」，于是最终位置取决于哪个步
+    # 先跑（`STEPS` 里 `apply_caption_utf8` 在 `build_nametable` 之前、也是唯一会新建成员的
+    # 一步）。一旦两者都新建，谁先 append 谁在前 ⇒ 历史产物与现流水线的顺序相反，
+    # 而 **Arc 成员顺序决定文件字节与哈希**（安装器按表重排，顺序错就校验失败）。
+    #
+    # **统一前置**（用户裁定）：`NameTable.txt` 恒位于成员列表**最前**。
+    # 与它原来在哪里无关、与其它成员的 append 先后无关 ⇒ 天然幂等。
+    # 引擎按成员名查表，不依赖位置；前置只是把顺序从一个「历史巧合」变成「不变量」。
+    out = [(TABLE_MEMBER.encode('utf-16le'), new)]
+    out += [(n, d) for n, d in pack if n.decode('utf-16le') != TABLE_MEMBER]
     layers.write_layer(PACK_RIO, out, expect_count=len(out))
 
     back = dict((n.decode('utf-16le'), d) for n, d in layers.read_layer(PACK_RIO))

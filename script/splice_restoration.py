@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tool import archprobe, arcbuild, rename_map as RN, ws2, ws2disasm, wsc  # noqa: E402
+from tool import archprobe, arcbuild, cgunlock, rename_map as RN, ws2, ws2disasm, wsc  # noqa: E402
 from tool.wsc2ws2 import ConvertOptions, convert_range  # noqa: E402
 
 if hasattr(sys.stdout, 'buffer'):
@@ -113,10 +113,23 @@ def src_instrs(stem):
 #     [前奏: 16 清框 / 64 / 37 清立绘，可有可无] + [33 <槽> <CG.PNG>] + [0b <旗标> 01 ×1..2]
 #     + [04 CG_ACHIEVEMENT]
 # 两个旗标：第一枚落在 menu_gallery.lua 的 CG 表域（1120..1248），第二枚（1260..1509）
-# 引擎/成就侧自用。**切除区内的解锁组一律保留**（原档在该拍点写旗标，产物也在该拍点写
-# —— 旗标别处还有置位点也不能丢，否则解锁时机会推迟）；**搬运只取 `0b` +
-# `04 CG_ACHIEVEMENT`**：解锁与成就只依赖旗标写入与成就子调用，`33` 显示与前奏是被
-# 还原段替换掉的 Steam 演出，搬了就会在接缝闪 Steam 替代图。组内不含文件内绝对偏移。
+# 引擎/成就侧自用。组内不含文件内绝对偏移。
+#
+# **三分区判据（用户裁定）**：
+#   A) 被删格（= 被替换/被丢弃的 Steam 格）之前已无存活内容承载解锁 → 把被覆盖区间里的
+#      **Steam 侧**解锁组前置到该删格前的**存活格前缀末尾**（现行拼接点就是前缀末尾，
+#      因为 `ins_at` 恰在第一个被删格的 `15` 上）。旗标别处还有置位点也不能丢 —— 那样只是
+#      保住「最终可解锁」，丢了**解锁时机**（实测教训：`EVCC0100` 由此从 `CCA0025C` 拍点
+#      推迟到 `CC4YOU` 才点亮，玩家中途查画廊仍是锁）。
+#   B) 被替换区间里的 Steam 显示若在插入段里有**同名替换**（同一张 CG 换了名字，见
+#      `resource/cg_map.json`）→ 仍然只搬 **Steam 的 A/B**，绝不拿原版编号冒充 Steam
+#      编号（两套编号体系互不通用，见 doc/file-formats.md「CG 解锁的旗标域」）。
+#   C) **原版独有的解锁一律抛弃**：原版 A 落在 `menu_gallery.lua` 的 CG 表域、B 落在引擎/
+#      成就侧，两者都是原版编号，本作的 `CG_PAGE`/`CG_ACHIEVEMENT` 只认 Steam 编号 ⇒
+#      搬过去只会点亮别的条目或把计数成就推高。还原段显示的 CG（`EVCC9XXX`）因此不带解锁。
+#
+# **搬运范围仍只有 `[0b ×N][04 CG_ACHIEVEMENT]`**：解锁与成就只依赖旗标写入与成就子调用，
+# `33` 显示与前奏是被还原段替换掉的 Steam 演出，搬了就会在接缝闪 Steam 替代图。
 # ---------------------------------------------------------------------------
 
 def _unlock_groups(ins, lo, hi):
@@ -144,17 +157,26 @@ def _unlock_groups(ins, lo, hi):
 
 
 def _keep_groups(steam, host, lo, hi):
-    """切除区间 `[lo,hi)` 内需要保留的解锁指令（已编码，仅 `0b` 旗标 + 成就子调用）。
+    """被覆盖区间 `[lo,hi)` 内需要保留的解锁指令（已编码，只有 `0b` 旗标 + 成就子调用）。
 
-    **切除区内的解锁组一律保留**：旗标在别处还有置位点也不能丢 —— 那样只是保住
-    「最终可解锁」，丢了**解锁时机**（实测：`EVCC0100` 由此从 `CCA0025C` 拍点推迟到
-    `CC4YOU` 才点亮，玩家中途查画廊仍是锁）。原档在该拍点写旗标，产物也在该拍点写。
+    判据见本段上方的**三分区**，与闸 `script/audit/audit_cg_unlock.py` 共用
+    `tool/cgunlock.py` 的旗标域定义（A/B 值域不在这里自写一份）：
+      * 搬的旗标**一律取自 Steam 档**（本函数只读 `steam[host]`）⇒ A/B 天然成立；
+        插入段里同名替换的 CG 也一样：显示由还原段出，旗标仍用 Steam 的那一对；
+      * **原版独有的解锁一律不搬**（C）—— 本函数看不见原版解锁，所以不会把它们带进来；
+        原版编号与本作的 `CG_PAGE`/`CG_ACHIEVEMENT` 互不通用，搬过去只会解错格子、
+        把 CG 计数成就推高。
+
     `33` 显示与前奏**不在搬运范围**：显示是被还原段替换掉的 Steam 演出，由还原段负责；
-    解锁只依赖 `0b` 写旗标（机制上与显示无耦合），成就只依赖子调用。"""
+    解锁只依赖 `0b` 写旗标（机制上与显示无耦合），成就只依赖子调用。
+    """
     plain = ws2.decode(steam[host.upper()])
     kept = []
     for start, end, flags, file in _unlock_groups(ws2disasm.disassemble(plain), lo, hi):
         print('  %-20s 保留解锁指令 %s（旗标 %s）' % (host, file, flags))
+        assert all(cgunlock.is_domain(f) for f in flags), \
+            '解锁组里出现域外旗标 %s（A=%d..%d、B=%d..%d）' % (
+                flags, cgunlock.A_LO, cgunlock.A_HI, cgunlock.B_LO, cgunlock.B_HI)
         kept.append(ws2.encode(plain[start:end]))
     return b''.join(kept)
 

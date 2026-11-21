@@ -26,6 +26,7 @@
     ---- 写盘之后 ----
     verify_text_map           **表 ↔ 产物**对账（占位数 / 插入段 / lng 条数 / 删格 / 行消耗）
     audit_row_alignment       行号对位闸（区间块 ↔ Steam 台词流逐格对齐）
+    audit_cg_unlock           CG 画廊/成就解锁闸（逐宿主位点/位序守恒 + 禁止伪造解锁）
     final_verification        全量验收
 
 ⚠️ **`METADATA.json` 只放归档条目**（`{归档名: {checksum, members}}`）、**不带任何 `_` 前缀元信息键**：
@@ -38,7 +39,7 @@ ffmpeg/libvorbis 版本）太多，一张"全输入"清单只会给出假保证�
 
     python script/build_patch.py                 # 跑全流程（**写盘前先跑表侧闸**；末步不幂等，复跑须先复位素材）
     python script/build_patch.py --bootstrap     # 从零：先按 backup/ 起底（见上「引导」）
-    python script/build_patch.py --check         # 只跑四道闸，不写任何东西
+    python script/build_patch.py --check         # 只跑五道闸，不写任何东西
 
 ⚠️ **`--bootstrap` 会按 `backup/`（Steam 原版）覆盖 `asset/` 的 5 份归档**，再显式带入
 Script（Lua 界面）、35 个表外 lng、37 张原版 CG；字体由管线自建（思源黑体）。
@@ -307,11 +308,12 @@ STEPS = [
     #    ↑ 语言包 `Script.arc` 的**唯一所有者**：中文 UI，只发与 Steam 原版不同的成员
     #      （官方语言包先例：IMHHW 的 zh-CN/Script.arc 只有 1 个成员）。幂等：内容相同则不重写
     (PHASE_WRITE, 'apply_caption_utf8.py', ('--write',), A),
-    #    ↑ 把 `resource/captions_zh.json` 的中文字幕写进**语言包 ws2 副本**（0x8f/0x90 走不了 lng），
-    #      并用实际写入的文本重生成 hook 白名单 `resource/caption_utf8.json`。必须排在 apply_text_map 之后。
+    #    ↑ 把 `resource/captions_zh.json` 的中文字幕写进**语言包 ws2 副本**（0x8f/0x90 走不了 lng）。
+    #      必须排在 apply_text_map 之后。
     (PHASE_WRITE, 'build_lang_dll.py', (), A),
-    #    ↑ 语言包 `AdvHDLang.dll`：`MultiByteToWideChar` 白名单 hook（只让白名单里的字幕按 UTF-8 解）
-    #      + 原 DSP 资源。白名单刚由上一步刷新，所以这一步必须紧跟其后（译文变了就自动重编）。
+    #    ↑ 语言包 `AdvHDLang.dll`：`MultiByteToWideChar` 位置门 hook（位置门不可用时退回
+    #      **兜底白名单**，由本步 `whitelist_from_pack()` **扫描语言包 ws2 自动生成**，不读外部文件）
+    #      + 原 DSP 资源。必须在上一步写完字幕之后跑，否则白名单漏条。
     (PHASE_WRITE, 'build_nametable.py', ('--write',), A),
     (PHASE_WRITE, 'apply_sysgraphic.py', ('--write',), A),
     #    ↑ **写盘的最后一步**（UI 汉化）：resource/SysGraphic/ 的图层换进 SysGraphic.arc。
@@ -322,12 +324,17 @@ STEPS = [
     #    ↑ **行号对位闸**：`op=ccs` 区间块只有「均匀偏移」一种表达，Steam 整行删/增过的地方
     #      会从那里起整体错开一格（文本落后一行 + 语音误删/错位，计数类闸全查不出）。
     #      判据、事故与处置规范见 doc/localization.md「区间块的行号对齐」
+    (PHASE_POST, 'audit/audit_cg_unlock.py', (), A),
+    #    ↑ **CG 画廊 / 成就解锁闸**（doc/call-chain.md「解锁指令的保留」）：逐宿主核
+    #      域内 `0b` 位点/位序与 `CG_ACHIEVEMENT` 子调用守恒，并禁止给还原段 CG
+    #      （`EVCC9XXX`）写伪造解锁 —— 两套编号体系互不通用
     (PHASE_POST, 'final_verification.py', (), A),
 ]
 
-# `--check`：只跑四道闸（表自身 → 表↔产物 → 行号对位 → 全量），不写任何东西
+# `--check`：只跑五道闸（表自身 → 表↔产物 → 行号对位 → CG 解锁 → 全量），不写任何东西
 CHECK_STEPS = {'verify_text_map_structure.py', 'verify_text_map.py',
-               'audit/audit_row_alignment.py', 'final_verification.py'}
+               'audit/audit_row_alignment.py', 'audit/audit_cg_unlock.py',
+               'final_verification.py'}
 
 
 def run_steps(only=None, skip_not_bootstrap=False):

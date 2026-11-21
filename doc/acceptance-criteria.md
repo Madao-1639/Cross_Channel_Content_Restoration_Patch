@@ -12,7 +12,9 @@
 - [ ] 所有文件内跳转（`06`、`0f` 条目、`01` 的 `a`/`b`）的落点都是**指令首字节**
 - [ ] 跳转目标脚本存在（无悬空引用）；脚本数 == Steam 原档（363 个 `*_en.ws2`，无遗留还原脚本）
 - [ ] 宿主「第一句对话之前」的场景开场件（`SCENETITLE*` / `SGCC*` / 鉴赏钩子）仍在
-- [ ] **CG 解锁旗标位点守恒**：每个 `0b` 旗标的置位点数与 Steam 原档逐 id 相等（`audit_inline.py` 的「旗标位点守恒」闸）——只查"有无"会漏掉位点数回退（解锁时机推迟）；切除区内的解锁组由 `splice_restoration.py` 一律保留 `[0b ×N][04 CG_ACHIEVEMENT]` 并置于插入段前端（不含 `33` 显示——演出归还原段；规则见 [call-chain.md](call-chain.md)「解锁指令的保留」）
+- [ ] **CG 解锁位点「不减」**：逐宿主的 `CG_ACHIEVEMENT` 数量不减、域内 `0b` 集合不减、`CG_PAGE` 的每个条目仍可置位（`script/audit/audit_cg_unlock.py` 第一组；全库口径另见 `audit_inline.py` 的「旗标位点守恒」）
+- [ ] **CG 解锁位点「不串号」**：4a 每个解锁对属于 Steam 编号集合；4b 有图名的解锁对等于 Steam **同一张图**的那一对；4c 还原段 `EVCC9XXX` 无一带解锁对（同闸第二组）—— 4b 不可省：只查集合会漏掉「合法值配错帧」
+- [ ] **三分区判据**（`splice_restoration.py` 的 `_keep_groups()`）：A 被覆盖区间的 Steam 解锁**提前**到删格前的存活格前缀（合规移动，不随显示走）；B 同名替换仍只搬 Steam 的 A/B；C 原版独有解锁一律抛弃（`EVCC9XXX` 不带解锁）（形状见 [call-chain.md](call-chain.md)「解锁指令的保留」，编号体系见 [file-formats.md](file-formats.md)「CG 解锁的旗标域」）
 - [ ] ws2 末尾 8 字节 == `(0x14 条数, 0f 条目数)` —— `MessageFlag.dat` 位图容量的来源，写错会实机崩溃（见 [engine-mechanics.md](engine-mechanics.md)「MessageFlag.dat」）
 
 ### 资源
